@@ -800,6 +800,75 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
           </div>
         </div>
       </div>
+
+      <!-- D — Réflexe d'appétit (Amendement v7 ICHTUS) -->
+      <div class="card" style="margin-top:.75rem">
+        <div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Réflexe d'appétit — Indicateur de santé quotidien</div>
+        <p style="font-size:10px;color:var(--t2);line-height:1.7;margin-bottom:.6rem">Évaluer à <strong style="color:var(--t1)">chaque repas dès J+3</strong> (premier repas post-silence alimentaire). C'est le premier indicateur visible de la bonne acclimatation. À noter dans le cahier de suivi.</p>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Comportement observé</th><th>Interprétation</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr style="background:rgba(0,201,167,.06)">
+                <td style="font-size:10px"><strong style="color:var(--acc)">✅ Précipitation &lt;30 sec</strong> · agitation surface · consommation totale en &lt;5 min</td>
+                <td><span class="badge b-ok">Santé optimale</span></td>
+                <td style="font-size:10px">Aucune · maintenir la ration</td>
+              </tr>
+              <tr style="background:rgba(245,166,35,.04)">
+                <td style="font-size:10px"><strong style="color:var(--warn)">⚠️ Réaction 1–2 min</strong> · consommation partielle · quelques refus</td>
+                <td><span class="badge b-warn">Léger stress</span></td>
+                <td style="font-size:10px">Vérifier DO + TAN · réduire ration 10% · surveiller</td>
+              </tr>
+              <tr style="background:rgba(255,61,87,.04)">
+                <td style="font-size:10px"><strong style="color:var(--dng)">🔴 Réaction lente &gt;2 min</strong> · poissons indifférents · nombreux refus</td>
+                <td><span class="badge b-dng">Stress ou maladie</span></td>
+                <td style="font-size:10px">Mesures DO + TAN + pH immédiat · −30% ration · appeler Responsable</td>
+              </tr>
+              <tr style="background:rgba(255,61,87,.08)">
+                <td style="font-size:10px"><strong style="color:var(--dng)">🚨 Aucune réaction</strong> · aliment ignoré · poissons groupés fond ou surface</td>
+                <td><span class="badge b-dng" style="background:var(--dng);color:#fff">URGENCE</span></td>
+                <td style="font-size:10px">ARRÊT nourrissage · mesures complètes · appliquer PROC-10 · appeler Responsable</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- D — Matrice de diagnostic croisé TAN × NO₂ -->
+      <div class="card" style="margin-top:.75rem">
+        <div class="ctitle"><span class="dot" style="background:var(--purp)"></span>Matrice diagnostic TAN × NO₂ — Source: Mémo paramètres eau v4.1</div>
+        <p style="font-size:10px;color:var(--t2);line-height:1.7;margin-bottom:.6rem">Mesurer <strong>simultanément</strong> TAN et NO₂ le matin à 6h à jeun. Croiser les deux valeurs pour le diagnostic.</p>
+        <div class="tw" style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>TAN \ NO₂</th>
+              <th style="color:var(--acc)">NO₂ &lt;0.2 ✅ Normal</th>
+              <th style="color:var(--warn)">NO₂ 0.2–1.0 ⚠️ Élevé</th>
+              <th style="color:var(--dng)">NO₂ &gt;1.0 🚨 Critique</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:700;color:var(--acc)">TAN &lt;0.5 ✅</td>
+                <td style="background:rgba(0,201,167,.06);font-size:10px"><strong style="color:var(--acc)">✅ SYSTÈME SAIN</strong><br>Cycle complet établi → Régime nominal</td>
+                <td style="background:rgba(245,166,35,.06);font-size:10px"><strong style="color:var(--warn)">Nitrospira faibles</strong><br>Inoculer Nitrospira → NaCl 1–2 g/L</td>
+                <td style="background:rgba(255,61,87,.06);font-size:10px"><strong style="color:var(--dng)">Nitrospira en crise</strong><br>Vidange 15% + NaCl 3–5 g/L + BioClean 100</td>
+              </tr>
+              <tr>
+                <td style="font-weight:700;color:var(--warn)">TAN 0.5–1.0 ⚠️</td>
+                <td style="background:rgba(245,166,35,.04);font-size:10px"><strong style="color:var(--warn)">Nitrosomonas sous pression</strong><br>Réduire ration 20% → vérifier C/N mélasse</td>
+                <td style="background:rgba(245,166,35,.08);font-size:10px"><strong style="color:var(--warn)">Double pression</strong><br>−50% ration + inoculation + NaCl 2 g/L + vidange 10%</td>
+                <td style="background:rgba(255,61,87,.08);font-size:10px"><strong style="color:var(--dng)">Système déséquilibré</strong><br>Arrêt alim + vidange 15% + NaCl 5 g/L + BioClean 100</td>
+              </tr>
+              <tr>
+                <td style="font-weight:700;color:var(--dng)">TAN &gt;1.0 🚨</td>
+                <td style="background:rgba(255,61,87,.06);font-size:10px"><strong style="color:var(--dng)">Nitrosomonas en crise</strong><br>Arrêt alim + vidange 15% + mélasse urgence + Nitroso.</td>
+                <td style="background:rgba(255,61,87,.1);font-size:10px"><strong style="color:var(--dng)">Crise grave</strong><br>Arrêt alim + vidange 20% + NaCl 5 g/L + BioClean 100 + eau mature</td>
+                <td style="background:rgba(255,61,87,.15);font-size:10px"><strong style="color:var(--dng)">🚨 EFFONDREMENT TOTAL</strong><br>O₂ pur + vidange max + BioClean dose choc · Urgence absolue</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- T12 RATIONNEMENT ALIMENTAIRE -->
@@ -863,19 +932,26 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
             <div>
               <div style="font-size:9px;color:var(--t3);margin-bottom:2px">
                 TAN mesuré (mg/L)
-                <span id="calc-tan-phase-badge" style="margin-left:4px;padding:1px 5px;border-radius:6px;font-size:8px;font-weight:700;background:rgba(0,201,167,.15);color:var(--acc)">Phase 1</span>
+                <span id="calc-tan-phase-badge" style="margin-left:4px;padding:1px 5px;border-radius:6px;font-size:8px;font-weight:700;background:rgba(0,201,167,.15);color:var(--acc)">Préventif</span>
               </div>
               <input type="number" id="calc-tan" class="ci" style="width:75px;border-color:var(--acc)" placeholder="ex: 0.5" step="0.1" oninput="calcRation()">
             </div>
+            <div>
+              <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Semaine (1–22)</div>
+              <input type="number" id="calc-week" class="ci" style="width:60px;border-color:var(--gold)" placeholder="8" min="1" max="22" oninput="calcRation()">
+            </div>
           </div>
 
-          <!-- Explication phases -->
+          <!-- Explication méthodes C/N -->
           <div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
             <div style="font-size:9px;padding:3px 8px;border-radius:6px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.2);color:var(--acc)">
-              <strong>Phase 1</strong> — TAN &lt; 1 mg/L : dose par kg d'aliment (formule classique)
+              <strong>🛡️ Préventif</strong> — TAN &lt; 1 mg/L : dose basée sur aliment distribué · C:N par phase
             </div>
             <div style="font-size:9px;padding:3px 8px;border-radius:6px;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.2);color:var(--warn)">
-              <strong>Phase 2</strong> — TAN ≥ 1 mg/L : dose selon TAN × volume bassin
+              <strong>🔧 Correctif</strong> — TAN ≥ 1 mg/L : dose basée sur TAN × volume bassin
+            </div>
+            <div style="font-size:9px;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);color:var(--gold)">
+              <strong>C:N</strong> : S0–S4 = 15:1 · S4–S16 = 10:1 · S16–S22 = 15:1
             </div>
           </div>
 
@@ -1001,21 +1077,69 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         </div>
       </div>
 
-      <!-- Seuils qualité eau -->
+      <!-- Seuils qualité eau — Source: Mémo paramètres eau v4.1 ICHTUS -->
       <div class="card">
         <div class="ctitle"><span class="dot" style="background:var(--dng)"></span>Règle 5 — Qualité de l'eau &amp; seuils d'arrêt alimentation</div>
         <div class="tw">
           <table>
-            <thead><tr><th>Paramètre</th><th>Valeur optimale</th><th>Seuil d'alerte</th><th>Action</th></tr></thead>
+            <thead><tr><th>Paramètre</th><th>Optimal</th><th>Vigilance</th><th>Alerte</th><th>Urgence</th></tr></thead>
             <tbody>
-              <tr><td>Température</td><td style="color:var(--acc)">27–30°C</td><td style="color:var(--warn)">&gt;32°C ou &lt;22°C</td><td style="font-size:10px">Réduire ou arrêter alimentation</td></tr>
-              <tr><td>DO (oxygène)</td><td style="color:var(--acc)">≥ 5 ppm (cible 6–8)</td><td style="color:var(--dng)">&lt; 3 ppm</td><td style="font-size:10px">Arrêt alimentation — urgence aération</td></tr>
-              <tr><td>NH₃ (ammoniac)</td><td style="color:var(--acc)">&lt; 0.07 mg/L</td><td style="color:var(--dng)">&gt; 0.5 mg/L</td><td style="font-size:10px">−50% ration · mélasse · vidange</td></tr>
-              <tr><td>NO₂ (nitrites)</td><td style="color:var(--acc)">&lt; 0.5 mg/L</td><td style="color:var(--dng)">&gt; 1 mg/L</td><td style="font-size:10px">Vidange 15% + NaCl 1–3 g/L</td></tr>
-              <tr><td>Volume Imhoff</td><td style="color:var(--acc)">25–40 ml/L</td><td style="color:var(--dng)">&lt;10 ou &gt;50 ml/L</td><td style="font-size:10px">&lt;10 : arrêt vidange + mélasse max · &gt;50 : vidange 15% urgente</td></tr>
-              <tr><td>pH</td><td style="color:var(--acc)">6.5–8.5</td><td style="color:var(--dng)">&lt;6 ou &gt;9</td><td style="font-size:10px">HCl ou bicarbonate de sodium</td></tr>
+              <tr><td>Température</td><td style="color:var(--acc)">26–30°C</td><td style="color:var(--warn)">30–32°C</td><td style="color:var(--dng)">&gt;32°C ou &lt;22°C</td><td style="color:var(--dng)">&gt;35°C → arrêt alim</td></tr>
+              <tr><td>DO (oxygène)</td><td style="color:var(--acc)">6–8 ppm</td><td style="color:var(--warn)">4–5 ppm → −30% ration</td><td style="color:var(--dng)">3–4 ppm → −50%</td><td style="color:var(--dng)">&lt;3 ppm → arrêt total</td></tr>
+              <tr><td>TAN (ammoniac)</td><td style="color:var(--acc)">&lt;0.5 mg/L</td><td style="color:var(--warn)">0.5–1.0 → −20% ration</td><td style="color:var(--dng)">1.0–2.0 → −50% + vidange</td><td style="color:var(--dng)">&gt;2.0 → arrêt + vidange 20%</td></tr>
+              <tr><td>NO₂ (nitrites)</td><td style="color:var(--acc)">&lt;0.2 mg/L</td><td style="color:var(--warn)">0.2–0.5 → NaCl 1 g/L</td><td style="color:var(--dng)">0.5–1.0 → vidange + NaCl 2 g/L</td><td style="color:var(--dng)">&gt;1.0 → vidange 15% + NaCl 3–5 g/L</td></tr>
+              <tr><td>pH</td><td style="color:var(--acc)">7.0–7.8</td><td style="color:var(--warn)">6.5–7.0 → vérifier TAC</td><td style="color:var(--dng)">6.0–6.5 → CaCO₃ urgent</td><td style="color:var(--dng)">&lt;6.0 → CaCO₃ SANS DÉLAI</td></tr>
+              <tr><td>Imhoff (tilapia)</td><td style="color:var(--acc)">25–40 ml/L</td><td style="color:var(--warn)">40–45 → vidange 15%</td><td style="color:var(--dng)">&gt;45 → vidange urgente</td><td style="color:var(--dng)">&gt;50 → arrêt mélasse 48h</td></tr>
+              <tr><td>TAC (alcalinité)</td><td style="color:var(--acc)">&gt;150 mg/L</td><td style="color:var(--warn)">80–150 → CaCO₃ préventif</td><td style="color:var(--dng)">50–80 → CaCO₃ immédiat</td><td style="color:var(--dng)">&lt;50 → URGENCE dose fractionnée</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- C — Calculateur TAC / CaCO₃ -->
+      <div class="card" style="border-color:rgba(167,139,250,.25)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:.65rem">
+          <span style="font-size:16px">🧪</span>
+          <div class="ctitle" style="margin-bottom:0"><span class="dot" style="background:var(--purp)"></span>Calculateur TAC / CaCO₃</div>
+          <div style="margin-left:auto;font-size:9px;color:var(--t3)">Source : Mémo TAT/CaCO₃ ICHTUS v1.0</div>
+        </div>
+        <p style="font-size:10px;color:var(--warn);line-height:1.7;margin-bottom:.6rem">
+          ⚠️ <strong>Règle absolue :</strong> Toujours mesurer le TAC AVANT tout ajout de CaCO₃. Le CaCO₃ ne s'ajoute QUE si TAC &lt; 150 mg/L.
+        </p>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:.5rem">
+          <div>
+            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">TAC mesuré (mg/L)</div>
+            <input type="number" id="tac-val" class="ci" style="width:90px;border-color:var(--purp)" placeholder="ex: 80" oninput="calcTAC()">
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Volume bassin (m³)</div>
+            <input type="number" id="tac-vol" class="ci" style="width:80px" placeholder="3.8" step="0.1" value="3.8" oninput="calcTAC()">
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">TAC cible (mg/L)</div>
+            <input type="number" id="tac-cible" class="ci" style="width:80px" value="150" oninput="calcTAC()">
+          </div>
+        </div>
+        <div id="tac-result" style="font-size:11px;color:var(--t2)">
+          <span style="color:var(--t3)">Saisissez le TAC mesuré pour obtenir la dose CaCO₃</span>
+        </div>
+        <!-- Tableau de correction rapide 3.8m³ -->
+        <div style="margin-top:.6rem">
+          <div style="font-size:9px;color:var(--t3);font-weight:700;margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.5px">Tableau rapide — Bassin 3.8 m³</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.25rem">
+            ${[[130,20,'7.6 g','Aucune'],[100,50,'19.0 g','Modérée'],[80,70,'26.6 g','Modérée'],[50,100,'38.0 g (2 doses)','Élevée']].map(([tac,def,dose,urg])=>`
+            <div style="background:var(--card);border:1px solid var(--b1);border-radius:7px;padding:.4rem .5rem;text-align:center">
+              <div style="font-size:9px;color:var(--purp);font-weight:700">TAC ${tac}</div>
+              <div style="font-size:8px;color:var(--t3)">déficit ${def}</div>
+              <div style="font-size:11px;font-weight:700;color:var(--t1)">${dose}</div>
+              <div style="font-size:8px;color:${urg==='Élevée'?'var(--dng)':urg==='Modérée'?'var(--warn)':'var(--t3)'}">Urgence: ${urg}</div>
+            </div>`).join('')}
+          </div>
+        </div>
+        <div style="font-size:9px;color:var(--t3);margin-top:.5rem;line-height:1.6">
+          Formule : Dose (g) = (TAC cible − TAC mesuré) × V(m³) × 1000 × 0.1 ÷ 1000 = (TAC cible − TAC) × V × 0.1<br>
+          ⚠️ Ne jamais dépasser 50 mg/L de correction par dose. Si déficit &gt; 50 mg/L → 2 doses espacées de 12h.<br>
+          🔑 TAC ≥ 150 + pH bas → utiliser NaHCO₃ à la place (chercher cause : CO₂ excessif, TAN élevé).
         </div>
       </div>
     </div>
@@ -1123,11 +1247,45 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         <div>
           <div class="card">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:.6rem">
-              <div class="ctitle" style="margin-bottom:0"><span class="dot"></span><span class="ldot"></span>Courbe</div>
+              <div class="ctitle" style="margin-bottom:0"><span class="dot"></span><span class="ldot"></span>Courbe croissance</div>
               <select id="chart-b" class="si" style="font-size:11px;margin-left:auto" onchange="renderChart()"><option value="">Tous</option></select>
             </div>
             <div class="cw"><canvas id="gc"></canvas></div>
           </div>
+        </div>
+      </div>
+
+      <!-- MODULE FCR & SURVIE HEBDOMADAIRE — Outil FCR v2.0 ICHTUS -->
+      <div class="card" style="margin-top:.75rem">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:.65rem">
+          <div style="font-size:18px">📊</div>
+          <div>
+            <div class="ctitle" style="margin-bottom:0"><span class="dot" style="background:var(--gold)"></span>Moniteur FCR &amp; Survie — 22 semaines</div>
+            <div style="font-size:9px;color:var(--t3)">570 alevins/bassin · Survie cible 90% · FCR objectif 1.3 · Source : Outil FCR v2.0 ICHTUS</div>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:.5rem">
+            <select id="fcr-bassin" class="si" style="font-size:11px" onchange="renderFCRModule()"><option value="">Sélectionner bassin...</option></select>
+          </div>
+        </div>
+        <div class="mgrid" id="fcr-metrics" style="margin-bottom:.6rem"></div>
+        <div class="tw" style="max-height:420px;overflow-y:auto">
+          <table>
+            <thead><tr>
+              <th>Sem.</th><th>Phase</th>
+              <th style="color:#60a5fa">Poids moy. (g)<br><small>pesée bimense.</small></th>
+              <th style="color:var(--gold)">Aliment (kg)<br><small>cette semaine</small></th>
+              <th style="color:var(--dng)">Morts<br><small>cette sem.</small></th>
+              <th style="color:var(--acc)">Survie %</th>
+              <th style="color:var(--acc)">FCR cumulé</th>
+              <th style="color:var(--t3)">FCR réf.</th>
+              <th style="color:var(--warn)">Écart</th>
+            </tr></thead>
+            <tbody id="fcr-tbody"><tr><td colspan="9" style="text-align:center;color:var(--t3);padding:1rem">Sélectionnez un bassin pour commencer le suivi</td></tr></tbody>
+          </table>
+        </div>
+        <div style="margin-top:.5rem;font-size:9px;color:var(--t3);line-height:1.6">
+          FCR = Aliment cumulé ÷ Gain biomasse · Poids moyen : saisir uniquement lors des pesées bimensuelles · 
+          <strong style="color:var(--acc)">FCR vert</strong> = conforme · <strong style="color:var(--warn)">orange</strong> = dépasse référence · <strong style="color:var(--dng)">rouge</strong> = dépasse 1.5
         </div>
       </div>
     </div>
@@ -1642,14 +1800,14 @@ const SPECIES_PROFILES=[
     // Paramètres de croissance
     gmqCible:2.9,       // g/jour — cible croissance
     poidsDepart:5,      // g — poids de départ pour courbe cible
-    // Plages optimales eau
-    tempMin:26, tempOpt:29, tempMax:32,
-    phMin:6.5,  phOpt:7.5, phMax:8.5,
-    doMin:5,    doOpt:7,   doAlerte:3,
-    nh3Max:0.07, nh3Alerte:0.5,
-    no2Max:0.5,  no2Alerte:1.0,
-    // Imhoff spécifique tilapia (filtreur actif du floc)
-    imhoffOpt:[25,40], imhoffMin:10, imhoffMax:50,
+    // Plages optimales eau — Source: Mémo paramètres eau v4.1 ICHTUS
+    tempMin:26, tempOpt:28, tempMax:32,
+    phMin:7.0,  phOpt:7.4,  phMax:7.8,   // pH harmonisé 7.0-7.8 — amendement v7
+    doMin:5,    doOpt:7,    doAlerte:4,   // vigilance à 4-5 ppm
+    nh3Max:0.07, nh3Alerte:0.5,          // vigilance 0.5, alerte 1.0
+    no2Max:0.2,  no2Alerte:0.5,          // vigilance 0.2 mg/L (mémo)
+    // Imhoff spécifique tilapia
+    imhoffOpt:[25,40], imhoffMin:10, imhoffMax:45, // alerte à 45 (pas 50)
     bioflocReduction:0.20,  // réduction ration vs élevage classique
     bioflocNote:'Le tilapia consomme activement le floc bactérien. Volume optimal 25–40 ml/L.',
     // Mélasse C/N
@@ -1774,9 +1932,15 @@ const KOUDIJS_PROFILE={
     {id:'K1',name:'9004 Poudre 0',   granule:'<0.5mm',    protein:40,maxPoids:1,   rate:0.080,freq:6,color:'#a78bfa',stage:'0.01–1 g'},
     {id:'K2',name:'9004 Crumble 1',  granule:'0.5-0.8mm', protein:40,maxPoids:2.5, rate:0.048,freq:5,color:'#c084fc',stage:'1–2.5 g'},
     {id:'K3',name:'9004 Crumble 2',  granule:'0.8-1.2mm', protein:40,maxPoids:5,   rate:0.044,freq:5,color:'#34d399',stage:'2.5–5 g'},
-    {id:'K4',name:'9008 Floating 2.0mm', granule:'2.0mm',     protein:32,maxPoids:50,  rate:0.034, freq:3,color:'#60a5fa',stage:'5–50 g'},
-    {id:'K5',name:'9008 Floating 3.0mm', granule:'3.0mm',     protein:32,maxPoids:200, rate:0.0215,freq:2,color:'#f59e0b',stage:'50–200 g'},
-    {id:'K6',name:'9008 Floating 4.5mm', granule:'4.5mm',     protein:32,maxPoids:9999,rate:0.015, freq:2,color:'#f87171',stage:'200–500+ g'},
+    {id:'K1',name:'9004 Poudre 0',   granule:'<0.5mm',    protein:40,maxPoids:1,   rate:0.080,freq:6,color:'#a78bfa',stage:'0.01–1 g'},
+    {id:'K2',name:'9004 Crumble 1',  granule:'0.5-0.8mm', protein:40,maxPoids:2.5, rate:0.048,freq:5,color:'#c084fc',stage:'1–2.5 g'},
+    {id:'K3',name:'9004 Crumble 2',  granule:'0.8-1.2mm', protein:40,maxPoids:5,   rate:0.044,freq:5,color:'#34d399',stage:'2.5–5 g'},
+    {id:'K4',name:'9008 Floating 2.0mm', granule:'2.0mm', protein:32,maxPoids:25,  rate:0.034, freq:6,color:'#60a5fa',stage:'5–25 g'},
+    {id:'K4b',name:'9008 Floating 2.0mm',granule:'2.0mm', protein:32,maxPoids:50,  rate:0.032, freq:5,color:'#38bdf8',stage:'25–50 g'},
+    {id:'K5',name:'9008 Floating 3.0mm', granule:'3.0mm', protein:32,maxPoids:100, rate:0.023, freq:4,color:'#f59e0b',stage:'50–100 g'},
+    {id:'K5b',name:'9008 Floating 3.0mm',granule:'3.0mm', protein:32,maxPoids:200, rate:0.020, freq:4,color:'#fbbf24',stage:'100–200 g'},
+    {id:'K6',name:'9008 Floating 4.5mm', granule:'4.5mm', protein:32,maxPoids:400, rate:0.016, freq:3,color:'#f87171',stage:'200–400 g'},
+    {id:'K6b',name:'9008 Floating 4.5mm',granule:'4.5mm', protein:32,maxPoids:9999,rate:0.014, freq:3,color:'#fca5a5',stage:'>400 g · note: >600g → 2×/j'},
   ]
 };
 
@@ -2577,38 +2741,63 @@ function calcBassin(b){
 }
 
 // ═══════════════════════════════════════════════
-// CONSTANTES CALCUL MÉLASSE C:N = 15:1
-// Source: Biofloc Carbon Source Calculator (QB Labs)
-// Mélasse : 31% carbone, densité 1.4 kg/L
-// Azote feed : protéines × 0.16, dont 75% non assimilé
-// Carbone feed : 16% du poids aliment, dont 80% non assimilé
+// CONSTANTES CALCUL MÉLASSE — Outil C/N Mélasse v2.0 ICHTUS
+// Source: OUTIL_DE_CALCUL_DE_LA_QTE_DE_MELASSE... xlsx
+// Facteur effectif mélasse = f1×f2×f3×f4 = 0.80×0.75×0.50×0.70 = 0.21
 // ═══════════════════════════════════════════════
-const CN_TARGET=15;
-const MOLASSES_CARBON=0.31;   // 31% carbone
-const MOLASSES_DENSITY=1.4;   // kg/L
-const N_PROTEIN_FACTOR=0.16;  // 16% des protéines = azote
-const N_NOT_ASSIM=0.75;       // 75% azote non assimilé par le poisson
-const C_FEED_FACTOR=0.16;     // 16% de carbone dans l'aliment
-const C_NOT_ASSIM=0.80;       // 80% carbone non assimilé
+const MOLASSES_DENSITY=1.4;      // kg/L — mélasse canne à sucre 28-30°C
+const MOLASSES_EFFECTIVE=0.21;   // facteur effectif (f1×f2×f3×f4) — CORRIGÉ (était 0.31)
+const C_FEED_FACTOR=0.50;        // fraction C dans matière sèche aliment — CORRIGÉ (était 0.16)
+const FEED_DRY_MATTER=0.90;      // fraction matière sèche aliment (humidité ~10%)
+const N_PROTEIN_FACTOR=0.155;    // N par gramme protéine brute (N=PB/6.45) — CORRIGÉ (était 0.16)
+const FEED_NON_ASSIM=0.70;       // fraction non assimilée (fèces+TAN) — CORRIGÉ (était 0.75)
 
-// Phase 1 : dose mélasse par kg d'aliment (TAN < 1 mg/L)
-// Formule classique basée sur charge protéique
-function calcMolassePhase1(feedKg, proteinPct){
-  const nNotAssim = feedKg * proteinPct * N_PROTEIN_FACTOR * N_NOT_ASSIM;
-  const cNotAssim = feedKg * C_FEED_FACTOR * C_NOT_ASSIM;
-  const cNeeded = nNotAssim * CN_TARGET - cNotAssim;
-  if(cNeeded <= 0) return 0;
-  const molassesKg = cNeeded / MOLASSES_CARBON;
-  return molassesKg / MOLASSES_DENSITY * 1000; // ml
+// Ratio C/N par phase de production (outil v2.0)
+const CN_PHASE={demarrage:15, grossissement:10, finition:15};
+function getCNTarget(week=1){
+  if(week<=4)return CN_PHASE.demarrage;
+  if(week<=16)return CN_PHASE.grossissement;
+  return CN_PHASE.finition;
+}
+function getPhaseLabel(week){
+  if(week<=4)return{label:'Démarrage (S0–S4)',cn:15,color:'var(--acc)'};
+  if(week<=16)return{label:'Grossissement (S4–S16)',cn:10,color:'var(--gold)'};
+  return{label:'Finition (S16–S22)',cn:15,color:'var(--dng)'};
 }
 
-// Phase 2 : dose mélasse basée sur TAN mesuré (TAN >= 1 mg/L)
-// Formule : traiter l'azote ammoniacal existant dans le volume d'eau
-function calcMolassePhase2(tanMgL, volL){
-  const tanKg = tanMgL * volL / 1e6;
-  const cNeeded = tanKg * CN_TARGET;
-  const molassesKg = cNeeded / MOLASSES_CARBON;
-  return molassesKg / MOLASSES_DENSITY * 1000; // ml
+// ── MÉTHODE PRÉVENTIVE (quotidienne, basée sur aliment distribué) ──
+// TCO = feedKg × C_FEED × %sec × NonAssim
+// TAO = feedKg × %prot × %sec × NonAssim × N/prot
+// RCN = TCO / TAO
+// Déficit = MAX(0, TAO × ratio_cible − TCO)
+// Mélasse (ml) = Déficit / MOLASSES_EFFECTIVE / MOLASSES_DENSITY × 1000
+function calcMolassePreventive(feedKg, proteinPct, cnTarget){
+  const TCO=feedKg*C_FEED_FACTOR*FEED_DRY_MATTER*FEED_NON_ASSIM;
+  const TAO=feedKg*proteinPct*FEED_DRY_MATTER*FEED_NON_ASSIM*N_PROTEIN_FACTOR;
+  const RCN=TAO>0?TCO/TAO:0;
+  const deficit=Math.max(0, TAO*cnTarget - TCO);
+  const molassesKg=deficit/MOLASSES_EFFECTIVE;
+  const molassesMl=molassesKg/MOLASSES_DENSITY*1000;
+  return{TCO,TAO,RCN,deficit,molassesMl};
+}
+// Alias Phase1 pour compatibilité ascendante
+function calcMolassePhase1(feedKg, proteinPct, cnTarget=15){
+  return calcMolassePreventive(feedKg,proteinPct,cnTarget).molassesMl;
+}
+
+// ── MÉTHODE CORRECTIVE (si TAN ≥ 1 mg/L, basée sur mesure terrain) ──
+// TAN_total(g) = TAN(mg/L) × Volume(L) / 1000
+// TCO_cible(g) = TAN_total × ratio_cible
+// Mélasse (ml) = TCO_cible / MOLASSES_EFFECTIVE / MOLASSES_DENSITY × 1000
+function calcMolasseCorrective(tanMgL, volL, cnTarget=15){
+  const tanTotalG=tanMgL*volL/1000;
+  const tcoCible=tanTotalG*cnTarget;
+  const molassesKg=tcoCible/MOLASSES_EFFECTIVE;
+  return molassesKg/MOLASSES_DENSITY*1000;
+}
+// Alias Phase2 pour compatibilité
+function calcMolassePhase2(tanMgL, volL, cnTarget=15){
+  return calcMolasseCorrective(tanMgL, volL, cnTarget);
 }
 
 // Calculateur rapide onglet Rationnement
@@ -2618,6 +2807,7 @@ function calcRation(){
   const imhoff=parseFloat(G('calc-imhoff')?.value)||30;
   const vol=parseFloat(G('calc-vol')?.value)||3800;
   const tan=G('calc-tan')?.value===''?null:parseFloat(G('calc-tan')?.value);
+  const week=parseFloat(G('calc-week')?.value)||8;
   const res=G('calc-result');if(!res)return;
 
   if(!nb||!poids){
@@ -2629,6 +2819,8 @@ function calcRation(){
   const ft=getRationEntry(poids);
   const nomComplet=getFeedFullName(ft);
   const proteinPct=ft.protein/100||0.32;
+  const cnTarget=getCNTarget(week);
+  const phase=getPhaseLabel(week);
 
   // Ajustement Imhoff sur la ration
   let mult=1;
@@ -2636,71 +2828,60 @@ function calcRation(){
   else if(imhoff<15)mult=0.875;
   else if(imhoff<25)mult=0.825;
   else if(imhoff<=40)mult=0.80;
-  else if(imhoff<=50)mult=0.75;
+  else if(imhoff<=45)mult=0.75;
   else mult=0.65;
 
   const rJour=biomasse*(ft.rate||0.020)*mult;
   const rRepas=rJour/(ft.freq||2);
 
-  // Calcul mélasse selon phase
-  const isPhase2 = tan!==null && tan>=1;
+  // Badge phase C/N
   const phaseBadge=G('calc-tan-phase-badge');
+  const isPhase2=tan!==null&&tan>=1;
   if(phaseBadge){
-    if(tan===null){
-      phaseBadge.textContent='Phase 1';
-      phaseBadge.style.background='rgba(0,201,167,.15)';
-      phaseBadge.style.color='var(--acc)';
-    } else if(isPhase2){
-      phaseBadge.textContent='Phase 2';
-      phaseBadge.style.background='rgba(245,166,35,.15)';
-      phaseBadge.style.color='var(--warn)';
-    } else {
-      phaseBadge.textContent='Phase 1';
-      phaseBadge.style.background='rgba(0,201,167,.15)';
-      phaseBadge.style.color='var(--acc)';
-    }
+    phaseBadge.textContent=isPhase2?'Correctif (TAN≥1)':'Préventif';
+    phaseBadge.style.background=isPhase2?'rgba(245,166,35,.15)':'rgba(0,201,167,.15)';
+    phaseBadge.style.color=isPhase2?'var(--warn)':'var(--acc)';
   }
 
   let melasseHtml='';
-  let melasseVal=0;
   if(isPhase2){
-    // Phase 2 : basé sur TAN × volume
-    const mel2=calcMolassePhase2(tan,vol);
-    melasseVal=mel2;
+    // CORRECTIF basé sur TAN
+    const mel=calcMolasseCorrective(tan,vol,cnTarget);
+    const tanTotalG=(tan*vol/1000).toFixed(1);
     melasseHtml=`
       <div style="grid-column:1/-1;margin-top:.3rem;padding:.4rem .6rem;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:7px">
-        <div style="font-size:9px;color:var(--warn);font-weight:700;margin-bottom:3px">📊 PHASE 2 — TAN = ${tan} mg/L · Volume = ${vol} L</div>
+        <div style="font-size:9px;color:var(--warn);font-weight:700;margin-bottom:3px">🔧 CORRECTIF — TAN = ${tan} mg/L · Vol = ${vol} L · C:N = ${cnTarget}:1 · ${phase.label}</div>
         <div style="display:flex;gap:1rem;flex-wrap:wrap">
-          <div><span style="color:var(--t3)">TAN à traiter</span> <strong style="color:var(--warn)">${(tan*vol/1e6*1000).toFixed(1)} g</strong></div>
-          <div><span style="color:var(--t3)">Mélasse bassin/jour</span> <strong style="color:var(--warn);font-size:13px">${Math.round(mel2)} ml</strong></div>
-          <div><span style="color:var(--t3)">C:N cible</span> <strong style="color:var(--gold)">15:1</strong></div>
+          <div><span style="color:var(--t3)">TAN total bassin</span> <strong style="color:var(--warn)">${tanTotalG} g</strong></div>
+          <div><span style="color:var(--t3)">Mélasse corrective</span> <strong style="color:var(--warn);font-size:13px">${Math.round(mel)} ml</strong></div>
         </div>
-        <div style="font-size:9px;color:var(--t3);margin-top:3px">Formule : TAN (mg/L) × Volume (L) × 15 ÷ 0.31 ÷ 1.4 ÷ 1000</div>
+        <div style="font-size:9px;color:var(--t3);margin-top:3px">Formule : TAN(mg/L)×Vol(L)/1000 × C:N ÷ 0.21 ÷ 1.4 · Diluer dans 2L eau · Verser en pluie · Remesurer TAN H+24</div>
       </div>`;
   } else {
-    // Phase 1 : basé sur la ration d'aliment
-    const mel1=calcMolassePhase1(rJour, proteinPct);
-    melasseVal=mel1;
+    // PRÉVENTIF basé sur aliment
+    const res2=calcMolassePreventive(rJour,proteinPct,cnTarget);
+    const {TCO,TAO,RCN,molassesMl}=res2;
     melasseHtml=`
       <div style="grid-column:1/-1;margin-top:.3rem;padding:.4rem .6rem;background:rgba(0,201,167,.06);border:1px solid rgba(0,201,167,.2);border-radius:7px">
-        <div style="font-size:9px;color:var(--acc);font-weight:700;margin-bottom:3px">📊 PHASE 1 — TAN &lt; 1 mg/L · Protéines ${Math.round(proteinPct*100)}%${tan!==null?` · TAN = ${tan} mg/L`:''}</div>
+        <div style="font-size:9px;color:var(--acc);font-weight:700;margin-bottom:3px">🛡️ PRÉVENTIF — ${phase.label} · C:N cible = ${cnTarget}:1 · RCN aliment = ${RCN.toFixed(1)}:1</div>
         <div style="display:flex;gap:1rem;flex-wrap:wrap">
-          <div><span style="color:var(--t3)">Mélasse/kg aliment</span> <strong style="color:var(--acc)">${Math.round(mel1/rJour)} ml/kg</strong></div>
-          <div><span style="color:var(--t3)">Mélasse bassin/jour</span> <strong style="color:var(--acc);font-size:13px">${Math.round(mel1)} ml</strong></div>
-          <div><span style="color:var(--t3)">C:N cible</span> <strong style="color:var(--gold)">15:1</strong></div>
+          <div><span style="color:var(--t3)">TCO carbone</span> <strong style="color:var(--t1)">${(TCO*1000).toFixed(1)} g</strong></div>
+          <div><span style="color:var(--t3)">TAO azote</span> <strong style="color:var(--t1)">${(TAO*1000).toFixed(1)} g</strong></div>
+          <div><span style="color:var(--t3)">Mélasse préventive/j</span> <strong style="color:var(--acc);font-size:13px">${Math.round(molassesMl)} ml</strong></div>
+          <div><span style="color:var(--t3)">Par repas ×${ft.freq}</span> <strong style="color:var(--acc)">${Math.round(molassesMl/ft.freq)} ml</strong></div>
         </div>
-        <div style="font-size:9px;color:var(--t3);margin-top:3px">Formule : (N×0.75×15 − C×0.80) ÷ 0.31 ÷ 1.4 — Mélasse : 31% carbone, densité 1.4 kg/L</div>
+        <div style="font-size:9px;color:var(--t3);margin-top:3px">Facteur effectif mélasse : 0.21 · Densité : 1.4 kg/L · Source : Outil C/N v2.0 ICHTUS</div>
       </div>`;
   }
 
-  const imhoffLabel=imhoff<10?'⚠️ Ration pleine':imhoff<=25?'Réduction −10 à −20%':imhoff<=40?'✅ Optimal −20%':imhoff<=50?'⚠️ Dense −25%':'🚨 Excessif';
+  const imhoffLabel=imhoff<10?'⚠️ Ration pleine':imhoff<=25?'Réduction −10 à −25%':imhoff<=40?'✅ Optimal −20%':imhoff<=45?'⚠️ Dense −25%':'🚨 Excessif';
 
   res.innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.35rem;margin-bottom:.3rem">
       <div><span style="color:var(--t3)">Biomasse</span> <strong style="color:var(--t1)">${biomasse.toFixed(1)} kg</strong></div>
       <div><span style="color:var(--t3)">Produit</span> <strong style="color:var(--gold)">${nomComplet}</strong></div>
       <div><span style="color:var(--t3)">Ration/jour</span> <strong style="color:var(--acc)">${rJour.toFixed(3)} kg</strong></div>
-      <div><span style="color:var(--t3)">Par repas ×${ft.freq||2}</span> <strong style="color:var(--acc)">${rRepas.toFixed(3)} kg</strong></div>
+      <div><span style="color:var(--t3)">Par repas ×${ft.freq}</span> <strong style="color:var(--acc)">${rRepas.toFixed(3)} kg</strong></div>
       <div style="font-size:9px;color:var(--t3)">${imhoffLabel}</div>
     </div>
     ${melasseHtml}`;
@@ -2716,7 +2897,7 @@ function sw(id){
   ['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11','t12'].forEach((t,i)=>{
     if(t===id)document.querySelectorAll('#screen-farm .tb')[i]?.classList.add('active');
   });
-  if(id==='t2')renderFeed();if(id==='t3')renderChart();if(id==='t4')upLog();
+  if(id==='t2')renderFeed();if(id==='t3'){renderChart();renderFCRModule();}if(id==='t4')upLog();
   if(id==='t5')upCompta();if(id==='t6')upCons();if(id==='t7')renderRecoltes();
   if(id==='t8')renderFiche();if(id==='t9')renderIoT();
   if(id==='t10'){renderRespAdmin();const fc=G('rsp-bkp-farmcode');if(fc)fc.textContent=APP.farmCode||'';}
@@ -3165,7 +3346,7 @@ function renderFeedMetrics(){
 // ═══════════════════════════════════════════════
 function popSelects(){
   const names=APP.state.bassins.map(b=>b.name);
-  ['sc-bassin','cons-b','chart-b','sc-filter'].forEach(id=>{
+  ['sc-bassin','cons-b','chart-b','sc-filter','fcr-bassin'].forEach(id=>{
     const sel=G(id);if(!sel)return;
     const cur=sel.value,hasAll=(id==='chart-b'||id==='sc-filter');
     sel.innerHTML=hasAll?'<option value="">Tous</option>':'<option value="">Sélectionner...</option>';
@@ -4725,6 +4906,137 @@ function openThemeModal(){
     </div>`;
   }).join('');
   G('theme-modal').classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════
+// CALCULATEUR TAC / CaCO₃
+// Source: Mémo Technique TAT/CaCO₃ ICHTUS v1.0
+// ═══════════════════════════════════════════════
+function calcTAC(){
+  const tac=parseFloat(G('tac-val')?.value);
+  const vol=parseFloat(G('tac-vol')?.value)||3.8;
+  const cible=parseFloat(G('tac-cible')?.value)||150;
+  const res=G('tac-result');if(!res)return;
+  if(isNaN(tac)){res.innerHTML='<span style="color:var(--t3)">Saisissez le TAC mesuré</span>';return;}
+  if(tac>=cible){
+    res.innerHTML=`<div style="color:var(--acc);font-weight:700">✅ TAC suffisant (${tac} ≥ ${cible} mg/L) — Ne PAS ajouter de CaCO₃.</div>
+      <div style="font-size:10px;color:var(--t2);margin-top:3px">Si pH est quand même bas → utiliser NaHCO₃ (chercher cause : CO₂ excessif, TAN élevé).</div>`;
+    return;
+  }
+  const deficit=cible-tac;
+  // Formule : (cible-TAC) × V(m³) × 1000 × 0.1 / 1000 = (cible-TAC) × V × 0.1
+  const dose=deficit*vol*0.1;
+  const fractionnee=deficit>50;
+  const dose1=fractionnee?Math.round(dose/2):dose;
+  const urgColor=tac<50?'var(--dng)':tac<80?'var(--warn)':'var(--t2)';
+  const urgLabel=tac<50?'🚨 URGENCE':tac<80?'⚠️ Élevée':'Modérée';
+  res.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.35rem;margin-bottom:.35rem">
+      <div><span style="color:var(--t3)">Déficit</span> <strong style="color:var(--purp)">${deficit} mg/L</strong></div>
+      <div><span style="color:var(--t3)">Volume</span> <strong style="color:var(--t1)">${vol} m³</strong></div>
+      <div><span style="color:var(--t3)">Urgence</span> <strong style="color:${urgColor}">${urgLabel}</strong></div>
+      <div><span style="color:var(--t3)">Dose CaCO₃</span> <strong style="color:var(--purp);font-size:13px">${dose.toFixed(1)} g</strong></div>
+      ${fractionnee?`<div style="grid-column:1/-1;font-size:9px;color:var(--warn)">⚠️ Déficit &gt; 50 mg/L → 2 doses de ${dose1.toFixed(1)} g espacées 12h</div>`:''}
+    </div>
+    <div style="font-size:9px;color:var(--t3);line-height:1.6">
+      Méthode : Prélever 3–5 L eau bassin · Peser ${dose.toFixed(1)} g CaCO₃ · Dissoudre (suspension laiteuse OK) · Verser en plusieurs points pendant aération · Remesurer pH 2h après · Enregistrer dans cahier de suivi.
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// FCR DE RÉFÉRENCE PAR SEMAINE — Outil FCR & Survie v2.0 ICHTUS
+// ═══════════════════════════════════════════════
+const FCR_REF=[
+  {s:1,fcr:1.90,phase:'Démarrage'},{s:2,fcr:1.80,phase:'Démarrage'},
+  {s:3,fcr:1.60,phase:'Démarrage'},{s:4,fcr:1.40,phase:'Démarrage'},
+  {s:5,fcr:1.25,phase:'Amélioration'},{s:6,fcr:1.15,phase:'Amélioration'},
+  {s:7,fcr:1.10,phase:'Amélioration'},{s:8,fcr:1.05,phase:'Amélioration'},
+  {s:9,fcr:1.00,phase:'Pic efficacité'},{s:10,fcr:1.00,phase:'Pic efficacité'},
+  {s:11,fcr:1.02,phase:'Pic efficacité'},{s:12,fcr:1.05,phase:'Pic efficacité'},
+  {s:13,fcr:1.08,phase:'Grossissement'},{s:14,fcr:1.10,phase:'Grossissement'},
+  {s:15,fcr:1.15,phase:'Grossissement'},{s:16,fcr:1.18,phase:'Grossissement'},
+  {s:17,fcr:1.20,phase:'Finition'},{s:18,fcr:1.22,phase:'Finition'},
+  {s:19,fcr:1.25,phase:'Finition'},{s:20,fcr:1.28,phase:'Finition'},
+  {s:21,fcr:1.30,phase:'Finition'},{s:22,fcr:1.35,phase:'Finition'},
+];
+
+// État FCR tracker (par bassin)
+let FCR_DATA={}; // {bassinName: [{week, alimKg, morts, poidsMoyen}]}
+
+function initFCRBassin(name){
+  if(!FCR_DATA[name])FCR_DATA[name]=Array.from({length:22},(_,i)=>({week:i+1,alimKg:null,morts:0,poidsMoyen:null}));
+}
+
+function getFCRWeek(bassinData, week){
+  // FCR semaine = aliment semaine / gain biomasse semaine
+  const w=bassinData[week-1];
+  if(!w||!w.alimKg)return null;
+  // Trouver pesées disponibles
+  const curPoids=w.poidsMoyen;
+  let prevPoids=null;
+  for(let i=week-2;i>=0;i--){if(bassinData[i].poidsMoyen){prevPoids=bassinData[i].poidsMoyen;break;}}
+  if(!curPoids||!prevPoids)return null;
+  const vivants=570-bassinData.slice(0,week).reduce((s,r)=>s+(r.morts||0),0);
+  const gainBio=(curPoids-prevPoids)*vivants/1000; // kg
+  return gainBio>0?w.alimKg/gainBio:null;
+}
+
+function getFCRCumul(bassinData, upToWeek){
+  const totalAlim=bassinData.slice(0,upToWeek).reduce((s,r)=>s+(r.alimKg||0),0);
+  const w=bassinData[upToWeek-1];
+  if(!w||!w.poidsMoyen)return null;
+  const startPoids=5; // poids initial
+  const vivants=570-bassinData.slice(0,upToWeek).reduce((s,r)=>s+(r.morts||0),0);
+  const totalGain=(w.poidsMoyen-startPoids)*vivants/1000;
+  return totalGain>0?totalAlim/totalGain:null;
+}
+
+function renderFCRModule(){
+  const bassin=G('fcr-bassin')?.value||'';
+  const el=G('fcr-tbody');if(!el)return;
+  if(!bassin){el.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:1rem">Sélectionnez un bassin</td></tr>';return;}
+  initFCRBassin(bassin);
+  const data=FCR_DATA[bassin];
+  const vivants570=570;
+  let survivants=vivants570;
+  el.innerHTML=data.map((w,i)=>{
+    survivants=vivants570-data.slice(0,i+1).reduce((s,r)=>s+(r.morts||0),0);
+    const survie=Math.round(survivants/vivants570*100);
+    const fcrS=getFCRWeek(data,i+1);
+    const fcrC=getFCRCumul(data,i+1);
+    const ref=FCR_REF[i];
+    const fcrColor=fcrC?fcrC>1.5?'var(--dng)':fcrC>1.3?'var(--warn)':'var(--acc)':'var(--t3)';
+    const ecart=fcrC&&ref?(fcrC-ref.fcr).toFixed(2):null;
+    const ecartColor=ecart?(parseFloat(ecart)>0.2?'var(--dng)':parseFloat(ecart)>0?'var(--warn)':'var(--acc)'):'var(--t3)';
+    return `<tr>
+      <td style="color:var(--t3);font-weight:700">S${i+1}</td>
+      <td style="font-size:9px;color:var(--t3)">${ref.phase}</td>
+      <td><input type="number" class="ci" style="width:65px;font-size:10px" value="${w.poidsMoyen||''}" placeholder="—" step="0.1"
+        onchange="FCR_DATA['${bassin}'][${i}].poidsMoyen=this.value?+this.value:null;renderFCRModule()"></td>
+      <td><input type="number" class="ci" style="width:65px;font-size:10px" value="${w.alimKg||''}" placeholder="—" step="0.01"
+        onchange="FCR_DATA['${bassin}'][${i}].alimKg=this.value?+this.value:null;renderFCRModule()"></td>
+      <td><input type="number" class="ci" style="width:45px;font-size:10px" value="${w.morts||0}" min="0"
+        onchange="FCR_DATA['${bassin}'][${i}].morts=+this.value||0;renderFCRModule()"></td>
+      <td style="font-family:var(--mono);color:${survie<85?'var(--dng)':survie<90?'var(--warn)':'var(--acc)'}">${survie}%</td>
+      <td style="font-family:var(--mono);color:${fcrColor}">${fcrC?fcrC.toFixed(2):'—'}</td>
+      <td style="font-size:9px;color:var(--gold)">${ref.fcr.toFixed(2)}</td>
+      <td style="font-size:9px;color:${ecartColor}">${ecart!==null?(parseFloat(ecart)>0?'+':'')+ecart:'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // Métriques synthèse
+  const totalAlim=data.reduce((s,r)=>s+(r.alimKg||0),0);
+  const totalMorts=data.reduce((s,r)=>s+(r.morts||0),0);
+  const lastPoids=data.map(d=>d.poidsMoyen).filter(Boolean).pop()||null;
+  const survieActuelle=Math.round((570-totalMorts)/570*100);
+  const fcrFinal=getFCRCumul(data,22)||getFCRCumul(data,data.filter(d=>d.poidsMoyen).length);
+  const m=G('fcr-metrics');
+  if(m)m.innerHTML=`
+    <div class="met${survieActuelle<85?' dng':survieActuelle<90?' warn':''}"><div class="mlbl">Survie actuelle</div><div class="mval">${survieActuelle}%</div></div>
+    <div class="met"><div class="mlbl">Total morts</div><div class="mval">${totalMorts}</div></div>
+    <div class="met"><div class="mlbl">Aliment cumulé</div><div class="mval">${totalAlim.toFixed(1)}<span class="munit">kg</span></div></div>
+    <div class="met${fcrFinal&&fcrFinal>1.3?' warn':''}"><div class="mlbl">FCR cumulé</div><div class="mval" style="color:${fcrFinal?fcrFinal>1.5?'var(--dng)':fcrFinal>1.3?'var(--warn)':'var(--acc)':'var(--t3)'}">${fcrFinal?fcrFinal.toFixed(2):'—'}</div></div>
+    <div class="met"><div class="mlbl">Dernier poids</div><div class="mval">${lastPoids?lastPoids+' g':'—'}</div></div>`;
 }
 
 // ═══════════════════════════════════════════════
