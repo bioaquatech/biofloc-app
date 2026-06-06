@@ -1961,16 +1961,12 @@ const firebaseConfig={
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 const auth=firebase.auth();
-const storage=firebase.storage(); // Firebase Storage pour logos
+const storage=firebase.storage();
 
-// Persistance Firestore — nouvelle API (évite le warning de dépréciation)
-try{
-  db.settings({cacheSizeBytes:firebase.firestore.CACHE_SIZE_UNLIMITED});
-  db.enableMultiTabIndexedDbPersistence().catch(e=>{
-    if(e.code!=='failed-precondition'&&e.code!=='unimplemented')
-      console.warn('Firestore cache:',e.code);
-  });
-}catch(e){}
+// Persistance Firestore simple (sans multi-onglets pour éviter l'erreur de channel)
+db.enablePersistence().catch(e=>{
+  if(e.code!=='unimplemented')console.warn('Firestore cache:',e.code);
+});
 // Secondary app for user creation without signing out admin
 let secondaryApp;
 try{secondaryApp=firebase.app('secondary');}
