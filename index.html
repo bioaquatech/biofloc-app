@@ -451,11 +451,45 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
             </div>
             <button class="sbtn" onclick="saveSettings()">Enregistrer</button>
           </div>
+        <div>
+          <div class="card">
+            <div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>🧪 Listes déroulantes — Config Bassins</div>
+            <p style="font-size:10px;color:var(--t2);line-height:1.7;margin-bottom:.75rem">Gérez les options disponibles dans les sélecteurs de la table Config Bassins. Ces listes sont partagées par toutes les fermes.</p>
+
+            <!-- Basifiants -->
+            <div style="margin-bottom:1rem">
+              <div style="font-size:11px;font-weight:700;color:var(--acc2);margin-bottom:.4rem">Basifiants</div>
+              <div id="admin-bas-list" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.4rem"></div>
+              <div style="display:flex;gap:.4rem">
+                <input id="admin-bas-input" class="form-inp" placeholder="Ex: Chaux vive" style="flex:1;font-size:11px">
+                <select id="admin-bas-unit" class="si" style="font-size:11px">
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                  <option value="mL">mL</option>
+                </select>
+                <button class="sbtn" style="padding:5px 12px" onclick="addParamItem('basifiant')">➕</button>
+              </div>
+            </div>
+
+            <!-- Carbohydrates -->
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--warn);margin-bottom:.4rem">Carbohydrates</div>
+              <div id="admin-carb-list" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.4rem"></div>
+              <div style="display:flex;gap:.4rem">
+                <input id="admin-carb-input" class="form-inp" placeholder="Ex: Farine de soja" style="flex:1;font-size:11px">
+                <select id="admin-carb-unit" class="si" style="font-size:11px">
+                  <option value="g">g</option>
+                  <option value="mL">mL</option>
+                  <option value="kg">kg</option>
+                </select>
+                <button class="sbtn" style="padding:5px 12px;background:var(--warn)" onclick="addParamItem('carbohydrate')">➕</button>
+              </div>
+            </div>
+            <div id="admin-params-msg" style="font-size:10px;margin-top:.5rem;color:var(--acc)"></div>
+          </div>
         </div>
       </div>
     </div>
-
-    <!-- TA4: JOURNAL D'AUDIT (ADMIN) -->
     <div id="ta4" class="pane">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin-bottom:.75rem">
         <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
@@ -1168,6 +1202,22 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         </div>
         <button class="abtn" onclick="addBassin()" id="btn-add-bassin">➕ Ajouter bassin</button>
       </div>
+
+      <!-- Bouton ANALYSE centré et bien visible -->
+      <div style="text-align:center;margin-bottom:.75rem">
+        <button onclick="openAnalyse()" style="
+          background:linear-gradient(135deg,var(--acc2),var(--purp));
+          color:#fff;border:none;border-radius:12px;
+          padding:10px 32px;font-size:13px;font-weight:800;
+          cursor:pointer;letter-spacing:.5px;
+          box-shadow:0 4px 20px rgba(61,142,245,.35);
+          transition:transform .15s,box-shadow .15s"
+          onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 28px rgba(61,142,245,.5)'"
+          onmouseout="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(61,142,245,.35)'">
+          🔬 Analyse des paramètres
+        </button>
+        <div style="font-size:9px;color:var(--t3);margin-top:4px">Interprétation et mesures correctives selon le dossier technique ICHTUS</div>
+      </div>
       <div class="tw">
         <table>
           <thead><tr>
@@ -1178,7 +1228,9 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
             <th style="color:#a8d8ff">pH <small style="color:var(--t3)">(opt.)</small></th>
             <th style="color:#a8d8ff">DO mg/L <small style="color:var(--t3)">(opt.)</small></th>
             <th style="color:#a8d8ff">NH₃ mg/L <small style="color:var(--t3)">(opt.)</small></th>
+            <th style="color:#ff8fab">NO₂ mg/L <small style="color:var(--t3)" title="Nitrites — vigilance 0.2 mg/L · alerte 0.5 mg/L">(opt.)</small></th>
             <th style="color:var(--warn)">TAN mg/L <small style="color:var(--t3)">(opt.)</small></th>
+            <th style="color:#7dd3fc">Imhoff ml/L <small style="color:var(--t3)" title="Cône Imhoff 30 min — optimal tilapia 25–40 ml/L">(opt.)</small></th>
             <th style="color:#c084fc">Probiot ml <small style="color:var(--t3)" title="Probiotique for Water Administration — quantité utilisée ce jour">(opt.)</small></th>
             <th style="color:var(--gold)">TAC mg/L <small style="color:var(--t3)" title="Titre Alcalimétrique Complet — alcalinité (CaCO₃ éq.)">(opt.)</small></th>
             <th style="color:var(--acc2)">Basifiant <small style="color:var(--t3)" title="CaCO₃ ou NaHCO₃">(opt.)</small></th>
@@ -1709,6 +1761,26 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         </table>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Modal Analyse des paramètres -->
+<div id="analyse-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:780px;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;position:sticky;top:0;background:var(--panel);padding:.5rem 0;z-index:1">
+      <span style="font-size:22px">🔬</span>
+      <div style="flex:1">
+        <div class="modal-title" style="margin-bottom:0">Analyse des paramètres — <span id="analyse-date"></span></div>
+        <div style="font-size:10px;color:var(--t3)">Source : Mémo paramètres eau v4.1 · Dossier technique ICHTUS v8.9</div>
+      </div>
+      <button onclick="G('analyse-modal').classList.add('hidden')" style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t2);padding:4px 12px;cursor:pointer">✕ Fermer</button>
+    </div>
+
+    <!-- Résumé global -->
+    <div id="analyse-summary" style="margin-bottom:1rem"></div>
+
+    <!-- Résultats par bassin -->
+    <div id="analyse-results"></div>
   </div>
 </div>
 
@@ -2321,6 +2393,7 @@ async function showFarmApp(){
   loadSuppliersFromFirestore();
   loadSpeciesFromFirestore();
   loadFarmLogo();
+  loadParamLists();
   const role=APP.user?.role||'Opérateur';
   if(role==='Responsable'||role==='Administrateur'){
     checkNotifications();
@@ -2462,6 +2535,8 @@ async function loadFarmData(){
         const x={...d.data()};delete x._order;
         if(!x.feedId)x.feedId=getRationEntry(x.poids||1)?.id||FEED_TYPES[0]?.id;
         if(x.TAN===undefined)x.TAN=null;
+        if(x.NO2===undefined)x.NO2=null;
+        if(x.imhoff===undefined)x.imhoff=null;
         if(x.probiot===undefined)x.probiot=null;
         if(x.TAC===undefined)x.TAC=null;
         if(x.basifiant===undefined)x.basifiant=null;
@@ -2474,7 +2549,7 @@ async function loadFarmData(){
     } else {
       APP.state.bassins=Array.from({length:16},(_,i)=>({
         name:`Bassin ${String(i+1).padStart(2,'0')}`,vol:3.8,nbInit:1000,mort:0,poids:5+i*0.3,
-        alimReel:0,temp:null,ph:null,DO:null,NH3:null,TAN:null,probiot:null,TAC:null,basifiant:null,basifiantType:null,carb:null,carbType:null,statut:'Actif',feedId:FEED_TYPES[0]?.id||'K1',harvestDate:null
+        alimReel:0,temp:null,ph:null,DO:null,NH3:null,NO2:null,TAN:null,imhoff:null,probiot:null,TAC:null,basifiant:null,basifiantType:null,carb:null,carbType:null,statut:'Actif',feedId:FEED_TYPES[0]?.id||'K1',harvestDate:null
       }));
       APP.bCount=17;
     }
@@ -2513,6 +2588,7 @@ function setupFarmListeners(){
 // ═══════════════════════════════════════════════
 async function loadAdminDashboard(){
   showLoader('Chargement des données…');
+  loadParamLists(); // Charger les listes basifiants/carbohydrates
   try{
     // Load settings
     const settSnap=await db.collection('superadmin').doc('settings').get();
@@ -3156,6 +3232,344 @@ async function openBassinStats(bassinName){
   }
 }
 // ═══════════════════════════════════════════════
+// MOTEUR D'ANALYSE — Mémo paramètres eau v4.1 ICHTUS
+// ═══════════════════════════════════════════════
+
+const ANALYSE_RULES={
+  DO:{
+    label:'DO — Oxygène dissous', unit:'mg/L', icon:'💧',
+    rules:[
+      {max:2, level:'CRISE', color:'#ff1744',
+        interpretation:'Asphyxie en cours — mortalité dans les 30 min si aucune action.',
+        actions:['O₂ pur immédiat si disponible','Les deux souffleurs à fond','Vidange partielle 10% eau fraîche oxygénée','Arrêt total alimentation et mélasse','Identifier cause : panne électrique ? Imhoff > 50 ? nuit ?']},
+      {min:2,max:3, level:'URGENCE', color:'var(--dng)',
+        interpretation:'Hypoxie sévère — poissons commencent à monter en surface.',
+        actions:['Arrêt alimentation immédiat','Vérifier souffleur — panne ?','Démarrer S2 si S1 en panne','O₂ pur si disponible','Réduire Imhoff si > 30 ml/L']},
+      {min:3,max:4, level:'ALERTE', color:'var(--dng)',
+        interpretation:'Hypoxie modérée — poissons stressés, activité bactérienne ralentie.',
+        actions:['Réduire ration 50% ou suspendre','Vérifier souffleurs et disques','Ouvrir vannes à fond','Remesurer toutes les 30 min','Ne pas augmenter mélasse']},
+      {min:4,max:5, level:'VIGILANCE', color:'var(--warn)',
+        interpretation:'Stress modéré — légèrement sous l\'optimum.',
+        actions:['Réduire ration 30%','Vérifier filtres souffleur','Vérifier Imhoff — si > 40 ml/L : vidange urgente','Ne pas augmenter mélasse']},
+      {min:5,max:6, level:'ACCEPTABLE', color:'var(--t2)',
+        interpretation:'Légèrement sous l\'optimum. Surveiller post-repas.',
+        actions:['Régime normal','Mesurer DO 1h après chaque repas','Si descend sous 5 après repas : réduire ration 20%']},
+    ]
+  },
+  ph:{
+    label:'pH', unit:'', icon:'⚗️',
+    rules:[
+      {max:6, level:'URGENCE', color:'var(--dng)',
+        interpretation:'Arrêt nitrification — toxicité — mortalité possible.',
+        actions:['NaHCO₃ 20 g/m³ immédiatement','Mesurer TAC en priorité','Arrêt alimentation','Remesurer toutes les 3h','Vidange 10% pour diluer']},
+      {min:6,max:6.5, level:'ALERTE', color:'var(--dng)',
+        interpretation:'Nitrification très réduite — stress poissons — TAN en hausse.',
+        actions:['CaCO₃ 100 g/m³ + NaHCO₃ 15 g/m³','Réduire ration 50%','Vidange 10% pour diluer','Remesurer dans 6h']},
+      {min:6.5,max:7, level:'VIGILANCE', color:'var(--warn)',
+        interpretation:'Zone limite basse — nitrifiantes partiellement actives.',
+        actions:['CaCO₃ 75 g/m³','Vérifier TAC bassin','Réduire mélasse 20% (source d\'acidité)','Remesurer le soir']},
+      {min:7.8,max:8.5, level:'VIGILANCE', color:'var(--warn)',
+        interpretation:'NH₃ libre augmente — à pH 8, 5% du TAN est sous forme libre toxique.',
+        actions:['Mesurer TAN immédiatement','Réduire mélasse si possible','Vidange légère 5–10% si Imhoff > 30 ml/L']},
+      {min:8.5, level:'URGENCE', color:'var(--dng)',
+        interpretation:'NH₃ très toxique même à TAN faible — nitrifiantes inhibées.',
+        actions:['HCl dilué (1 mL HCl 10% / m³ max)','Arrêt mélasse et alimentation','Vidange 15%','Remesurer toutes les 3h']},
+    ]
+  },
+  temp:{
+    label:'Température', unit:'°C', icon:'🌡️',
+    rules:[
+      {max:22, level:'ATTENTION', color:'var(--warn)',
+        interpretation:'Froid — croissance ralentie, nitrifiantes peu actives.',
+        actions:['Réduire ration 30% (digestion lente)','Surveiller TAN — nitrification ralentie','Situation rare à Lomé — vérifier source eau froide']},
+      {min:22,max:26, level:'SOUS-OPTIMAL', color:'var(--t2)',
+        interpretation:'Croissance réduite — nitrification acceptable.',
+        actions:['Réduire ration 15%','Surveiller FCR','Adapter le calendrier si saisonnier']},
+      {min:30,max:32, level:'VIGILANCE', color:'var(--warn)',
+        interpretation:'Limite haute — DO commence à baisser, stress thermique léger.',
+        actions:['Mesurer DO plus fréquemment','Réduire ration 10%','Vérifier aération']},
+      {min:32,max:35, level:'ALERTE', color:'var(--dng)',
+        interpretation:'DO fortement réduit — stress métabolique poissons.',
+        actions:['Réduire ration 30%','Mesurer DO toutes les heures','Ventiler le bâtiment','Eau de remplissage fraîche (forage)','Surveiller TAN — augmente vite à cette température']},
+      {min:35, level:'URGENCE', color:'var(--dng)',
+        interpretation:'Danger vital — nitrifiantes inhibées + DO critique.',
+        actions:['Arrêt alimentation','Refroidir eau (eau de forage fraîche)','Aération maximale','Réduire Imhoff si > 30 ml/L','Vérifier toiture — situation exceptionnelle à Lomé']},
+    ]
+  },
+  NH3:{
+    label:'NH₃ — Ammoniac', unit:'mg/L', icon:'☣️',
+    rules:[
+      {min:0.07,max:0.5, level:'VIGILANCE', color:'var(--warn)',
+        interpretation:'Pression ammoniacale en hausse — nitrifiantes sous pression.',
+        actions:['Remesurer TAN 24h plus tard','Réduire ration 20%','Vérifier ratio C/N mélasse','Ne pas augmenter la charge']},
+      {min:0.5,max:1, level:'ALERTE', color:'var(--dng)',
+        interpretation:'Nitrification dépassée — risque NH₃ libre significatif.',
+        actions:['Réduire ration 50%','Vidange 10%','Augmenter mélasse','Inoculer nitrifiants (9–14 L eau mature)','Remesurer le lendemain matin']},
+      {min:1, level:'URGENCE', color:'var(--dng)',
+        interpretation:'Intoxication NH₃ imminente — branchies en danger.',
+        actions:['Arrêt alimentation immédiat','Vidange 15–20%','BioClean 100 dose choc (1,2 L/bassin)','Mesurer pH — si > 7,8 : corriger en priorité','Aération maximale — remesurer toutes les 6h']},
+    ]
+  },
+  NO2:{
+    label:'NO₂ — Nitrites', unit:'mg/L', icon:'🔴',
+    rules:[
+      {min:0.2,max:0.5, level:'VIGILANCE', color:'var(--warn)',
+        interpretation:'Nitrospira sous pression ou en établissement.',
+        actions:['NaCl 1 g/L préventif (protection branchies)','Remesurer 48h','Surveiller comportement poissons','Vérifier Imhoff — floc excessif aggrave les NO₂']},
+      {min:0.5,max:1, level:'ALERTE', color:'var(--dng)',
+        interpretation:'Nitrospira insuffisantes — risque méthémoglobinémie.',
+        actions:['Vidange 10% immédiate','NaCl 2 g/L','Inoculer eau mature riche en Nitrospira (15–20 L/m³)','Réduire ration 30%','Remesurer 24h']},
+      {min:1,max:2, level:'URGENCE', color:'var(--dng)',
+        interpretation:'Méthémoglobinémie active — poissons suffoquent malgré DO correct.',
+        actions:['Vidange 15% urgente','NaCl 3–5 g/L','BioClean 100 dose choc (1,2 L/bassin)','Arrêt alimentation','Vérifier DO > 6 ppm','Remesurer toutes les 12h']},
+      {min:2, level:'CRISE', color:'#ff1744',
+        interpretation:'Crise nitrification grave — mortalité probable si non traité.',
+        actions:['Vidange 20% immédiate','NaCl 5 g/L','Arrêt alimentation et mélasse 48h','Inoculation massive Nitrospira','Identifier cause : choc pH ? antibiotique ? température ?']},
+    ]
+  },
+  TAN:{
+    label:'TAN — Azote ammoniacal total', unit:'mg/L', icon:'⚠️',
+    rules:[
+      {min:0.5,max:1, level:'VIGILANCE', color:'var(--warn)',
+        interpretation:'Système sous pression — Nitrosomonas insuffisantes ou charge trop élevée.',
+        actions:['Remesurer 24h plus tard','Réduire ration 20%','Vérifier ratio C/N mélasse','Ne pas augmenter la charge']},
+      {min:1,max:2, level:'ALERTE', color:'var(--dng)',
+        interpretation:'Nitrification dépassée — risque NH₃ libre significatif.',
+        actions:['Réduire ration 50%','Vidange 10%','Augmenter mélasse (méthode corrective)','Inoculer nitrifiants (9–14 L eau mature)','Remesurer le lendemain matin']},
+      {min:2,max:3, level:'URGENCE', color:'var(--dng)',
+        interpretation:'Intoxication NH₃ imminente — branchies en danger.',
+        actions:['Arrêt alimentation immédiat','Vidange 15–20%','Dose de choc BioClean 100 (1,2 L/bassin)','Mesurer pH — si > 7,8 : corriger en priorité','Aération maximale — remesurer toutes les 6h']},
+      {min:3, level:'CRISE', color:'#ff1744',
+        interpretation:'Mortalité en cours ou imminente — effondrement du système.',
+        actions:['Arrêt alimentation','Vidange 20% immédiate','O₂ pur si disponible','BioClean 100 dose choc','Séparer les poissons si possible','Identifier la cause : panne aération ? pluie ? sur-alimentation ?']},
+    ]
+  },
+  TAC:{
+    label:'TAC — Alcalinité', unit:'mg/L CaCO₃', icon:'🧪',
+    rules:[
+      {min:100,max:150, level:'ACCEPTABLE', color:'var(--t2)',
+        interpretation:'Tampon suffisant — surveiller l\'évolution hebdomadaire.',
+        actions:['CaCO₃ maintenance : 20 g/m³ tous les 3 jours','Régime normal']},
+      {min:50,max:100, level:'VIGILANCE', color:'var(--warn)',
+        interpretation:'Réserve en baisse — risque crash pH dans 2–4 jours.',
+        actions:['CaCO₃ 25 g/m³ immédiatement','Remesurer dans 48h','Surveiller pH 2×/jour']},
+      {min:40,max:50, level:'ALERTE', color:'var(--dng)',
+        interpretation:'Réserve presque épuisée — crash pH imminent.',
+        actions:['CaCO₃ 50 g/m³ immédiatement','NaHCO₃ 10 g/m³ en appoint','Remesurer le lendemain matin','Réduire mélasse 30%']},
+      {max:40, level:'URGENCE', color:'var(--dng)',
+        interpretation:'Réserve épuisée — effondrement pH probable dans les heures.',
+        actions:['CaCO₃ 100 g/m³ + NaHCO₃ 15 g/m³ immédiatement','Mesurer pH toutes les 3h','Arrêt alimentation','Vidange 10% pour diluer','Vérifier si eau forage a TAC plus élevée aujourd\'hui']},
+    ]
+  },
+  imhoff:{
+    label:'Imhoff — Volume floc', unit:'ml/L', icon:'🔬',
+    rules:[
+      {max:5, level:'INSUFFISANT', color:'var(--dng)',
+        interpretation:'Floc inexistant ou détruit — risque NH₃ immédiat — système non protecteur.',
+        actions:['Arrêt de toute vidange immédiatement','Mélasse dose max (150–180 ml/m³/j) 2×/jour','Inoculer eau mature ou BioClean 100','Mesurer TAN quotidiennement','Vérifier DO ≥ 5 ppm']},
+      {min:5,max:10, level:'VIGILANCE', color:'var(--warn)',
+        interpretation:'Floc insuffisant — système en démarrage ou floc dilué.',
+        actions:['Pas de vidange','Mélasse 130–150 ml/m³/j','Surveiller TAN 2×/semaine','Laisser le floc se développer naturellement']},
+      {min:10,max:25, level:'EN MONTÉE', color:'var(--warn)',
+        interpretation:'Floc en développement — zone de transition vers l\'optimum tilapia.',
+        actions:['Pas de vidange encore','Maintenir mélasse 110–130 ml/m³/j','Mesurer DO après chaque repas','Préparer le protocole vidange pour Imhoff ≥ 25 ml/L']},
+      {min:40,max:45, level:'ALERTE', color:'var(--dng)',
+        interpretation:'Floc dense — risque hypoxie nocturne — consommation O₂ excessive la nuit.',
+        actions:['Vidange 15% immédiatement','Réduire mélasse de 20%','Surveiller DO la nuit (mesure à 2h00 si possible)','Mesurer TAN et NO₂ quotidiennement']},
+      {min:45, level:'URGENCE', color:'var(--dng)',
+        interpretation:'Floc excessif — hypoxie nocturne quasi certaine — DO peut tomber à 1–2 mg/L avant l\'aube.',
+        actions:['Vidange 15% urgente 2×/semaine','Arrêt mélasse 48–72h','Réduire ration 30–40% ou suspendre 24h','DO toutes les heures la nuit','Ne pas nourrir si DO < 5 ppm','Reprendre mélasse en doses réduites après 72h']},
+    ]
+  }
+};
+
+function getAlertForParam(param, value){
+  if(value===null||value===undefined)return null;
+  const v=parseFloat(value);if(isNaN(v))return null;
+  const ruleset=ANALYSE_RULES[param];if(!ruleset)return null;
+  for(const rule of ruleset.rules){
+    const aboveMin=rule.min===undefined||v>=rule.min;
+    const belowMax=rule.max===undefined||v<rule.max;
+    if(aboveMin&&belowMax)return{...rule,param,label:ruleset.label,unit:ruleset.unit,icon:ruleset.icon,value:v};
+  }
+  return null;
+}
+
+function openAnalyse(){
+  const modal=G('analyse-modal');
+  modal.classList.remove('hidden');
+  const dateEl=G('analyse-date');
+  if(dateEl)dateEl.textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+
+  const bassins=APP.state.bassins.filter(b=>b.statut==='Actif');
+  let totalAlertes=0,totalUrgences=0,totalOk=0;
+  const results=[];
+
+  bassins.forEach(b=>{
+    const alerts=[];
+    ['DO','ph','temp','NH3','NO2','TAN','TAC','imhoff'].forEach(p=>{
+      const alert=getAlertForParam(p,b[p]);
+      if(alert)alerts.push(alert);
+    });
+
+    const ok=['DO','ph','temp','NH3','NO2','TAN','TAC','imhoff'].filter(p=>{
+      const v=b[p];if(v===null||v===undefined)return false;
+      return !getAlertForParam(p,v);
+    });
+
+    const paramSaisis=['DO','ph','temp','NH3','NO2','TAN','TAC','imhoff'].filter(p=>b[p]!==null&&b[p]!==undefined).length;
+    if(paramSaisis===0)return; // Ignorer bassins sans données
+
+    const urgCount=alerts.filter(a=>['URGENCE','CRISE'].includes(a.level)).length;
+    const warnCount=alerts.filter(a=>['ALERTE','VIGILANCE','INSUFFISANT'].includes(a.level)).length;
+    totalAlertes+=warnCount;totalUrgences+=urgCount;
+    if(alerts.length===0)totalOk++;
+
+    results.push({bassin:b,alerts,ok,paramSaisis,urgCount,warnCount});
+  });
+
+  // Résumé global
+  const summary=G('analyse-summary');
+  if(summary){
+    const totalBassins=results.length;
+    const badBassins=results.filter(r=>r.alerts.length>0).length;
+    summary.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem;margin-bottom:.75rem">
+        <div style="background:rgba(0,201,167,.08);border:1px solid rgba(0,201,167,.2);border-radius:10px;padding:.6rem;text-align:center">
+          <div style="font-size:22px">✅</div>
+          <div style="font-size:18px;font-weight:800;color:var(--acc)">${totalBassins-badBassins}</div>
+          <div style="font-size:10px;color:var(--t2)">Bassins normaux</div>
+        </div>
+        <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:.6rem;text-align:center">
+          <div style="font-size:22px">⚠️</div>
+          <div style="font-size:18px;font-weight:800;color:var(--warn)">${totalAlertes}</div>
+          <div style="font-size:10px;color:var(--t2)">Alertes vigilance</div>
+        </div>
+        <div style="background:rgba(255,61,87,.08);border:1px solid rgba(255,61,87,.2);border-radius:10px;padding:.6rem;text-align:center">
+          <div style="font-size:22px">🚨</div>
+          <div style="font-size:18px;font-weight:800;color:var(--dng)">${totalUrgences}</div>
+          <div style="font-size:10px;color:var(--t2)">Urgences critiques</div>
+        </div>
+        <div style="background:rgba(61,142,245,.08);border:1px solid rgba(61,142,245,.2);border-radius:10px;padding:.6rem;text-align:center">
+          <div style="font-size:22px">📊</div>
+          <div style="font-size:18px;font-weight:800;color:var(--acc2)">${totalBassins}</div>
+          <div style="font-size:10px;color:var(--t2)">Bassins analysés</div>
+        </div>
+      </div>
+      ${totalBassins===0?'<div style="text-align:center;color:var(--t3);padding:1rem">Aucun bassin actif avec des données saisies aujourd\'hui.</div>':''}`;
+  }
+
+  // Résultats par bassin
+  const container=G('analyse-results');
+  if(!container)return;
+  container.innerHTML=results.length===0
+    ?'<div style="text-align:center;color:var(--t3);padding:2rem;font-size:12px">Aucune donnée saisie pour aujourd\'hui. Renseignez les paramètres dans Config Bassins puis relancez l\'analyse.</div>'
+    :results.sort((a,b2)=>b2.urgCount-a.urgCount||b2.warnCount-a.warnCount)
+    .map(({bassin,alerts,ok,paramSaisis,urgCount,warnCount})=>{
+      const borderColor=urgCount>0?'var(--dng)':warnCount>0?'var(--warn)':'var(--acc)';
+      const statusLabel=urgCount>0?'🚨 URGENCES ACTIVES':warnCount>0?'⚠️ Alertes détectées':'✅ Paramètres normaux';
+      const statusColor=urgCount>0?'var(--dng)':warnCount>0?'var(--warn)':'var(--acc)';
+      return `
+      <div style="margin-bottom:.9rem;border:2px solid ${borderColor};border-radius:12px;overflow:hidden">
+        <!-- En-tête bassin -->
+        <div style="background:${urgCount>0?'rgba(255,61,87,.12)':warnCount>0?'rgba(245,166,35,.12)':'rgba(0,201,167,.08)'};padding:.6rem 1rem;display:flex;align-items:center;gap:.75rem">
+          <div style="font-size:18px">${urgCount>0?'🚨':warnCount>0?'⚠️':'✅'}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:800;color:${borderColor}">${bassin.name}</div>
+            <div style="font-size:9px;color:var(--t3)">${paramSaisis} paramètre(s) analysé(s) · Biomasse ${(bassin.nbInit*bassin.poids/1000-bassin.mort*bassin.poids/1000).toFixed(1)} kg</div>
+          </div>
+          <div style="font-size:10px;font-weight:700;color:${statusColor};padding:3px 10px;background:${urgCount>0?'rgba(255,61,87,.15)':warnCount>0?'rgba(245,166,35,.15)':'rgba(0,201,167,.1)'};border-radius:8px">${statusLabel}</div>
+        </div>
+
+        ${alerts.length===0
+          ?`<div style="padding:.75rem 1rem;font-size:11px;color:var(--acc)">✅ Tous les paramètres saisis sont dans les normes. Continuez le régime nominal.</div>`
+          :`<div style="padding:.75rem 1rem">
+            ${alerts.map(a=>`
+              <div style="margin-bottom:.6rem;padding:.5rem .7rem;background:${a.color==='#ff1744'?'rgba(255,23,68,.06)':a.color==='var(--dng)'?'rgba(255,61,87,.06)':a.color==='var(--warn)'?'rgba(245,166,35,.06)':'rgba(0,0,0,.03)'};border-left:3px solid ${a.color};border-radius:0 8px 8px 0">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:.35rem">
+                  <span style="font-size:14px">${a.icon}</span>
+                  <strong style="font-size:11px;color:${a.color}">${a.level}</strong>
+                  <span style="font-size:11px;color:var(--t1)">${a.label}</span>
+                  <span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${a.color}">${a.value} ${a.unit}</span>
+                </div>
+                <div style="font-size:10px;color:var(--t2);font-style:italic;margin-bottom:.35rem">${a.interpretation}</div>
+                <div style="font-size:9px;color:var(--t1)">
+                  <strong style="color:var(--t2)">Actions à mener :</strong><br>
+                  ${a.actions.map((act,i)=>`<span style="display:inline-block;margin-top:2px">→ ${act}</span>`).join('<br>')}
+                </div>
+              </div>`).join('')}
+            </div>`
+        }
+
+        ${ok.length>0&&alerts.length>0?`<div style="padding:.3rem 1rem .6rem;font-size:9px;color:var(--t3)">✓ Paramètres normaux : ${ok.map(p=>ANALYSE_RULES[p]?.label||p).join(' · ')}</div>`:''}
+      </div>`;
+    }).join('');
+}
+// Stockées dans Firestore : platform/params
+// ═══════════════════════════════════════════════
+let PARAM_LISTS={
+  basifiants:[
+    {label:'CaCO₃',unit:'g'},{label:'NaHCO₃',unit:'g'},
+  ],
+  carbohydrates:[
+    {label:'Mélasse',unit:'mL'},{label:'Farine blé',unit:'g'},
+    {label:'Farine maïs',unit:'g'},{label:'Farine manioc',unit:'g'},
+  ]
+};
+
+async function loadParamLists(){
+  try{
+    const snap=await db.collection('platform').doc('params').get();
+    if(snap.exists&&snap.data().lists)PARAM_LISTS={...PARAM_LISTS,...snap.data().lists};
+  }catch(e){console.warn('ParamLists:',e);}
+  renderAdminParamLists();
+}
+
+async function saveParamLists(){
+  try{
+    await db.collection('platform').doc('params').set({lists:PARAM_LISTS},{merge:true});
+    const msg=G('admin-params-msg');
+    if(msg){msg.textContent='✅ Enregistré';setTimeout(()=>msg.textContent='',2000);}
+  }catch(e){const msg=G('admin-params-msg');if(msg)msg.textContent='❌ '+e.message;}
+}
+
+function renderAdminParamLists(){
+  const basList=G('admin-bas-list');
+  if(basList)basList.innerHTML=PARAM_LISTS.basifiants.map((item,idx)=>
+    `<div style="display:flex;align-items:center;gap:3px;background:rgba(61,142,245,.1);border:1px solid rgba(61,142,245,.3);border-radius:8px;padding:2px 8px;font-size:10px">
+      <span style="color:var(--acc2)">${item.label}</span><span style="color:var(--t3);font-size:9px">(${item.unit})</span>
+      <button onclick="removeParamItem('basifiant',${idx})" style="background:none;border:none;color:var(--dng);cursor:pointer;font-size:11px">×</button>
+    </div>`).join('');
+  const carbList=G('admin-carb-list');
+  if(carbList)carbList.innerHTML=PARAM_LISTS.carbohydrates.map((item,idx)=>
+    `<div style="display:flex;align-items:center;gap:3px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:2px 8px;font-size:10px">
+      <span style="color:var(--warn)">${item.label}</span><span style="color:var(--t3);font-size:9px">(${item.unit})</span>
+      <button onclick="removeParamItem('carbohydrate',${idx})" style="background:none;border:none;color:var(--dng);cursor:pointer;font-size:11px">×</button>
+    </div>`).join('');
+}
+
+function addParamItem(type){
+  const isB=type==='basifiant';
+  const input=G(isB?'admin-bas-input':'admin-carb-input');
+  const unitSel=G(isB?'admin-bas-unit':'admin-carb-unit');
+  const label=(input?.value||'').trim();if(!label)return;
+  const unit=unitSel?.value||'g';
+  const list=isB?PARAM_LISTS.basifiants:PARAM_LISTS.carbohydrates;
+  if(list.find(x=>x.label===label))return;
+  list.push({label,unit});
+  if(input)input.value='';
+  renderAdminParamLists();saveParamLists();
+  if(APP.farmCode)buildBTable();
+}
+
+function removeParamItem(type,idx){
+  if(type==='basifiant')PARAM_LISTS.basifiants.splice(idx,1);
+  else PARAM_LISTS.carbohydrates.splice(idx,1);
+  renderAdminParamLists();saveParamLists();
+  if(APP.farmCode)buildBTable();
+}
+
+// ═══════════════════════════════════════════════
 
 let LOGO_PENDING_FILE=null; // fichier sélectionné en attente d'upload
 
@@ -3451,7 +3865,7 @@ function saveNotification(bassinIdx,dateStr,b){
     bassinName:b.name,
     dateModified:dateStr,
     dateAction:firebase.firestore.FieldValue.serverTimestamp(),
-    data:{alimReel:b.alimReel,temp:b.temp,ph:b.ph,DO:b.DO,NH3:b.NH3,TAN:b.TAN,probiot:b.probiot,TAC:b.TAC,poids:b.poids},
+    data:{alimReel:b.alimReel,temp:b.temp,ph:b.ph,DO:b.DO,NH3:b.NH3,NO2:b.NO2,TAN:b.TAN,imhoff:b.imhoff,PWA:b.probiot,TAC:b.TAC,poids:b.poids},
     read:false
   };
   farmCol('notifications').add(notif).catch(console.error);
@@ -3562,6 +3976,10 @@ function buildBTable(){
         <div id="bDst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
       <td><input type="number" id="bN-${i}" class="${optCls(b.NH3)}" value="${optVal(b.NH3)}" step="0.01" style="width:55px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].NH3=v;else APP_historyData[${i}].NH3=v;upConfigCalcs()">
         <div id="bNst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
+      <td><input type="number" id="bNO2-${i}" class="${optCls(b.NO2)}" value="${optVal(b.NO2)}" step="0.01" style="width:55px;border-color:rgba(255,143,171,.3)" placeholder="—"
+          title="Nitrites NO₂ — Vigilance 0.2 · Alerte 0.5 · Urgence 1.0 mg/L"
+          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].NO2=v;else APP_historyData[${i}].NO2=v;upConfigCalcs()">
+        <div id="bNO2st-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
       <td>
         <input type="number" id="bTAN-${i}" class="${b.TAN!==null&&b.TAN>=1?'ci wi':'ci opt'}" value="${optVal(b.TAN)}" step="0.01" style="width:55px;border-color:${b.TAN!==null&&b.TAN>=1?'var(--warn)':'rgba(245,166,35,.25)'}"
           placeholder="—" title="TAN ≥1 mg/L → Phase 2 mélasse · Saisir pour pré-remplir le calculateur"
@@ -3579,6 +3997,14 @@ function buildBTable(){
           ">
         <div id="bMel-${i}" style="font-size:9px;font-weight:700;text-align:center;margin-top:1px;color:var(--t3)" title="Mélasse C:N=15:1">—</div>
         <div id="bTANst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div>
+      </td>
+      <!-- Imhoff -->
+      <td>
+        <input type="number" id="bIMH-${i}" class="${b.imhoff!=null?(b.imhoff<10||b.imhoff>45?'ci di':b.imhoff>=25&&b.imhoff<=40?'ci':'ci wi'):'ci opt'}"
+          value="${b.imhoff??''}" step="0.5" style="width:60px;border-color:${b.imhoff!=null?b.imhoff<10||b.imhoff>45?'var(--dng)':b.imhoff>=25&&b.imhoff<=40?'var(--acc)':'var(--warn)':'rgba(125,211,252,.25)'}"
+          placeholder="—" title="Cône Imhoff 30 min — optimal tilapia 25–40 ml/L"
+          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].imhoff=v;else APP_historyData[${i}].imhoff=v;upConfigCalcs()">
+        <div id="bIMHst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div>
       </td>
       <td>
         <input type="number" id="bPROBIOT-${i}" class="${(b.probiot!==null&&b.probiot!==undefined)?'ci':'ci opt'}"
@@ -3609,8 +4035,7 @@ function buildBTable(){
         <select id="bBAS-type-${i}" class="si" style="font-size:9px;padding:1px 3px;width:58px;border-color:rgba(61,142,245,.3);color:var(--acc2);margin-bottom:2px"
           onchange="if(!APP_historyDate)APP.state.bassins[${i}].basifiantType=this.value;else APP_historyData[${i}].basifiantType=this.value;upConfigCalcs()">
           <option value="">—</option>
-          <option value="CaCO3"${(b.basifiantType==='CaCO3')?' selected':''}>CaCO₃</option>
-          <option value="NaHCO3"${(b.basifiantType==='NaHCO3')?' selected':''}>NaHCO₃</option>
+          ${PARAM_LISTS.basifiants.map(item=>`<option value="${item.label}"${b.basifiantType===item.label?' selected':''}>${item.label} (${item.unit})</option>`).join('')}
         </select>
         <input type="number" id="bBAS-${i}" class="${b.basifiant?'ci':'ci opt'}" value="${b.basifiant??''}"
           step="0.1" style="width:58px;font-size:10px" placeholder="g"
@@ -3626,20 +4051,18 @@ function buildBTable(){
             if(!APP_historyDate)APP.state.bassins[${i}].carbType=this.value;
             else APP_historyData[${i}].carbType=this.value;
             const unit=G('bCARB-unit-${i}');
-            if(unit)unit.textContent=this.value==='Mélasse'?'mL':'g';
+            const found=PARAM_LISTS.carbohydrates.find(x=>x.label===this.value);
+            if(unit)unit.textContent=found?found.unit:'g';
             upConfigCalcs()">
           <option value="">—</option>
-          <option value="Mélasse"${(b.carbType==='Mélasse')?' selected':''}>🍯 Mélasse</option>
-          <option value="Farine blé"${(b.carbType==='Farine blé')?' selected':''}>🌾 Farine blé</option>
-          <option value="Farine maïs"${(b.carbType==='Farine maïs')?' selected':''}>🌽 Farine maïs</option>
-          <option value="Farine manioc"${(b.carbType==='Farine manioc')?' selected':''}>🥔 Farine manioc</option>
+          ${PARAM_LISTS.carbohydrates.map(item=>`<option value="${item.label}"${b.carbType===item.label?' selected':''}>${item.label}</option>`).join('')}
         </select>
         <div style="display:flex;align-items:center;gap:2px">
           <input type="number" id="bCARB-${i}" class="${b.carb?'ci':'ci opt'}" value="${b.carb??''}"
             step="1" style="width:52px;font-size:10px" placeholder="qté"
             title="Quantité de carbohydrate utilisée"
             onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].carb=v;else APP_historyData[${i}].carb=v;upConfigCalcs()">
-          <span id="bCARB-unit-${i}" style="font-size:9px;color:var(--t3)">${b.carbType==='Mélasse'?'mL':'g'}</span>
+          <span id="bCARB-unit-${i}" style="font-size:9px;color:var(--t3)">${(PARAM_LISTS.carbohydrates.find(x=>x.label===b.carbType)||{unit:'g'}).unit}</span>
         </div>
         ${b.carb&&b.carbType?`<div style="font-size:8px;color:var(--warn);text-align:center">${b.carb}${b.carbType==='Mélasse'?'mL':'g'} ${b.carbType}</div>`:''}
       </td>
@@ -3666,14 +4089,17 @@ function upConfigCalcs(){
     sc(`bP-${i}`,b.ph,b.ph!==null&&(b.ph>8.2||b.ph<6.5),false);
     sc(`bD-${i}`,b.DO,false,b.DO!==null&&b.DO<sp().doAlerte);
     sc(`bN-${i}`,b.NH3,false,b.NH3!==null&&b.NH3>sp().nh3Alerte);
+    sc(`bNO2-${i}`,b.NO2,b.NO2!==null&&b.NO2>=0.2,b.NO2!==null&&b.NO2>=0.5);
     sc(`bTAN-${i}`,b.TAN,false,b.TAN!==null&&b.TAN>=1);
     // Labels de validation en temps réel sous chaque champ
     updateParamStatusLabel(`bTst-${i}`,'temp',b.temp);
     updateParamStatusLabel(`bPst-${i}`,'ph',b.ph);
     updateParamStatusLabel(`bDst-${i}`,'DO',b.DO);
     updateParamStatusLabel(`bNst-${i}`,'NH3',b.NH3);
+    updateParamStatusLabel(`bNO2st-${i}`,'NO2',b.NO2);
     updateParamStatusLabel(`bTANst-${i}`,'TAN',b.TAN);
     updateParamStatusLabel(`bTACst-${i}`,'TAC',b.TAC);
+    updateParamStatusLabel(`bIMHst-${i}`,'imhoff',b.imhoff);
     // Afficher dose mélasse bassin si TAN renseigné
     const melEl=G(`bMel-${i}`);
     if(melEl){
@@ -3696,6 +4122,10 @@ function upConfigCalcs(){
     if(b.statut==='Récolté')recoltes++;
   });
   const avgPh=phCnt?sumPh/phCnt:null,avgT=tCnt?sumT/tCnt:null;
+  // Imhoff moyen
+  let sumImh=0,imhCnt=0;
+  APP.state.bassins.forEach(b=>{if(b.statut==='Actif'&&b.imhoff!==null){sumImh+=b.imhoff;imhCnt++;}});
+  const avgImh=imhCnt?sumImh/imhCnt:null;
   // Mélasse totale journalière (bassins avec TAN renseigné)
   let tMelas=0;
   APP.state.bassins.filter(b=>b.statut==='Actif'&&b.TAN!==null).forEach(b=>{
@@ -3712,6 +4142,7 @@ function upConfigCalcs(){
     <div class="met ok"><div class="mlbl">Biomasse totale</div><div class="mval">${fmt(tBio,2)}<span class="munit">kg</span></div></div>
     <div class="met"><div class="mlbl">Alim théo/j</div><div class="mval">${fmt(tTheo,3)}<span class="munit">kg</span></div></div>
     <div class="met"><div class="mlbl">Alim réel/j</div><div class="mval">${fmt(tReel,3)}<span class="munit">kg</span></div></div>
+    ${avgImh!==null?`<div class="met${avgImh<10||avgImh>45?' dng':avgImh>=25&&avgImh<=40?' ok':' warn'}"><div class="mlbl">Imhoff moy</div><div class="mval" style="color:${avgImh<10||avgImh>45?'var(--dng)':avgImh>=25&&avgImh<=40?'var(--acc)':'var(--warn)'}">${fmt(avgImh,1)}<span class="munit">ml/L</span></div></div>`:''}
     ${tMelas>0?`<div class="met warn"><div class="mlbl">Mélasse totale/j</div><div class="mval" style="color:var(--warn)">${Math.round(tMelas)}<span class="munit">ml</span></div></div>`:''}`;
   G('s-actifs').textContent=actifs;G('s-bio').textContent=fmt(tBio,1)+' kg';G('s-alim').textContent=fmt(tTheo,3)+' kg';G('s-recolte').textContent=recoltes;
 }
@@ -3760,6 +4191,12 @@ function getParamStatus(param, value){
       if(v>=50)return{label:'⚠️ Vigilance',color:'var(--warn)'};
       if(v>=40)return{label:'🔴 Alerte',color:'var(--dng)'};
       return{label:'🚨 URGENT',color:'var(--dng)'};
+    case 'NO2':
+      if(v<0.2)return{label:'✅ Optimal',color:'var(--acc)'};
+      if(v<0.5)return{label:'⚠️ Vigilance',color:'var(--warn)'};
+      if(v<1.0)return{label:'🔴 Alerte',color:'var(--dng)'};
+      if(v<2.0)return{label:'🚨 URGENCE',color:'var(--dng)'};
+      return{label:'💀 CRISE',color:'var(--dng)'};
     case 'imhoff':
       if(v>=25&&v<=40)return{label:'✅ Optimal',color:'var(--acc)'};
       if(v>=15&&v<25)return{label:'⚠️ En montée',color:'var(--warn)'};
