@@ -2402,13 +2402,13 @@ async function showFarmApp(){
       APP.user.role=ud.role||APP.user.role||'Opérateur';
     }
   }catch(e){console.warn('User profile load:',e);}
-  G('sc-date').value=today();G('cons-d').value=today();
-  // Mettre à jour le badge espèce (déjà chargé au login depuis la fiche ferme)
-  updateSpeciesBadge();
-  buildBTable();popSelects();renderFeed();
-  upAll();upLog();upCompta();
-  setupFarmListeners();
-  applyRoleRestrictions();
+  try{G('sc-date').value=today();}catch(e){}
+  try{G('cons-d').value=today();}catch(e){}
+  try{updateSpeciesBadge();}catch(e){}
+  try{buildBTable();popSelects();renderFeed();}catch(e){console.warn('buildBTable:',e);}
+  try{upAll();upLog();upCompta();}catch(e){console.warn('upAll:',e);}
+  try{setupFarmListeners();}catch(e){console.warn('setupFarmListeners:',e);}
+  try{applyRoleRestrictions();}catch(e){}
   showScreen('screen-farm');
   startSession();
   loadSuppliersFromFirestore();
@@ -2585,23 +2585,43 @@ async function loadFarmData(){
 }
 
 function setupFarmListeners(){
-  APP.unsubs.push(farmCol('bassins').orderBy('_order').onSnapshot(snap=>{
-    if(snap.metadata.hasPendingWrites)return;
-    const nb=snap.docs.map(d=>{const x={...d.data()};delete x._order;if(!x.feedId)x.feedId=getRationEntry(x.poids||1)?.id||FEED_TYPES[0]?.id;return x;});
-    if(JSON.stringify(nb)===JSON.stringify(APP.state.bassins))return;
-    APP.state.bassins=nb;APP.bCount=nb.length+1;buildBTable();popSelects();upAll();
-  }));
-  APP.unsubs.push(farmCol('suivi').orderBy('date').onSnapshot(snap=>{
-    if(snap.metadata.hasPendingWrites)return;
-    const ns=snap.docs.map(d=>({...d.data()}));
-    if(JSON.stringify(ns)===JSON.stringify(APP.state.suivi))return;
-    APP.state.suivi=ns;APP.state.suiviId=Math.max(0,...ns.map(r=>r.id||0))+1;renderSuivi();renderChart();
-  }));
-  APP.unsubs.push(farmCol('feed').onSnapshot(snap=>{
-    if(snap.metadata.hasPendingWrites)return;
-    snap.docs.forEach(d=>{const ft=FEED_TYPES.find(f=>f.id===d.id);if(ft&&d.data().batches)ft.batches=d.data().batches;});
-    if(G('t2').classList.contains('active'))renderFeed();
-  }));
+  // Utilisation de get() au lieu de onSnapshot pour éviter les erreurs WebChannel
+  // Les données se rafraîchissent à chaque navigation entre onglets
+  farmCol('bassins').get().then(snap=>{
+    if(snap&&!snap.empty){
+      const nb=snap.docs.map(d=>{
+        const x={...d.data()};delete x._order;
+        if(!x.feedId)x.feedId=getRationEntry(x.poids||1)?.id||FEED_TYPES[0]?.id;
+        return x;
+      });
+      APP.state.bassins=nb;APP.bCount=nb.length+1;buildBTable();popSelects();upAll();
+    }
+  }).catch(e=>console.warn('Bassins load:',e));
+
+  farmCol('suivi').orderBy('date').get().then(snap=>{
+    if(snap&&!snap.empty){
+      const ns=snap.docs.map(d=>({...d.data()}));
+      APP.state.suivi=ns;APP.state.suiviId=Math.max(0,...ns.map(r=>r.id||0))+1;
+    }
+  }).catch(e=>{
+    // Sans index orderBy — fallback sans tri
+    farmCol('suivi').get().then(snap=>{
+      if(snap&&!snap.empty){
+        const ns=snap.docs.map(d=>({...d.data()})).sort((a,b)=>a.date>b.date?1:-1);
+        APP.state.suivi=ns;APP.state.suiviId=Math.max(0,...ns.map(r=>r.id||0))+1;
+      }
+    }).catch(()=>{});
+  });
+
+  farmCol('feed').get().then(snap=>{
+    if(snap&&!snap.empty){
+      snap.docs.forEach(d=>{
+        const ft=FEED_TYPES.find(f=>f.id===d.id);
+        if(ft&&d.data().batches)ft.batches=d.data().batches;
+      });
+      if(G('t2')?.classList.contains('active'))renderFeed();
+    }
+  }).catch(e=>console.warn('Feed load:',e));
 }
 
 // ═══════════════════════════════════════════════
@@ -5018,7 +5038,7 @@ function testIoTConnection(){
 function setupIoTListener(){
   // Listener temps réel sur la collection sensors
   if(APP_iotUnsub)APP_iotUnsub();
-  APP_iotUnsub=farmCol('sensors').onSnapshot(snap=>{
+  farmCol('sensors').get().then(snap=>{
     if(snap.empty)return;
     const readings={};
     snap.docs.forEach(d=>readings[d.id]={...d.data()});
