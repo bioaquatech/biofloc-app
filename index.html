@@ -21,7 +21,7 @@ html{font-size:13px}
 body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden}
 .hidden{display:none!important}
 /* ── BOOT ── */
-#screen-boot{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;position:relative;overflow:hidden}
+#screen-boot{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;position:relative;overflow:hidden;background:radial-gradient(ellipse at 30% 70%,rgba(0,201,167,.06),transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(61,142,245,.08),transparent 50%),var(--bg)}
 .boot-bg-circle{position:absolute;border-radius:50%;opacity:.07;pointer-events:none}
 .bc1{width:600px;height:600px;background:var(--acc);top:-180px;right:-150px}
 .bc2{width:380px;height:380px;background:var(--acc2);bottom:-80px;left:-80px}
@@ -248,17 +248,16 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 </div>
 
 <div id="screen-boot">
-  <div class="boot-bg-circle bc1"></div>
-  <div class="boot-bg-circle bc2"></div>
-  <div class="boot-bg-circle bc3"></div>
+  <!-- Aquarium animé en fond -->
+  <canvas id="aqua-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.55"></canvas>
   <div class="boot-card">
     <!-- Logo ferme dynamique (chargé après saisie du code ferme) -->
     <div id="boot-logo-area" style="text-align:center;margin-bottom:.3rem;min-height:50px;display:flex;align-items:center;justify-content:center;gap:10px">
       <div style="font-size:42px" id="boot-fish-icon">🐟</div>
       <img id="boot-logo-img" src="" alt="" style="height:80px;max-width:180px;border-radius:10px;object-fit:contain;display:none;border:1px solid var(--b2)">
     </div>
-    <div class="boot-logo" id="boot-farm-display">BIOFLOC PLATFORM</div>
-    <div class="boot-sub">Système de gestion aquacole</div>
+    <div class="boot-logo" id="boot-farm-display" style="font-size:22px;letter-spacing:2px;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Bio Aqua Tech</div>
+    <div class="boot-sub" style="font-size:11px;letter-spacing:2px;color:var(--t2)">Système de gestion aquacole</div>
     <div class="boot-platform" id="boot-platform-name">BIOFLOC EXPERT SYSTEM V19</div>
     <div class="boot-clock" id="boot-clock">--:--:--</div>
     <div class="boot-date" id="boot-date">—</div>
@@ -273,6 +272,9 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
     <input id="b-pass" class="boot-inp" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="boot-btn" onclick="doLogin()">ACCÉDER À MA FERME →</button>
     <div class="boot-err" id="boot-err">Identifiants incorrects</div>
+    <div style="text-align:center;margin-top:.4rem">
+      <button class="boot-link" onclick="openForgotPassword('operator')" style="font-size:10px;color:var(--t3)">🔑 Mot de passe oublié ?</button>
+    </div>
     <div class="boot-links">
       <button class="boot-link" onclick="showAdminModal()">🔑 Accès Administrateur</button>
       <button class="boot-link" id="wa-link" onclick="openWhatsApp()">💬 Contacter l'admin</button>
@@ -291,7 +293,10 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
     <input id="adm-pass" class="boot-inp" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()">
     <button class="boot-btn" onclick="doAdminLogin()">CONNEXION ADMIN</button>
     <div class="boot-err" id="adm-err">Identifiants incorrects</div>
-    <button class="boot-link" style="margin-top:.6rem;width:100%;justify-content:center" onclick="hideAdminModal()">Annuler</button>
+    <div style="text-align:center;margin-top:.4rem">
+      <button class="boot-link" onclick="openForgotPassword('admin')" style="font-size:10px;color:var(--t3)">🔑 Mot de passe oublié ?</button>
+    </div>
+    <button class="boot-link" style="margin-top:.3rem;width:100%;justify-content:center" onclick="hideAdminModal()">Annuler</button>
   </div>
 </div>
 
@@ -372,6 +377,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
           <div class="form-group"><div class="form-lbl">Nom complet</div><input id="nu-name" class="form-inp" placeholder="Ex: Jean Dupont"></div>
           <div class="form-group"><div class="form-lbl">Nom d'utilisateur (login)</div><input id="nu-user" class="form-inp" placeholder="Ex: jean" style="text-transform:lowercase"></div>
           <div class="form-group"><div class="form-lbl">Mot de passe</div><input id="nu-pass" class="form-inp" type="password" placeholder="Min. 6 caractères"></div>
+          <div class="form-group"><div class="form-lbl">Email personnel <small style="color:var(--t3)">(pour reset mdp)</small></div><input id="nu-email-perso" class="form-inp" type="email" placeholder="email@reel.com"></div>
           <div class="form-group"><div class="form-lbl">Niveau d'habilitation</div>
             <select id="nu-role" class="form-inp si">
               <option value="Opérateur">Opérateur — accès limité (sans Comptabilité / Récoltes)</option>
@@ -390,7 +396,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
           </select>
         </div>
         <div class="tw"><table>
-          <thead><tr><th>Nom</th><th>Username</th><th>Rôle</th><th>Ferme</th><th>Créé le</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Nom</th><th>Username</th><th>Rôle</th><th>Ferme</th><th>Email personnel</th><th>Créé le</th><th>Actions</th></tr></thead>
           <tbody id="users-table-body"></tbody>
         </table></div>
       </div>
@@ -1619,6 +1625,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
               <div class="form-group"><div class="form-lbl">Nom complet</div><input id="r-nu-name" class="form-inp" placeholder="Ex: Jean Dupont"></div>
               <div class="form-group"><div class="form-lbl">Nom d'utilisateur (login)</div><input id="r-nu-user" class="form-inp" placeholder="Ex: jean" style="text-transform:lowercase"></div>
               <div class="form-group"><div class="form-lbl">Mot de passe</div><input id="r-nu-pass" class="form-inp" type="password" placeholder="Min. 6 caractères"></div>
+              <div class="form-group"><div class="form-lbl">Email personnel <small style="color:var(--t3)">(pour reset mdp)</small></div><input id="r-nu-email-perso" class="form-inp" type="email" placeholder="email@reel.com"></div>
               <div class="form-group"><div class="form-lbl">Permission sauvegarde</div>
                 <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
                   <input type="checkbox" id="r-nu-backup" style="width:16px;height:16px;accent-color:var(--acc2)">
@@ -1781,6 +1788,31 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 
     <!-- Résultats par bassin -->
     <div id="analyse-results"></div>
+  </div>
+</div>
+
+<!-- Modal Mot de passe oublié -->
+<div id="forgot-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-title">🔑 Mot de passe oublié</div>
+    <div id="forgot-admin-section">
+      <p style="font-size:11px;color:var(--t2);line-height:1.7;margin-bottom:.75rem">Saisissez votre adresse email. Vous recevrez un lien pour réinitialiser votre mot de passe.</p>
+      <div class="boot-lbl">Email</div>
+      <input id="forgot-email" class="boot-inp" type="email" placeholder="votre@email.com">
+      <button class="boot-btn" style="margin-top:.5rem" onclick="sendPasswordReset()">Envoyer le lien de réinitialisation</button>
+    </div>
+    <div id="forgot-operator-section" class="hidden">
+      <p style="font-size:11px;color:var(--t2);line-height:1.7;margin-bottom:.75rem">
+        En tant qu'opérateur, le réinitalisation de mot de passe se fait via votre <strong style="color:var(--t1)">email personnel</strong> enregistré lors de la création de votre compte.
+      </p>
+      <div class="boot-lbl">Code Ferme</div>
+      <input id="forgot-farm" class="boot-inp" type="text" placeholder="Ex: FARM01" style="text-transform:uppercase">
+      <div class="boot-lbl">Nom d'utilisateur</div>
+      <input id="forgot-user" class="boot-inp" type="text" placeholder="Votre identifiant">
+      <button class="boot-btn" style="margin-top:.5rem" onclick="sendOperatorReset()">Envoyer le lien de réinitialisation</button>
+    </div>
+    <div id="forgot-msg" style="font-size:10px;text-align:center;margin-top:.5rem;line-height:1.6"></div>
+    <button class="boot-link" style="margin-top:.5rem;width:100%;justify-content:center" onclick="G('forgot-modal').classList.add('hidden')">Annuler</button>
   </div>
 </div>
 
@@ -2276,6 +2308,11 @@ async function doLogin(){
     const farmSnap=await db.collection('farms').doc(farmCode).get();
     if(!farmSnap.exists){await auth.signOut();throw new Error('Ferme introuvable');}
     const farmData=farmSnap.data();
+    // Vérifier si la ferme est active (abonnement)
+    if(farmData.active===false){
+      await auth.signOut();
+      throw new Error('🚫 Ferme désactivée — Veuillez contacter l\'administrateur pour régulariser votre abonnement.');
+    }
     APP.farmName=farmData.name||farmCode;
     // Charger le profil espèce depuis la fiche ferme (verrouillé par le Super Admin)
     // Gestion des fermes créées avant l'ajout du champ speciesId (rétrocompatibilité)
@@ -2655,19 +2692,21 @@ function renderFarmsTable(){
     const fc=f.code||f.id;
     const fu=users.filter(u=>u.farmCode===fc).length;
     const sp=SPECIES_PROFILES.find(s=>s.id===f.speciesId)||null;
+    const farmActive=f.active!==false; // true par défaut si non défini
     const spBadge=sp
       ?`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700;background:${sp.color}15;color:${sp.color};border:1px solid ${sp.color}30">${sp.icon} ${sp.nom}</span>`
       :'<span style="font-size:9px;color:var(--t3)">—</span>';
-    return `<tr>
+    return `<tr style="${farmActive?'':'opacity:.6;background:rgba(255,61,87,.03)'}">
       <td><span class="badge b-gold" style="font-family:var(--mono)">${fc}</span></td>
       <td class="cn">${f.name||'—'}</td>
       <td class="cf">${f.responsable||'—'}</td>
       <td class="cf">${f.localisation||'—'}</td>
       <td>${spBadge}</td>
-      <td><span class="badge b-ok">Actif</span></td>
+      <td><span class="badge ${farmActive?'b-ok':'b-dng'}">${farmActive?'✅ Active':'🔴 Désactivée'}</span></td>
       <td class="cf">${fu}</td>
       <td><button class="dbtn" onclick="deleteFarm('${fc}')">Supprimer</button>
-          <button class="ebtn" onclick="adminEnterFarm('${fc}')" style="margin-left:4px;background:var(--acc2);color:#fff;border:none">🔑 Accéder</button></td>
+          <button class="ebtn" onclick="adminEnterFarm('${fc}')" style="margin-left:4px;background:var(--acc2);color:#fff;border:none">🔑 Accéder</button>
+          <button onclick="toggleFarmActivation('${fc}',${farmActive})" style="margin-left:4px;background:${farmActive?'rgba(255,61,87,.15)':'rgba(0,201,167,.15)'};color:${farmActive?'var(--dng)':'var(--acc)'};border:1px solid ${farmActive?'var(--dng)':'var(--acc)'};border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer">${farmActive?'🔴 Désactiver':'✅ Activer'}</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" style="color:var(--t3);padding:.75rem;text-align:center">Aucune ferme</td></tr>';
 }
@@ -2684,13 +2723,15 @@ function renderUsersTable(){
       <td class="cf" style="font-family:var(--mono)">${u.username||'—'}</td>
       <td><span class="badge ${roleBadge}">${u.role||'Opérateur'}</span></td>
       <td><span class="badge b-gold" style="font-size:9px">${u.farmCode||'—'}</span></td>
+      <td class="cf" style="font-size:9px">${u.personalEmail?`<span style="color:var(--acc)">✅ ${u.personalEmail}</span>`:`<span style="color:var(--t3)">—</span>`}</td>
       <td class="cf">${u.createdAt?new Date(u.createdAt.seconds*1000).toLocaleDateString('fr-FR'):'—'}</td>
-      <td style="display:flex;gap:4px;justify-content:center">
+      <td style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
         <button class="ebtn" onclick='openEditUser(${JSON.stringify({uid:u.id,email:u.email,name:u.name,role:u.role,canBackup:u.canBackup||false})})'>Modifier</button>
+        <button onclick="adminForceResetPassword('${u.id}','${u.username||u.name}','${u.farmCode||''}')" style="background:rgba(245,166,35,.15);color:var(--warn);border:1px solid rgba(245,166,35,.3);border-radius:4px;padding:3px 7px;font-size:10px;cursor:pointer" title="Réinitialiser le mot de passe">🔑 Reset</button>
         <button class="dbtn" onclick="deleteUser('${u.id}','${u.email||''}')">Supprimer</button>
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="6" style="color:var(--t3);padding:.75rem;text-align:center">Aucun utilisateur</td></tr>';
+  }).join('') || '<tr><td colspan="7" style="color:var(--t3);padding:.75rem;text-align:center">Aucun utilisateur</td></tr>';
 }
 
 function loadUsersTable(){renderUsersTable();}
@@ -2782,6 +2823,7 @@ async function createOperator(){
   const name=G('nu-name').value.trim();
   const username=G('nu-user').value.trim().toLowerCase();
   const password=G('nu-pass').value.trim();
+  const personalEmail=(G('nu-email-perso')?.value||'').trim().toLowerCase();
   const role=G('nu-role')?.value||'Opérateur';
   const msg=G('nu-msg');
   if(!farmCode||!name||!username||!password){msg.style.color='var(--dng)';msg.textContent='⚠️ Tous les champs sont obligatoires';return;}
@@ -2789,16 +2831,17 @@ async function createOperator(){
   const email=`${username.toLowerCase().replace(/[^a-z0-9]/g,'')}_${farmCode.toLowerCase().replace(/[^a-z0-9]/g,'')}@biofloc.app`;
   showLoader('Création de l\'utilisateur…');
   try{
-    // Create in secondary auth app (doesn't sign out admin)
     const cred=await secondaryAuth.createUserWithEmailAndPassword(email,password);
     const uid=cred.user.uid;
     await secondaryAuth.signOut();
-    // Store profile in Firestore
     await db.collection('users').doc(uid).set({
       uid,email,name,username,farmCode,role,
+      personalEmail:personalEmail||null,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
-    G('nu-name').value='';G('nu-user').value='';G('nu-pass').value='';
+    // Créer lookup par username pour reset mdp
+    await db.collection('logins').doc(`${farmCode}_${username}`).set({authEmail:email,personalEmail:personalEmail||null,uid,farmCode});
+    G('nu-name').value='';G('nu-user').value='';G('nu-pass').value='';if(G('nu-email-perso'))G('nu-email-perso').value='';
     await logAudit('modification',`Création utilisateur admin`,`${name} (${role}) — ferme: ${farmCode}`);
     await loadAdminDashboard();
     msg.style.color='var(--acc)';msg.textContent=`✅ ${role} "${name}" créé sur ${farmCode}`;
@@ -3505,6 +3548,111 @@ function openAnalyse(){
       </div>`;
     }).join('');
 }
+// ═══════════════════════════════════════════════
+// MOT DE PASSE OUBLIÉ — Réinitialisation
+// ═══════════════════════════════════════════════
+
+function openForgotPassword(type){
+  G('forgot-modal').classList.remove('hidden');
+  G('forgot-msg').textContent='';
+  G('forgot-admin-section').classList.toggle('hidden', type==='operator');
+  G('forgot-operator-section').classList.toggle('hidden', type==='admin');
+  if(type==='admin'){
+    const adminEmail=G('adm-email')?.value||'';
+    if(G('forgot-email'))G('forgot-email').value=adminEmail;
+  }
+}
+
+async function sendPasswordReset(){
+  const email=(G('forgot-email')?.value||'').trim();
+  const msg=G('forgot-msg');
+  if(!email){msg.style.color='var(--dng)';msg.textContent='⚠️ Saisissez votre adresse email';return;}
+  try{
+    await firebase.auth().sendPasswordResetEmail(email);
+    msg.style.color='var(--acc)';
+    msg.textContent='✅ Lien envoyé ! Vérifiez votre boîte mail (et les spams). Le lien expire dans 1 heure.';
+  }catch(e){
+    msg.style.color='var(--dng)';
+    msg.textContent=e.code==='auth/user-not-found'?'❌ Aucun compte trouvé avec cet email.'
+      :e.code==='auth/invalid-email'?'❌ Email invalide.'
+      :'❌ Erreur : '+e.message;
+  }
+}
+
+async function sendOperatorReset(){
+  const farmCode=(G('forgot-farm')?.value||'').trim().toUpperCase();
+  const username=(G('forgot-user')?.value||'').trim().toLowerCase();
+  const msg=G('forgot-msg');
+  if(!farmCode||!username){msg.style.color='var(--dng)';msg.textContent='⚠️ Saisissez le code ferme et votre identifiant';return;}
+  msg.style.color='var(--t3)';msg.textContent='Recherche en cours…';
+  try{
+    const loginSnap=await db.collection('logins').doc(`${farmCode}_${username}`).get();
+    if(!loginSnap.exists){
+      msg.style.color='var(--warn)';
+      msg.textContent='⚠️ Identifiant introuvable. Contactez votre Super Administrateur.';
+      return;
+    }
+    const loginData=loginSnap.data();
+    if(loginData.personalEmail){
+      await firebase.auth().sendPasswordResetEmail(loginData.authEmail);
+      msg.style.color='var(--acc)';
+      msg.textContent='✅ Lien envoyé à votre email personnel. Vérifiez votre boîte mail et les spams.';
+    } else {
+      msg.style.color='var(--warn)';
+      msg.innerHTML=`⚠️ Aucun email personnel enregistré.<br>Contactez votre Super Administrateur.${APP.whatsapp?` <strong>WhatsApp : ${APP.whatsapp}</strong>`:''}`;
+    }
+  }catch(e){
+    msg.style.color='var(--dng)';msg.textContent='❌ Erreur : '+e.message;
+  }
+}
+
+async function adminForceResetPassword(uid, username, farmCode){
+  const newPassword=generateTempPassword();
+  if(!confirm(`Réinitialiser le mot de passe de "${username}" ?\n\nMot de passe temporaire : ${newPassword}\n\nCommuniquez ce mot de passe à l'utilisateur via WhatsApp.`))return;
+  showLoader('Réinitialisation en cours…');
+  try{
+    const v=Date.now().toString().slice(-4);
+    const newEmail=`${username}_${farmCode.toLowerCase()}_r${v}@biofloc.app`;
+    const cred=await secondaryAuth.createUserWithEmailAndPassword(newEmail,newPassword);
+    const newUid=cred.user.uid;
+    await secondaryAuth.signOut();
+    const oldSnap=await db.collection('users').doc(uid).get();
+    const oldData=oldSnap.exists?oldSnap.data():{};
+    await db.collection('users').doc(newUid).set({...oldData,uid:newUid,email:newEmail,username,farmCode});
+    await db.collection('users').doc(uid).delete();
+    await db.collection('logins').doc(`${farmCode}_${username}`).set({authEmail:newEmail,personalEmail:oldData.personalEmail||null,uid:newUid,farmCode});
+    await logAudit('reset_mdp',`Reset mdp forcé`,`${username} — ferme: ${farmCode}`);
+    hideLoader();
+    await loadAdminDashboard();
+    alert(`✅ Mot de passe réinitialisé !\n\nIdentifiant : ${username}\nMot de passe temp. : ${newPassword}\n\nCommuniquez à l'utilisateur via WhatsApp.`);
+  }catch(e){hideLoader();alert('❌ Erreur : '+e.message);}
+}
+
+function generateTempPassword(){
+  const chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+  let p='';for(let i=0;i<10;i++)p+=chars[Math.floor(Math.random()*chars.length)];
+  return p;
+}
+
+// ═══════════════════════════════════════════════
+// ACTIVATION / DÉSACTIVATION FERME — Abonnement
+// ═══════════════════════════════════════════════
+
+async function toggleFarmActivation(farmCode, currentlyActive){
+  const msg=currentlyActive
+    ?`Désactiver "${farmCode}" ?\nLes utilisateurs ne pourront plus se connecter (non-paiement abonnement).`
+    :`Réactiver "${farmCode}" ?\nLes utilisateurs pourront à nouveau se connecter.`;
+  if(!confirm(msg))return;
+  showLoader(currentlyActive?'Désactivation…':'Activation…');
+  try{
+    await db.collection('farms').doc(farmCode).set({active:!currentlyActive},{merge:true});
+    await logAudit('ferme_toggle',`Ferme ${currentlyActive?'désactivée':'réactivée'}`,`farmCode: ${farmCode}`);
+    await loadAdminDashboard();
+    alert(`✅ Ferme "${farmCode}" ${currentlyActive?'désactivée — utilisateurs bloqués':'réactivée — accès rétabli'}.`);
+  }catch(e){alert('❌ '+e.message);}
+  hideLoader();
+}
+
 // Stockées dans Firestore : platform/params
 // ═══════════════════════════════════════════════
 let PARAM_LISTS={
@@ -6034,9 +6182,232 @@ function renderFCRModule(){
 }
 
 // ═══════════════════════════════════════════════
-// INIT — show boot screen
+// ANIMATION AQUATIQUE — Page d'accueil
+// Tilapia gris · Tilapia rouge · Silure · Carpe koï
 // ═══════════════════════════════════════════════
-loadSavedTheme();
+(function initAquaAnimation(){
+  const canvas=document.getElementById('aqua-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+
+  function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+  resize();window.addEventListener('resize',resize);
+
+  // Définitions des espèces de poissons
+  const SPECIES=[
+    // Tilapia gris (Oreochromis niloticus)
+    {name:'tilapia-gris', count:6, size:[28,42],
+     colors:['#8899aa','#99aabb','#778899','#6688aa','#aabbcc'],
+     bodyW:1.8, finH:0.4, speed:[0.4,0.9], layer:1,
+     draw:(ctx,w,h,c)=>{
+       // Corps ovale gris
+       ctx.fillStyle=c;
+       ctx.beginPath();ctx.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);ctx.fill();
+       // Stries latérales caractéristiques du tilapia
+       ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=0.5;
+       for(let i=0;i<5;i++){
+         ctx.beginPath();ctx.moveTo(-w/2+w*i/5,-h/3);ctx.lineTo(-w/2+w*i/5,h/3);ctx.stroke();
+       }
+       // Nageoire dorsale
+       ctx.fillStyle='rgba(80,100,120,.7)';
+       ctx.beginPath();ctx.moveTo(-w/4,-h/2);ctx.quadraticCurveTo(w/6,-h*0.85,w/3,-h/2);ctx.closePath();ctx.fill();
+       // Queue en fourche
+       ctx.fillStyle=c;
+       ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w*0.75,-h/2.5);ctx.lineTo(w*0.85,0);ctx.lineTo(w*0.75,h/2.5);ctx.closePath();ctx.fill();
+       // Œil
+       ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-w/4,-h/6,h/6,0,Math.PI*2);ctx.fill();
+       ctx.fillStyle='#223';ctx.beginPath();ctx.arc(-w/4,-h/6,h/9,0,Math.PI*2);ctx.fill();
+     }},
+    // Tilapia rouge (variant rouge GIFT)
+    {name:'tilapia-rouge', count:4, size:[30,45],
+     colors:['#cc4422','#dd5533','#bb3311','#ee6644','#cc3322'],
+     bodyW:1.8, finH:0.4, speed:[0.3,0.8], layer:2,
+     draw:(ctx,w,h,c)=>{
+       ctx.fillStyle=c;
+       ctx.beginPath();ctx.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);ctx.fill();
+       // Reflets orangés sur le dos
+       const grad=ctx.createLinearGradient(0,-h/2,0,h/2);
+       grad.addColorStop(0,'rgba(255,140,60,.35)');grad.addColorStop(1,'rgba(0,0,0,.15)');
+       ctx.fillStyle=grad;ctx.beginPath();ctx.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);ctx.fill();
+       // Nageoire dorsale rouge vif
+       ctx.fillStyle='rgba(200,50,20,.8)';
+       ctx.beginPath();ctx.moveTo(-w/4,-h/2);ctx.quadraticCurveTo(w/8,-h*0.9,w/3,-h/2);ctx.closePath();ctx.fill();
+       // Queue
+       ctx.fillStyle=c;
+       ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w*0.78,-h/2.2);ctx.lineTo(w*0.88,0);ctx.lineTo(w*0.78,h/2.2);ctx.closePath();ctx.fill();
+       ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-w/4,-h/6,h/6,0,Math.PI*2);ctx.fill();
+       ctx.fillStyle='#1a0000';ctx.beginPath();ctx.arc(-w/4,-h/6,h/9,0,Math.PI*2);ctx.fill();
+     }},
+    // Silure (Clarias gariepinus) — long et sombre
+    {name:'silure', count:3, size:[55,80],
+     colors:['#334455','#223344','#445566','#2d3d4d'],
+     bodyW:4.5, finH:0.3, speed:[0.2,0.5], layer:3,
+     draw:(ctx,w,h,c)=>{
+       // Corps allongé
+       ctx.fillStyle=c;
+       ctx.beginPath();ctx.moveTo(-w/2,0);ctx.quadraticCurveTo(0,-h/2.5,w/2,0);ctx.quadraticCurveTo(0,h/2.5,-w/2,0);ctx.closePath();ctx.fill();
+       // Mouchetures claires
+       ctx.fillStyle='rgba(150,180,200,.2)';
+       for(let i=0;i<8;i++){ctx.beginPath();ctx.arc(-w/2+w*i/9+Math.random()*w/12,h/8*(Math.random()-0.5),h/8,0,Math.PI*2);ctx.fill();}
+       // Nageoire dorsale longue
+       ctx.fillStyle='rgba(30,50,70,.6)';
+       ctx.beginPath();ctx.moveTo(-w/3,-h/2.5);ctx.lineTo(w/4,-h/2);ctx.lineTo(w/3,-h/2.5);ctx.closePath();ctx.fill();
+       // Barbillons (whiskers)
+       ctx.strokeStyle='rgba(180,200,220,.7)';ctx.lineWidth=1;
+       ctx.beginPath();ctx.moveTo(-w/2,0);ctx.quadraticCurveTo(-w*0.65,-h/3,-w*0.7,-h/2);ctx.stroke();
+       ctx.beginPath();ctx.moveTo(-w/2,0);ctx.quadraticCurveTo(-w*0.65,h/3,-w*0.7,h/2);ctx.stroke();
+       ctx.beginPath();ctx.moveTo(-w/2,0);ctx.quadraticCurveTo(-w*0.6,0,-w*0.75,0);ctx.stroke();
+       // Queue
+       ctx.fillStyle=c;
+       ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w*0.75,-h/2);ctx.lineTo(w*0.8,0);ctx.lineTo(w*0.75,h/2);ctx.closePath();ctx.fill();
+       // Œil
+       ctx.fillStyle='#aabbcc';ctx.beginPath();ctx.arc(-w/2.5,0,h/5,0,Math.PI*2);ctx.fill();
+       ctx.fillStyle='#000c';ctx.beginPath();ctx.arc(-w/2.5,0,h/8,0,Math.PI*2);ctx.fill();
+     }},
+    // Carpe koï multicolore
+    {name:'koi', count:4, size:[40,60],
+     colors:['#ff8833','#ff3300','#ff6688','#ffaa44','#ffffff'],
+     bodyW:2.2, finH:0.45, speed:[0.25,0.6], layer:2,
+     draw:(ctx,w,h,c)=>{
+       // Dessin de la carpe koï
+       const colors=['#ff6622','#ffffff','#ff2200','#ffaa33','#fff'];
+       const c1=colors[Math.floor(Math.random()*colors.length)];
+       const c2=colors[Math.floor(Math.random()*colors.length)];
+       // Corps
+       ctx.fillStyle=c1;
+       ctx.beginPath();ctx.ellipse(0,0,w/2,h/2,0,0,Math.PI*2);ctx.fill();
+       // Taches colorées aléatoires
+       ctx.fillStyle=c2;
+       ctx.beginPath();ctx.ellipse(w/8,h/4,w/5,h/4,0.5,0,Math.PI*2);ctx.fill();
+       ctx.beginPath();ctx.ellipse(-w/6,-h/5,w/6,h/5,-0.3,0,Math.PI*2);ctx.fill();
+       // Écailles
+       ctx.strokeStyle='rgba(0,0,0,.12)';ctx.lineWidth=0.4;
+       for(let row=0;row<3;row++)for(let col=0;col<5;col++){
+         const x=-w/3+col*(w*0.15);const y=-h/4+row*(h*0.22);
+         ctx.beginPath();ctx.arc(x,y,h/5,0,Math.PI);ctx.stroke();
+       }
+       // Nageoires orange translucides
+       ctx.fillStyle='rgba(255,120,30,.5)';
+       ctx.beginPath();ctx.moveTo(-w/5,-h/2);ctx.quadraticCurveTo(w/5,-h,w/3,-h/2);ctx.closePath();ctx.fill();
+       ctx.beginPath();ctx.moveTo(-w/5,h/2);ctx.quadraticCurveTo(w/5,h,w/3,h/2);ctx.closePath();ctx.fill();
+       // Queue bilobée
+       ctx.fillStyle='rgba(255,120,30,.8)';
+       ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w*0.8,-h/1.8);ctx.lineTo(w*0.85,0);ctx.closePath();ctx.fill();
+       ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w*0.8,h/1.8);ctx.lineTo(w*0.85,0);ctx.closePath();ctx.fill();
+       ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-w/3,-h/5,h/5.5,0,Math.PI*2);ctx.fill();
+       ctx.fillStyle='#111';ctx.beginPath();ctx.arc(-w/3,-h/5,h/9,0,Math.PI*2);ctx.fill();
+     }},
+  ];
+
+  // Bulle d'air
+  function makeBubble(){
+    return{x:Math.random()*canvas.width,y:canvas.height+10,r:1.5+Math.random()*4,speed:0.4+Math.random()*0.8,wobble:Math.random()*Math.PI*2,alpha:0.2+Math.random()*0.3};
+  }
+  const bubbles=Array.from({length:25},makeBubble);
+
+  // Génération des poissons
+  const fish=[];
+  SPECIES.forEach(sp=>{
+    for(let i=0;i<sp.count;i++){
+      const size=sp.size[0]+Math.random()*(sp.size[1]-sp.size[0]);
+      const w=size*sp.bodyW,h=size;
+      const dir=Math.random()>.5?1:-1;
+      const speed=(sp.speed[0]+Math.random()*(sp.speed[1]-sp.speed[0]))*dir;
+      fish.push({
+        sp, w, h,
+        x:Math.random()*canvas.width,
+        y:canvas.height*0.15+Math.random()*canvas.height*0.7,
+        speed, dir,
+        color:sp.colors[Math.floor(Math.random()*sp.colors.length)],
+        wave:Math.random()*Math.PI*2,
+        waveAmp:3+Math.random()*5,
+        waveSpeed:0.02+Math.random()*0.03,
+        tailAngle:0, tailDir:1, tailSpeed:0.08+Math.random()*0.06,
+        opacity:0.65+Math.random()*0.3,
+      });
+    }
+  });
+  // Trier par layer (profondeur)
+  fish.sort((a,b)=>a.sp.layer-b.sp.layer);
+
+  let raf;
+  function draw(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Gradient eau de fond
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'rgba(2,15,30,.0)');
+    bg.addColorStop(1,'rgba(0,30,60,.12)');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+    // Lumière caustics (ondulations lumineuses)
+    ctx.save();ctx.globalAlpha=0.03;
+    const t=Date.now()*0.001;
+    for(let i=0;i<6;i++){
+      const cx=W*(0.1+i*0.15)+Math.sin(t*0.4+i)*W*0.04;
+      const cy=H*0.15+Math.sin(t*0.3+i*1.3)*H*0.05;
+      const gr=ctx.createRadialGradient(cx,cy,0,cx,cy,80+Math.sin(t+i)*20);
+      gr.addColorStop(0,'rgba(100,220,200,1)');gr.addColorStop(1,'transparent');
+      ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+    }
+    ctx.restore();
+
+    // Bulles
+    bubbles.forEach(b=>{
+      b.y-=b.speed;b.wobble+=0.05;
+      b.x+=Math.sin(b.wobble)*0.4;
+      if(b.y<-10){Object.assign(b,makeBubble());}
+      ctx.save();ctx.globalAlpha=b.alpha;
+      ctx.strokeStyle='rgba(150,220,255,.6)';ctx.lineWidth=0.8;
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.stroke();
+      // Reflet
+      ctx.fillStyle='rgba(200,240,255,.3)';
+      ctx.beginPath();ctx.arc(b.x-b.r*0.3,b.y-b.r*0.3,b.r*0.3,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    });
+
+    // Poissons
+    const now=Date.now()*0.001;
+    fish.forEach(f=>{
+      f.x+=f.speed;
+      f.wave+=f.waveSpeed;
+      f.tailAngle+=f.tailSpeed*f.tailDir;
+      if(Math.abs(f.tailAngle)>0.35)f.tailDir*=-1;
+      const yOff=Math.sin(f.wave)*f.waveAmp;
+
+      // Rebond sur les bords
+      if(f.x>canvas.width+f.w*0.9){f.x=-f.w*0.9;f.color=f.sp.colors[Math.floor(Math.random()*f.sp.colors.length)];}
+      if(f.x<-f.w*0.9){f.x=canvas.width+f.w*0.9;f.color=f.sp.colors[Math.floor(Math.random()*f.sp.colors.length)];}
+
+      ctx.save();
+      ctx.globalAlpha=f.opacity;
+      ctx.translate(f.x,f.y+yOff);
+      if(f.dir<0)ctx.scale(-1,1);
+      // Ombre douce
+      ctx.shadowColor='rgba(0,20,40,.3)';ctx.shadowBlur=8;ctx.shadowOffsetY=4;
+      const scaleH=f.h/50,scaleW=f.w/50;
+      ctx.scale(scaleW,scaleH);
+      f.sp.draw(ctx,50,50,f.color);
+      ctx.restore();
+    });
+
+    raf=requestAnimationFrame(draw);
+  }
+
+  // Démarrer uniquement sur screen-boot visible
+  function startIfBoot(){
+    const bootEl=document.getElementById('screen-boot');
+    if(bootEl&&!bootEl.classList.contains('hidden')){draw();}
+    else{cancelAnimationFrame(raf);}
+  }
+  // Observer la visibilité de screen-boot
+  const observer=new MutationObserver(startIfBoot);
+  const bootEl=document.getElementById('screen-boot');
+  if(bootEl)observer.observe(bootEl,{attributes:true,attributeFilter:['class']});
+  // Démarrer immédiatement
+  setTimeout(startIfBoot,100);
+})();
 showScreen('screen-boot');
 </script>
 </body>
