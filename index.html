@@ -255,7 +255,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
     <!-- Logo ferme dynamique (chargé après saisie du code ferme) -->
     <div id="boot-logo-area" style="text-align:center;margin-bottom:.3rem;min-height:50px;display:flex;align-items:center;justify-content:center;gap:10px">
       <div style="font-size:42px" id="boot-fish-icon">🐟</div>
-      <img id="boot-logo-img" src="" alt="" style="height:50px;max-width:120px;border-radius:8px;object-fit:contain;display:none;border:1px solid var(--b2)">
+      <img id="boot-logo-img" src="" alt="" style="height:80px;max-width:180px;border-radius:10px;object-fit:contain;display:none;border:1px solid var(--b2)">
     </div>
     <div class="boot-logo" id="boot-farm-display">BIOFLOC PLATFORM</div>
     <div class="boot-sub">Système de gestion aquacole</div>
@@ -536,7 +536,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 <div id="screen-farm" class="hidden">
   <div class="topbar">
     <div class="logo">
-      <img id="farm-logo-img" src="" alt="" style="height:28px;width:28px;border-radius:6px;object-fit:cover;display:none;margin-right:4px;border:1px solid var(--b2)">
+      <img id="farm-logo-img" src="" alt="" style="height:36px;width:36px;border-radius:6px;object-fit:cover;display:none;margin-right:4px;border:1px solid var(--b2)">
       🐟 <span id="farm-display-name">BIOFLOC</span>
     </div>
     <div class="stats">
@@ -1511,7 +1511,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
           <div class="card" style="border-color:rgba(0,201,167,.2)">
             <div class="ctitle"><span class="dot" style="background:var(--acc)"></span>Logo de la ferme</div>
             <p style="font-size:10px;color:var(--t2);line-height:1.7;margin-bottom:.8rem">
-              Le logo s'affiche dans la barre supérieure et sur la page de connexion. Formats acceptés : JPG, PNG, SVG. Taille max : 500 Ko.
+            Le logo s'affiche dans la barre supérieure et sur la page de connexion. Formats acceptés : JPG, PNG, SVG. Taille max : <strong>2 Mo</strong> · Résolution recommandée : 800×800 px minimum.
             </p>
 
             <!-- Aperçu logo actuel -->
@@ -1548,8 +1548,8 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
             <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Conseils</div>
             <div style="font-size:10px;color:var(--t2);line-height:1.9">
               <div>📐 <strong style="color:var(--t1)">Format idéal</strong> : carré ou rectangulaire · fond transparent (PNG) ou blanc</div>
-              <div>🎨 <strong style="color:var(--t1)">Résolution</strong> : 200×200 px minimum · 500×500 px recommandé</div>
-              <div>⚖️ <strong style="color:var(--t1)">Taille fichier</strong> : moins de 500 Ko pour un chargement rapide</div>
+              <div>🎨 <strong style="color:var(--t1)">Résolution</strong> : 800×800 px minimum · 1000×1000 px recommandé pour écrans Retina</div>
+              <div>⚖️ <strong style="color:var(--t1)">Taille fichier</strong> : moins de 2 Mo · PNG haute résolution conseillé</div>
               <div>🔄 <strong style="color:var(--t1)">Remplacement</strong> : uploader un nouveau logo écrase l'ancien automatiquement</div>
               <div style="margin-top:.6rem;padding:.4rem .6rem;background:rgba(251,191,36,.08);border-radius:6px;border:1px solid rgba(251,191,36,.2)">
                 ⚠️ Le logo est visible par tous les utilisateurs de cette ferme. Utilisez le logo officiel de votre structure.
@@ -3013,8 +3013,8 @@ function onLogoFileSelected(input){
   const file=input.files[0];
   if(!file)return;
   // Vérification taille
-  if(file.size>500*1024){
-    showLogoError('Fichier trop volumineux. Maximum 500 Ko.');
+  if(file.size>2*1024*1024){
+    showLogoError('Fichier trop volumineux. Maximum 2 Mo.');
     return;
   }
   LOGO_PENDING_FILE=file;
