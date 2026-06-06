@@ -2285,28 +2285,33 @@ async function doLogin(){
   const password=(G('b-pass').value||'').trim();
   const errEl=G('boot-err');
   if(!farmCode||!username||!password){errEl.textContent='⚠️ Tous les champs sont obligatoires';errEl.classList.add('show');return;}
-  showLoader('Vérification…');
+  errEl.classList.remove('show');
+  showLoader('Étape 1/4 — Authentification…');
   try{
     const email=`${username.toLowerCase().replace(/[^a-z0-9]/g,'')}_${farmCode.toLowerCase().replace(/[^a-z0-9]/g,'')}@biofloc.app`;
-    const cred=await auth.signInWithEmailAndPassword(email,password);
-    // Load user profile
-    const userSnap=await db.collection('users').doc(cred.user.uid).get();
+    let cred;
+    try{
+      cred=await auth.signInWithEmailAndPassword(email,password);
+    }catch(authErr){
+      throw new Error(authErr.code==='auth/wrong-password'||authErr.code==='auth/user-not-found'||authErr.code==='auth/invalid-credential'
+        ?'❌ Identifiant ou mot de passe incorrect'
+        :'❌ Authentification échouée : '+authErr.message);
+    }
+    showLoader('Étape 2/4 — Chargement du profil…');
+    const userSnap=await db.collection('users').doc(cred.user.uid).get().catch(e=>{throw new Error('❌ Profil inaccessible : '+e.message);});
     const userData=userSnap.exists?userSnap.data():{name:username,role:'Opérateur',farmCode};
     const role=userData.role||'Opérateur';
     APP.user={uid:cred.user.uid,email,name:userData.name||username,role,farmCode,canBackup:userData.canBackup||false};
     APP.farmCode=farmCode;
-    // Load farm info — species locked at farm creation by Super Admin
-    const farmSnap=await db.collection('farms').doc(farmCode).get();
-    if(!farmSnap.exists){await auth.signOut();throw new Error('Ferme introuvable');}
+    showLoader('Étape 3/4 — Vérification de la ferme…');
+    const farmSnap=await db.collection('farms').doc(farmCode).get().catch(e=>{throw new Error('❌ Ferme inaccessible : '+e.message);});
+    if(!farmSnap.exists){await auth.signOut();throw new Error('❌ Ferme "'+farmCode+'" introuvable dans la base de données.');}
     const farmData=farmSnap.data();
-    // Vérifier si la ferme est active (abonnement)
     if(farmData.active===false){
       await auth.signOut();
-      throw new Error('🚫 Ferme désactivée — Veuillez contacter l\'administrateur pour régulariser votre abonnement.');
+      throw new Error('🚫 Ferme désactivée — Contactez l\'administrateur pour régulariser votre abonnement.');
     }
     APP.farmName=farmData.name||farmCode;
-    // Charger le profil espèce depuis la fiche ferme (verrouillé par le Super Admin)
-    // Gestion des fermes créées avant l'ajout du champ speciesId (rétrocompatibilité)
     try{
       if(farmData.speciesId==='custom'&&farmData.speciesCustom){
         const idx=SPECIES_PROFILES.findIndex(s=>s.id==='custom');
@@ -2315,34 +2320,22 @@ async function doLogin(){
       } else if(farmData.speciesId){
         APP.species=SPECIES_PROFILES.find(s=>s.id===farmData.speciesId)||SPECIES_PROFILES[0];
       } else {
-        // Ferme ancienne sans speciesId — tilapia par défaut, pas de blocage
         APP.species=SPECIES_PROFILES[0];
       }
-    }catch(specErr){
-      APP.species=SPECIES_PROFILES[0]; // fallback silencieux
-    }
-    // Check if password was reset by admin/responsable
-    await checkPasswordReset(cred.user);
+    }catch(specErr){APP.species=SPECIES_PROFILES[0];}
+    showLoader('Étape 4/4 — Chargement des données…');
+    await checkPasswordReset(cred.user).catch(e=>console.warn('checkPasswordReset:',e));
     await loadFarmData();
-    hideLoader();errEl.classList.remove('show');
-    logAudit('CONNEXION','Connexion réussie — '+role);
+    hideLoader();
+    errEl.classList.remove('show');
+    logAudit('CONNEXION','Connexion réussie — '+role).catch(()=>{});
     showFarmApp();
   }catch(e){
     hideLoader();
-    const isAuthErr=e.code==='auth/wrong-password'||e.code==='auth/user-not-found'||e.code==='auth/invalid-credential';
-    errEl.textContent=isAuthErr?'❌ Code ferme, identifiant ou mot de passe incorrect':'❌ '+e.message;
+    errEl.textContent=e.message||'❌ Erreur inconnue';
     errEl.classList.add('show');
-    G('b-pass').value='';G('b-pass').focus();
-    // Log failed login attempt
-    try{
-      await db.collection('superadmin').doc('auditLog').collection('logs').add({
-        timestamp:firebase.firestore.FieldValue.serverTimestamp(),
-        timestampLocal:new Date().toISOString(),
-        uid:'inconnu',name:username||'?',role:'—',farmCode:farmCode||'?',
-        action:'CONNEXION_ECHEC',details:'Tentative échouée — '+farmCode+'/'+username,
-        device:getDeviceInfo(),userAgent:navigator.userAgent.substring(0,100)
-      });
-    }catch(le){console.warn('Audit log failed login error',le);}
+    errEl.style.display='block';
+    G('b-pass').value='';
   }
 }
 
