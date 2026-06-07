@@ -926,276 +926,66 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 
     <!-- T12 RATIONNEMENT ALIMENTAIRE -->
     <div id="t12" class="pane">
-      <!-- SÉLECTEUR FOURNISSEUR -->
-      <div class="card" style="border-color:rgba(251,191,36,.3)">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div style="font-size:22px">🏭</div>
-          <div style="flex:1">
-            <div style="font-size:12px;font-weight:700;color:var(--gold)">Fournisseur d'aliment actif</div>
-            <div id="supplier-active-label" style="font-size:10px;color:var(--t2);margin-top:2px">Koudijs AKF — 6 types · Réduction Biofloc −20%</div>
-          </div>
-          <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
-            <select id="supplier-select" class="si" style="font-size:11px" onchange="onSupplierChange(this.value)">
-              <option value="koudijs">🌿 Koudijs AKF (défaut)</option>
-              <option value="custom">➕ Nouveau fournisseur…</option>
+      <!-- Sélecteur bassin + Semaine -->
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;padding:.6rem 1rem;background:var(--card);border:1px solid var(--b2);border-radius:10px">
+        <div style="font-size:20px">🍽️</div>
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:12px;font-weight:700;color:var(--gold)">Guide de rationnement — par bassin</div>
+          <div style="font-size:10px;color:var(--t3)">Ration · Fréquence · Mélasse préventive & corrective · Ratio C:N selon phase</div>
+        </div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+          <div>
+            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Bassin</div>
+            <select id="rat-bassin" class="si" style="font-size:11px;min-width:120px" onchange="renderRationnement()">
+              <option value="all">🔢 Tous les bassins</option>
             </select>
-            <button class="sbtn" style="font-size:10px;padding:4px 12px;background:var(--warn);color:#04101e;font-weight:700" onclick="editActiveSupplier()" title="Modifier le fournisseur actuellement sélectionné">✏️ Modifier actif</button>
-            <button class="sbtn" style="font-size:10px;padding:4px 10px;background:var(--b2)" onclick="openSupplierModal(true)" title="Créer un nouveau fournisseur">+ Nouveau</button>
-          </div>
-        </div>
-        <!-- Aperçu des types du fournisseur actif -->
-        <div id="supplier-types-preview" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.6rem;padding-top:.55rem;border-top:1px solid var(--b1)"></div>
-      </div>
-
-      <!-- En-tête + Calculateur rapide -->
-      <div class="card" style="border-color:rgba(251,191,36,.2);padding:.8rem 1rem">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:.75rem">
-          <div style="font-size:28px" id="t12-species-icon">🐟</div>
-          <div style="flex:1">
-            <div id="t12-title" style="font-size:13px;font-weight:700;color:var(--gold)">Plan de rationnement — Koudijs AKF adapté Biofloc Tilapia</div>
-            <div id="t12-subtitle" style="font-size:10px;color:var(--t2);margin-top:2px">Oreochromis niloticus · Lomé 28–30°C · Réduction Biofloc −20% (floc optimal tilapia 25–40 ml/L Imhoff)</div>
-          </div>
-        </div>
-
-        <!-- Calculateur rapide étendu -->
-        <div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:.75rem 1rem">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:.6rem">
-            <span style="font-size:13px">⚡</span>
-            <span style="font-size:11px;font-weight:700;color:var(--gold)">Calculateur rapide — Ration &amp; Mélasse C:N = 15:1</span>
-          </div>
-
-          <!-- Ligne 1 : données poissons -->
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem">
-            <div>
-              <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Nb poissons</div>
-              <input type="number" id="calc-nb" class="ci" style="width:75px" placeholder="1000" oninput="calcRation()">
-            </div>
-            <div>
-              <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Poids moy. (g)</div>
-              <input type="number" id="calc-poids" class="ci" style="width:70px" placeholder="50" oninput="calcRation()">
-            </div>
-            <div>
-              <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Imhoff (ml/L)</div>
-              <input type="number" id="calc-imhoff" class="ci" style="width:65px" placeholder="30" oninput="calcRation()">
-            </div>
-            <div>
-              <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Volume bassin (L)</div>
-              <input type="number" id="calc-vol" class="ci" style="width:80px" placeholder="3800" oninput="calcRation()">
-            </div>
-            <div>
-              <div style="font-size:9px;color:var(--t3);margin-bottom:2px">
-                TAN mesuré (mg/L)
-                <span id="calc-tan-phase-badge" style="margin-left:4px;padding:1px 5px;border-radius:6px;font-size:8px;font-weight:700;background:rgba(0,201,167,.15);color:var(--acc)">Préventif</span>
-              </div>
-              <input type="number" id="calc-tan" class="ci" style="width:75px;border-color:var(--acc)" placeholder="ex: 0.5" step="0.1" oninput="calcRation()">
-            </div>
-            <div>
-              <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Semaine (1–22)</div>
-              <input type="number" id="calc-week" class="ci" style="width:60px;border-color:var(--gold)" placeholder="8" min="1" max="22" oninput="calcRation()">
-            </div>
-          </div>
-
-          <!-- Explication méthodes C/N -->
-          <div style="display:flex;gap:.5rem;margin-bottom:.6rem;flex-wrap:wrap">
-            <div style="font-size:9px;padding:3px 8px;border-radius:6px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.2);color:var(--acc)">
-              <strong>🛡️ Préventif</strong> — TAN &lt; 1 mg/L : dose basée sur aliment distribué · C:N par phase
-            </div>
-            <div style="font-size:9px;padding:3px 8px;border-radius:6px;background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.2);color:var(--warn)">
-              <strong>🔧 Correctif</strong> — TAN ≥ 1 mg/L : dose basée sur TAN × volume bassin
-            </div>
-            <div style="font-size:9px;padding:3px 8px;border-radius:6px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);color:var(--gold)">
-              <strong>C:N</strong> : S0–S4 = 15:1 · S4–S16 = 10:1 · S16–S22 = 15:1
-            </div>
-          </div>
-
-          <div id="calc-result" style="font-size:11px;color:var(--t2)"></div>
-        </div>
-      </div>
-
-      <!-- Tableau Imhoff -->
-      <div class="card">
-        <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Gestion du floc selon volume Imhoff — Spécifique Tilapia</div>
-        <p style="font-size:10px;color:var(--t2);margin-bottom:.6rem">Mesure au cône Imhoff : laisser décanter 30 minutes. Lire le volume en ml/L.</p>
-        <div class="tw">
-          <table>
-            <thead><tr>
-              <th>Imhoff</th><th>État du floc</th><th>Réduction ration</th><th>Mélasse C:N=15:1</th><th>Vidange</th><th>Actions clés</th>
-            </tr></thead>
-            <tbody>
-              <tr style="background:rgba(255,61,87,.06)">
-                <td style="font-weight:700;color:var(--dng);white-space:nowrap">&lt; 10 ml/L</td>
-                <td style="font-size:10px">Floc insuffisant — risque NH₃</td>
-                <td><span class="badge b-ok">0% — Ration pleine</span></td>
-                <td style="font-size:10px"><strong>Phase 2</strong><br><span style="color:var(--t3);font-size:9px">selon TAN × vol</span></td>
-                <td><span class="badge b-dng">Non</span></td>
-                <td style="font-size:9px;color:var(--t2)">Arrêter toute vidange · Mélasse 2×/jour pendant 5j · DO ≥ 6 ppm · NH₃ quotidien</td>
-              </tr>
-              <tr style="background:rgba(245,166,35,.04)">
-                <td style="font-weight:700;color:var(--warn);white-space:nowrap">10–15 ml/L</td>
-                <td style="font-size:10px">Floc en développement</td>
-                <td><span class="badge b-warn">−10 à −15%</span></td>
-                <td style="font-size:10px"><strong>Phase 1</strong><br><span style="color:var(--t3);font-size:9px">~1 364 ml/kg (40%prot)<br>~1 032 ml/kg (32%prot)</span></td>
-                <td><span class="badge b-dng">Non</span></td>
-                <td style="font-size:9px;color:var(--t2)">Mélasse quotidienne · NH₃ 2×/semaine · Pas de vidange</td>
-              </tr>
-              <tr style="background:rgba(245,166,35,.04)">
-                <td style="font-weight:700;color:var(--warn);white-space:nowrap">15–25 ml/L</td>
-                <td style="font-size:10px">Floc actif — zone de transition</td>
-                <td><span class="badge b-warn">−15 à −20%</span></td>
-                <td style="font-size:10px"><strong>Phase 1</strong><br><span style="color:var(--t3);font-size:9px">~1 364 ml/kg (40%prot)<br>~1 032 ml/kg (32%prot)</span></td>
-                <td style="font-size:10px;color:var(--t3)">Surveillance</td>
-                <td style="font-size:9px;color:var(--t2)">Réduction progressive · DO après repas · Préparer protocole vidange</td>
-              </tr>
-              <tr style="background:rgba(0,201,167,.06)">
-                <td style="font-weight:700;color:var(--acc);white-space:nowrap">25–40 ml/L</td>
-                <td style="font-size:10px"><strong style="color:var(--acc)">✅ OPTIMAL</strong></td>
-                <td><span class="badge b-ok">−20 à −25%</span></td>
-                <td style="font-size:10px"><strong>Phase 1</strong><br><span style="color:var(--t3);font-size:9px">~1 364 ml/kg (40%prot)<br>~1 032 ml/kg (32%prot)</span></td>
-                <td><span class="badge b-ok">10% / 10 j</span></td>
-                <td style="font-size:9px;color:var(--t2)">Régime nominal · Vidange routine 10%/10j · DO 3×/jour · Pesée 2 semaines</td>
-              </tr>
-              <tr style="background:rgba(245,166,35,.04)">
-                <td style="font-weight:700;color:var(--warn);white-space:nowrap">40–50 ml/L</td>
-                <td style="font-size:10px">Floc dense — surveillance renforcée</td>
-                <td><span class="badge b-warn">−25%</span></td>
-                <td style="font-size:10px"><strong>Phase 1+2</strong><br><span style="color:var(--warn);font-size:9px">Réduire mélasse −20%</span></td>
-                <td><span class="badge b-warn">15% urgent</span></td>
-                <td style="font-size:9px;color:var(--t2)">Vidange 15% immédiate puis 10%/7j · Réduire mélasse 20% · DO continu</td>
-              </tr>
-              <tr style="background:rgba(255,61,87,.06)">
-                <td style="font-weight:700;color:var(--dng);white-space:nowrap">&gt; 50 ml/L</td>
-                <td style="font-size:10px"><strong style="color:var(--dng)">🚨 Floc EXCESSIF</strong></td>
-                <td><span class="badge b-dng">−30 à −40% ou arrêt</span></td>
-                <td style="font-size:10px;color:var(--dng)"><strong>Arrêt 48–72h</strong></td>
-                <td><span class="badge b-dng">15% urgent 2×/sem</span></td>
-                <td style="font-size:9px;color:var(--t2)">ALERTE · Vidange 15% immédiate · DO toutes les heures · Pas nourrissage si DO &lt;5</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:.55rem .75rem;margin-top:.5rem;font-size:9px;color:var(--t2);line-height:1.7">
-          <strong style="color:var(--gold)">📊 Doses mélasse C:N = 15:1 (Phase 1) :</strong>
-          Mélasse 31% carbone · densité 1.4 kg/L · 75% azote non assimilé · 16% carbone aliment non assimilé à 80%.<br>
-          <strong>9004 Starter 40%prot → ~1 364 ml/kg aliment</strong> · <strong>9008 Grower 32%prot → ~1 032 ml/kg aliment</strong><br>
-          <strong style="color:var(--warn)">Phase 2 (TAN ≥ 1 mg/L) :</strong> dose calculée selon TAN × volume bassin — utilisez le calculateur rapide en haut de page.
-        </div>
-      </div>
-
-      <!-- Tableau de rationnement principal -->
-      <div class="card">
-        <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Tableau de rationnement — Koudijs AKF adapté Biofloc Lomé</div>
-        <p style="font-size:10px;color:var(--t2);margin-bottom:.6rem">Ration Biofloc = Ration Koudijs 29°C × 0.80 (−20% floc optimal). Applicable à toute biomasse.</p>
-        <div class="tw">
-          <table>
-            <thead><tr>
-              <th>Âge (sem.)</th><th>Poids (g)</th><th>Produit</th><th>Granulé</th><th>Protéines</th><th>Fréquence/j</th><th>Ration Koudijs</th><th>Ration Biofloc −20%</th><th style="color:var(--gold)">g/kg biomasse/j</th><th>Intervalle</th>
-            </tr></thead>
-            <tbody>
-              <tr><td>0–3</td><td>0.01–1 g</td><td style="color:#a78bfa">9004 Poudre 0</td><td>&lt;0.5 mm</td><td>40%</td><td><span class="badge b-purp">6×/j</span></td><td>10.0%</td><td style="color:var(--gold);font-weight:700">8.0%</td><td style="color:var(--gold);font-weight:700">80 g/kg/j</td><td style="font-size:9px;color:var(--t3)">~2h20</td></tr>
-              <tr><td>4–6</td><td>1–2.5 g</td><td style="color:#a78bfa">9004 Crumble 1</td><td>0.5–0.8 mm</td><td>40%</td><td><span class="badge b-purp">5×/j</span></td><td>6.0%</td><td style="color:var(--gold);font-weight:700">4.8%</td><td style="color:var(--gold);font-weight:700">48 g/kg/j</td><td style="font-size:9px;color:var(--t3)">~2h48</td></tr>
-              <tr><td>7–8</td><td>2.5–5 g</td><td style="color:#a78bfa">9004 Crumble 2</td><td>0.8–1.2 mm</td><td>40%</td><td><span class="badge b-purp">5×/j</span></td><td>5.5%</td><td style="color:var(--gold);font-weight:700">4.4%</td><td style="color:var(--gold);font-weight:700">44 g/kg/j</td><td style="font-size:9px;color:var(--t3)">~2h48</td></tr>
-              <tr><td>9–12</td><td>5–25 g</td><td style="color:#34d399">9008 Floating 2.0mm</td><td>32%</td><td><span class="badge b-ok">3×/j</span></td><td>4.5%</td><td style="color:var(--gold);font-weight:700">3.6%</td><td style="color:var(--gold);font-weight:700">36 g/kg/j</td><td style="font-size:9px;color:var(--t3)">~4h40</td></tr>
-              <tr><td>13–15</td><td>25–50 g</td><td style="color:#34d399">9008 Floating 2.0mm</td><td>32%</td><td><span class="badge b-ok">2×/j</span></td><td>4.0%</td><td style="color:var(--gold);font-weight:700">3.2%</td><td style="color:var(--gold);font-weight:700">32 g/kg/j</td><td style="font-size:9px;color:var(--t3)">~7h</td></tr>
-              <tr><td>15–17</td><td>50–100 g</td><td style="color:#60a5fa">9008 Floating 3.0mm</td><td>32%</td><td><span class="badge b-ok">2×/j</span></td><td>2.9%</td><td style="color:var(--gold);font-weight:700">2.3%</td><td style="color:var(--gold);font-weight:700">23 g/kg/j</td><td style="font-size:9px;color:var(--t3)">~7h</td></tr>
-              <tr><td>18–22</td><td>100–200 g</td><td style="color:#60a5fa">9008 Floating 3.0mm</td><td>32%</td><td><span class="badge b-ok">2×/j</span></td><td>2.5%</td><td style="color:var(--gold);font-weight:700">2.0%</td><td style="color:var(--gold);font-weight:700">20 g/kg/j</td><td style="font-size:9px;color:var(--t3)">~7h</td></tr>
-              <tr><td>23–30</td><td>200–400 g</td><td style="color:#f59e0b">9008 Floating 4.5mm</td><td>32%</td><td><span class="badge b-ok">2×/j</span></td><td>2.0%</td><td style="color:var(--gold);font-weight:700">1.6%</td><td style="color:var(--gold);font-weight:700">16 g/kg/j</td><td style="font-size:9px;color:var(--t3)">~7h</td></tr>
-              <tr><td>&gt;31</td><td>400–500+ g</td><td style="color:#f87171">9008 Floating 4.5mm</td><td>32%</td><td><span class="badge b-ok">2×/j</span></td><td>1.8%</td><td style="color:var(--gold);font-weight:700">1.4%</td><td style="color:var(--gold);font-weight:700">14 g/kg/j</td><td style="font-size:9px;color:var(--t3)">~7h</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="font-size:9px;color:var(--t3);margin-top:.4rem">Intervalles calculés sur 14h d'activité journalière (06h00–20h00). Ration (g/kg/j) × biomasse réelle (kg) ÷ 1000 = ration journalière (kg).</div>
-      </div>
-
-      <!-- Tableau de conversion pratique -->
-      <div class="card">
-        <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Tableau de conversion pratique — Ration par bassin</div>
-        <p style="font-size:10px;color:var(--t2);margin-bottom:.6rem">Formule : <strong style="color:var(--t1)">Ration (kg/j) = Biomasse (kg) × Ration (g/kg/j) ÷ 1000</strong> · Ration/repas = Ration/j ÷ Fréquence</p>
-        <div class="tw">
-          <table>
-            <thead><tr>
-              <th>Poids moy.</th><th>Produit</th><th>Fréq./j</th><th style="color:var(--gold)">g/kg/j</th><th>g/kg/repas</th><th>Formule pratique (pour 50 kg biomasse)</th><th style="font-size:9px">Bol 500ml≈350g pour 100 kg</th>
-            </tr></thead>
-            <tbody>
-              <tr><td>0.5 g</td><td style="color:#a78bfa">9004 Poudre</td><td>6×</td><td style="color:var(--gold);font-weight:700">80</td><td>13.3</td><td style="font-size:10px;font-family:var(--mono)">50 × 80 ÷ 1000 = <strong>4.00 kg/j</strong></td><td style="font-size:9px;color:var(--t3)">≈ 22.9 bols</td></tr>
-              <tr><td>1.5 g</td><td style="color:#a78bfa">9004 Crumble 1</td><td>5×</td><td style="color:var(--gold);font-weight:700">48</td><td>9.6</td><td style="font-size:10px;font-family:var(--mono)">50 × 48 ÷ 1000 = <strong>2.40 kg/j</strong></td><td style="font-size:9px;color:var(--t3)">≈ 13.7 bols</td></tr>
-              <tr><td>3.5 g</td><td style="color:#a78bfa">9004 Crumble 2</td><td>5×</td><td style="color:var(--gold);font-weight:700">44</td><td>8.8</td><td style="font-size:10px;font-family:var(--mono)">50 × 44 ÷ 1000 = <strong>2.20 kg/j</strong></td><td style="font-size:9px;color:var(--t3)">≈ 12.6 bols</td></tr>
-              <tr><td>10 g</td><td style="color:#34d399">9008 Float. 2mm</td><td>3×</td><td style="color:var(--gold);font-weight:700">36</td><td>12.0</td><td style="font-size:10px;font-family:var(--mono)">50 × 36 ÷ 1000 = <strong>1.80 kg/j</strong></td><td style="font-size:9px;color:var(--t3)">≈ 10.3 bols</td></tr>
-              <tr><td>30 g</td><td style="color:#34d399">9008 Float. 2mm</td><td>2×</td><td style="color:var(--gold);font-weight:700">32</td><td>16.0</td><td style="font-size:10px;font-family:var(--mono)">50 × 32 ÷ 1000 = <strong>1.60 kg/j</strong></td><td style="font-size:9px;color:var(--t3)">≈ 9.1 bols</td></tr>
-              <tr><td>75 g</td><td style="color:#60a5fa">9008 Float. 3mm</td><td>2×</td><td style="color:var(--gold);font-weight:700">23</td><td>11.6</td><td style="font-size:10px;font-family:var(--mono)">50 × 23 ÷ 1000 = <strong>1.16 kg/j</strong></td><td style="font-size:9px;color:var(--t3)">≈ 6.6 bols</td></tr>
-              <tr><td>150 g</td><td style="color:#60a5fa">9008 Float. 3mm</td><td>2×</td><td style="color:var(--gold);font-weight:700">20</td><td>10.0</td><td style="font-size:10px;font-family:var(--mono)">50 × 20 ÷ 1000 = <strong>1.00 kg/j</strong></td><td style="font-size:9px;color:var(--t3)">≈ 5.7 bols</td></tr>
-              <tr><td>300 g</td><td style="color:#f59e0b">9008 Float. 4.5mm</td><td>2×</td><td style="color:var(--gold);font-weight:700">16</td><td>8.0</td><td style="font-size:10px;font-family:var(--mono)">50 × 16 ÷ 1000 = <strong>0.80 kg/j</strong></td><td style="font-size:9px;color:var(--t3)">≈ 4.6 bols</td></tr>
-              <tr><td>450 g</td><td style="color:#f87171">9008 Float. 4.5mm</td><td>2×</td><td style="color:var(--gold);font-weight:700">14</td><td>7.2</td><td style="font-size:10px;font-family:var(--mono)">50 × 14 ÷ 1000 = <strong>0.72 kg/j</strong></td><td style="font-size:9px;color:var(--t3)">≈ 4.1 bols</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Seuils qualité eau — Source: Mémo paramètres eau v4.1 ICHTUS -->
-      <div class="card">
-        <div class="ctitle"><span class="dot" style="background:var(--dng)"></span>Règle 5 — Qualité de l'eau &amp; seuils d'arrêt alimentation</div>
-        <div class="tw">
-          <table>
-            <thead><tr><th>Paramètre</th><th>Optimal</th><th>Vigilance</th><th>Alerte</th><th>Urgence</th></tr></thead>
-            <tbody>
-              <tr><td>Température</td><td style="color:var(--acc)">26–30°C</td><td style="color:var(--warn)">30–32°C</td><td style="color:var(--dng)">&gt;32°C ou &lt;22°C</td><td style="color:var(--dng)">&gt;35°C → arrêt alim</td></tr>
-              <tr><td>DO (oxygène)</td><td style="color:var(--acc)">6–8 ppm</td><td style="color:var(--warn)">4–5 ppm → −30% ration</td><td style="color:var(--dng)">3–4 ppm → −50%</td><td style="color:var(--dng)">&lt;3 ppm → arrêt total</td></tr>
-              <tr><td>TAN (ammoniac)</td><td style="color:var(--acc)">&lt;0.5 mg/L</td><td style="color:var(--warn)">0.5–1.0 → −20% ration</td><td style="color:var(--dng)">1.0–2.0 → −50% + vidange</td><td style="color:var(--dng)">&gt;2.0 → arrêt + vidange 20%</td></tr>
-              <tr><td>NO₂ (nitrites)</td><td style="color:var(--acc)">&lt;0.2 mg/L</td><td style="color:var(--warn)">0.2–0.5 → NaCl 1 g/L</td><td style="color:var(--dng)">0.5–1.0 → vidange + NaCl 2 g/L</td><td style="color:var(--dng)">&gt;1.0 → vidange 15% + NaCl 3–5 g/L</td></tr>
-              <tr><td>pH</td><td style="color:var(--acc)">7.0–7.8</td><td style="color:var(--warn)">6.5–7.0 → vérifier TAC</td><td style="color:var(--dng)">6.0–6.5 → CaCO₃ urgent</td><td style="color:var(--dng)">&lt;6.0 → CaCO₃ SANS DÉLAI</td></tr>
-              <tr><td>Imhoff (tilapia)</td><td style="color:var(--acc)">25–40 ml/L</td><td style="color:var(--warn)">40–45 → vidange 15%</td><td style="color:var(--dng)">&gt;45 → vidange urgente</td><td style="color:var(--dng)">&gt;50 → arrêt mélasse 48h</td></tr>
-              <tr><td>TAC (alcalinité)</td><td style="color:var(--acc)">&gt;150 mg/L</td><td style="color:var(--warn)">80–150 → CaCO₃ préventif</td><td style="color:var(--dng)">50–80 → CaCO₃ immédiat</td><td style="color:var(--dng)">&lt;50 → URGENCE dose fractionnée</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- C — Calculateur TAC / CaCO₃ -->
-      <div class="card" style="border-color:rgba(167,139,250,.25)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:.65rem">
-          <span style="font-size:16px">🧪</span>
-          <div class="ctitle" style="margin-bottom:0"><span class="dot" style="background:var(--purp)"></span>Calculateur TAC / CaCO₃</div>
-          <div style="margin-left:auto;font-size:9px;color:var(--t3)">Source : Mémo TAT/CaCO₃ ICHTUS v1.0</div>
-        </div>
-        <p style="font-size:10px;color:var(--warn);line-height:1.7;margin-bottom:.6rem">
-          ⚠️ <strong>Règle absolue :</strong> Toujours mesurer le TAC AVANT tout ajout de CaCO₃. Le CaCO₃ ne s'ajoute QUE si TAC &lt; 150 mg/L.
-        </p>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:.5rem">
-          <div>
-            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">TAC mesuré (mg/L)</div>
-            <input type="number" id="tac-val" class="ci" style="width:90px;border-color:var(--purp)" placeholder="ex: 80" oninput="calcTAC()">
           </div>
           <div>
-            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Volume bassin (m³)</div>
-            <input type="number" id="tac-vol" class="ci" style="width:80px" placeholder="3.8" step="0.1" value="3.8" oninput="calcTAC()">
+            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Semaine du cycle</div>
+            <input type="number" id="rat-semaine" class="ci" value="1" min="1" max="22" style="width:55px" oninput="renderRationnement()">
           </div>
           <div>
-            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">TAC cible (mg/L)</div>
-            <input type="number" id="tac-cible" class="ci" style="width:80px" value="150" oninput="calcTAC()">
+            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">% Protéines aliment</div>
+            <input type="number" id="rat-prot" class="ci" value="40" min="10" max="55" step="0.5" style="width:65px" oninput="renderRationnement()">
           </div>
-        </div>
-        <div id="tac-result" style="font-size:11px;color:var(--t2)">
-          <span style="color:var(--t3)">Saisissez le TAC mesuré pour obtenir la dose CaCO₃</span>
-        </div>
-        <!-- Tableau de correction rapide 3.8m³ -->
-        <div style="margin-top:.6rem">
-          <div style="font-size:9px;color:var(--t3);font-weight:700;margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.5px">Tableau rapide — Bassin 3.8 m³</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.25rem">
-            ${[[130,20,'7.6 g','Aucune'],[100,50,'19.0 g','Modérée'],[80,70,'26.6 g','Modérée'],[50,100,'38.0 g (2 doses)','Élevée']].map(([tac,def,dose,urg])=>`
-            <div style="background:var(--card);border:1px solid var(--b1);border-radius:7px;padding:.4rem .5rem;text-align:center">
-              <div style="font-size:9px;color:var(--purp);font-weight:700">TAC ${tac}</div>
-              <div style="font-size:8px;color:var(--t3)">déficit ${def}</div>
-              <div style="font-size:11px;font-weight:700;color:var(--t1)">${dose}</div>
-              <div style="font-size:8px;color:${urg==='Élevée'?'var(--dng)':urg==='Modérée'?'var(--warn)':'var(--t3)'}">Urgence: ${urg}</div>
-            </div>`).join('')}
-          </div>
-        </div>
-        <div style="font-size:9px;color:var(--t3);margin-top:.5rem;line-height:1.6">
-          Formule : Dose (g) = (TAC cible − TAC mesuré) × V(m³) × 1000 × 0.1 ÷ 1000 = (TAC cible − TAC) × V × 0.1<br>
-          ⚠️ Ne jamais dépasser 50 mg/L de correction par dose. Si déficit &gt; 50 mg/L → 2 doses espacées de 12h.<br>
-          🔑 TAC ≥ 150 + pH bas → utiliser NaHCO₃ à la place (chercher cause : CO₂ excessif, TAN élevé).
+          <button class="sbtn" onclick="renderRationnement()" style="font-size:11px;margin-top:12px">♻️ Calculer</button>
         </div>
       </div>
+
+      <!-- Tableau référence fréquences -->
+      <div style="margin-bottom:.75rem">
+        <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.4rem">📋 Tableau de rationnement ICHTUS — Fréquences & aliments par stade</div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:10px;min-width:600px">
+          <thead><tr style="background:var(--inp)">
+            <th style="padding:6px 10px;text-align:left;border-bottom:2px solid var(--b2)">Stade / Poids</th>
+            <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--gold)">Aliment</th>
+            <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--acc)">Fréq./jour</th>
+            <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--acc2)">% Biomasse</th>
+            <th style="padding:6px 10px;border-bottom:2px solid var(--b2)">Semaines</th>
+            <th style="padding:6px 10px;border-bottom:2px solid var(--b2)">Ratio C:N</th>
+            <th style="padding:6px 10px;border-bottom:2px solid var(--b2)">Phase</th>
+          </tr></thead>
+          <tbody>
+            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Alevinette &lt;1g</td><td style="padding:6px 10px;color:var(--gold);font-weight:700">K1 Starter</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">6</td><td style="padding:6px 10px;text-align:center">8–10%</td><td style="padding:6px 10px;text-align:center">S1–S2</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Démarrage floc</td></tr>
+            <tr><td style="padding:6px 10px;font-weight:700">Alevin 1–5g</td><td style="padding:6px 10px;color:#a78bfa;font-weight:700">K4 2mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">5</td><td style="padding:6px 10px;text-align:center">5–8%</td><td style="padding:6px 10px;text-align:center">S2–S3</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Démarrage floc</td></tr>
+            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Juvénile 5–25g</td><td style="padding:6px 10px;color:#a78bfa;font-weight:700">K4 2mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">5</td><td style="padding:6px 10px;text-align:center">3–5%</td><td style="padding:6px 10px;text-align:center">S3–S5</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--acc2)">Grossissement</td></tr>
+            <tr><td style="padding:6px 10px;font-weight:700">Juvénile 25–50g</td><td style="padding:6px 10px;color:#a78bfa;font-weight:700">K4 2mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">6</td><td style="padding:6px 10px;text-align:center">2–3%</td><td style="padding:6px 10px;text-align:center">S5–S7</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--acc2)">Grossissement</td></tr>
+            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Pré-adulte 50–100g</td><td style="padding:6px 10px;color:#34d399;font-weight:700">K5 3mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">5</td><td style="padding:6px 10px;text-align:center">2–3%</td><td style="padding:6px 10px;text-align:center">S7–S10</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--acc2)">Grossissement</td></tr>
+            <tr><td style="padding:6px 10px;font-weight:700">Adulte 100–200g</td><td style="padding:6px 10px;color:#34d399;font-weight:700">K5 3mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">4</td><td style="padding:6px 10px;text-align:center">1.5–2%</td><td style="padding:6px 10px;text-align:center">S10–S13</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--acc2)">Grossissement</td></tr>
+            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Finition 200–400g</td><td style="padding:6px 10px;color:#f87171;font-weight:700">K6 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">4</td><td style="padding:6px 10px;text-align:center">1.5%</td><td style="padding:6px 10px;text-align:center">S13–S17</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Finition</td></tr>
+            <tr><td style="padding:6px 10px;font-weight:700">Finition 400–600g</td><td style="padding:6px 10px;color:#f87171;font-weight:700">K6 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">3</td><td style="padding:6px 10px;text-align:center">1–1.5%</td><td style="padding:6px 10px;text-align:center">S17–S20</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Finition</td></tr>
+            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Marché &gt;600g</td><td style="padding:6px 10px;color:#f87171;font-weight:700">K6 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">3</td><td style="padding:6px 10px;text-align:center">1%</td><td style="padding:6px 10px;text-align:center">S20–S22</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Finition</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div style="font-size:9px;color:var(--t3);margin-top:.3rem">Réduction Biofloc appliquée : −20% (floc mature Imhoff 25–40 mL/L) · Fréquences : 6-5-5-6-5-4-4-3-3 selon stade</div>
+      </div>
+
+      <!-- Résultats par bassin -->
+      <div id="rat-results"></div>
     </div>
+
 
     <!-- T1 CONFIG BASSINS -->
     <div id="t1" class="pane">
@@ -1333,7 +1123,6 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
       <!-- Sous-navigation Logistique -->
       <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem">
         <button class="tb active" id="lt-intrants" onclick="swLog('intrants')" style="font-size:11px">📦 Intrants</button>
-        <button class="tb" id="lt-aliments" onclick="swLog('aliments')" style="font-size:11px">🌾 Aliments</button>
         <button class="tb" id="lt-stock" onclick="swLog('stock')" style="font-size:11px">📥 Entrées Stock</button>
         <button class="tb" id="lt-inventaire" onclick="swLog('inventaire')" style="font-size:11px">📋 Inventaire</button>
         <button class="tb" id="lt-analyse" onclick="swLog('analyse')" style="font-size:11px">📊 Analyse</button>
@@ -1528,19 +1317,49 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 
     <!-- T8 FICHE COLLECTE -->
     <div id="t8" class="pane">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:.6rem" class="no-print">
-        <button class="sbtn" onclick="window.print()">🖨️ Imprimer</button>
+      <!-- Sous-nav fiche (pas d'entrée, juste impression) -->
+      <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem">
+        <div style="display:flex;gap:.3rem">
+          <button class="tb active" id="fc-tab-bassin" onclick="swFiche('bassin')" style="font-size:11px">📊 Fiche Bassins</button>
+          <button class="tb" id="fc-tab-inventaire" onclick="swFiche('inventaire')" style="font-size:11px">📋 Fiche Inventaire</button>
+        </div>
+        <div style="display:flex;gap:.4rem;align-items:center">
+          <span style="font-size:10px;color:var(--t3)">🖨️ Vue impression uniquement</span>
+          <button class="sbtn" onclick="window.print()" style="background:var(--acc2)">🖨️ Imprimer</button>
+        </div>
       </div>
-      <div class="tw">
-        <table><thead><tr>
-          <th>Bassin</th><th>Nb Actuel</th><th>Poids Moy (g)</th><th>Type Alim</th>
-          <th>Alim Théo (kg)</th>
-          <th style="background:#0a2e1a;color:var(--acc)">Alim Réel ✍️</th>
-          <th style="color:#a8d8ff">Temp ✍️</th><th style="color:#a8d8ff">pH ✍️</th>
-          <th style="color:#a8d8ff">DO ✍️</th><th style="color:#a8d8ff">NH₃ ✍️</th>
-          <th>Mort. ✍️</th><th>Obs.</th>
+      <!-- Fiche Bassins -->
+      <div id="fc-bassin">
+        <div class="print-header" style="text-align:center;margin-bottom:.75rem">
+          <div style="font-size:15px;font-weight:800;color:var(--t1)" id="fc-farm-title">Bio Aqua Tech — Fiche de collecte journalière</div>
+          <div style="font-size:11px;color:var(--t3)">Date : <strong id="fc-date-display"></strong> &nbsp;|&nbsp; Opérateur : ____________________</div>
+        </div>
+        <div class="tw">
+          <table style="font-size:10px"><thead><tr>
+            <th>Bassin</th><th>Nb Actuel</th><th>Poids (g)</th><th>Aliment</th>
+            <th>Théo (kg)</th><th style="background:rgba(0,201,167,.1);color:var(--acc)">Réel ✍️</th>
+            <th style="color:#a8d8ff">Temp ✍️</th><th style="color:#a8d8ff">pH ✍️</th>
+            <th style="color:#a8d8ff">DO ✍️</th><th style="color:#a8d8ff">NH₃ ✍️</th>
+            <th style="color:var(--warn)">Imhoff ✍️</th><th style="color:var(--warn)">TAN ✍️</th>
+            <th>Morts ✍️</th><th>Obs.</th>
+          </tr></thead>
+          <tbody id="fiche-tbody"></tbody></table>
+        </div>
+        <div style="margin-top:.5rem;font-size:9px;color:var(--t3)">Formules : Mélasse préventive → voir onglet Rationnement · Mélasse corrective si TAN ≥ 1 mg/L</div>
+      </div>
+      <!-- Fiche Inventaire imprimable -->
+      <div id="fc-inventaire" style="display:none">
+        <div class="print-header" style="text-align:center;margin-bottom:.75rem">
+          <div style="font-size:15px;font-weight:800;color:var(--t1)">Bio Aqua Tech — Fiche d'inventaire des stocks</div>
+          <div style="font-size:11px;color:var(--t3)">Date : <strong id="fc-inv-date"></strong> &nbsp;|&nbsp; Vérificateur : ____________________</div>
+        </div>
+        <div class="tw">
+        <table style="font-size:10px"><thead><tr>
+          <th>Intrant</th><th>Catégorie</th><th>Unité</th><th>Stock théorique</th>
+          <th>Stock réel ✍️</th><th>Écart ✍️</th><th>Péremption</th><th>N° Lot</th><th>Obs.</th>
         </tr></thead>
-        <tbody id="fiche-tbody"></tbody></table>
+        <tbody id="fiche-inv-tbody"></tbody></table></div>
+        <div style="margin-top:1rem;font-size:9px;color:var(--t3)">Signature Responsable : ______________________ &nbsp;|&nbsp; Date validation : ______</div>
       </div>
     </div>
 
@@ -1986,23 +1805,44 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 
 <!-- Modal Entrée Stock -->
 <div id="stock-modal" class="modal-overlay hidden">
-  <div class="modal-box" style="max-width:460px">
+  <div class="modal-box" style="max-width:500px">
     <div class="modal-title">📥 Nouvelle entrée en stock</div>
     <div><div class="form-lbl">Intrant *</div>
       <select id="stock-intrant" class="si" style="width:100%;font-size:11px"></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.4rem">
-      <div><div class="form-lbl">Quantité *</div><input id="stock-qty" class="form-inp" type="number" value="1" step="0.1" min="0.001"></div>
+      <div><div class="form-lbl">Quantité *</div><input id="stock-qty" class="form-inp" type="number" value="1" step="0.001" min="0.001"></div>
+      <div><div class="form-lbl">Conditionnement</div><input id="stock-cond" class="form-inp" placeholder="Ex: 25 kg/sac"></div>
       <div><div class="form-lbl">Date d'entrée *</div><input id="stock-date" class="form-inp" type="date"></div>
       <div><div class="form-lbl">Date péremption</div><input id="stock-expiry" class="form-inp" type="date"></div>
-      <div><div class="form-lbl">Fournisseur</div><input id="stock-supplier" class="form-inp" placeholder="Optionnel"></div>
-      <div style="grid-column:1/-1"><div class="form-lbl">Notes</div><input id="stock-notes" class="form-inp" placeholder="Lot, facture..."></div>
+      <div><div class="form-lbl">N° de lot</div><input id="stock-lot" class="form-inp" placeholder="Ex: LOT-2026-001"></div>
+      <div><div class="form-lbl">N° de facture</div><input id="stock-facture" class="form-inp" placeholder="Ex: FAC-001"></div>
+      <div style="grid-column:1/-1"><div class="form-lbl">Fournisseur</div><input id="stock-supplier" class="form-inp" placeholder="Optionnel"></div>
+      <div style="grid-column:1/-1"><div class="form-lbl">Notes</div><input id="stock-notes" class="form-inp" placeholder="Informations complémentaires..."></div>
+    </div>
+    <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:6px;padding:.4rem .6rem;margin-top:.4rem;font-size:10px;color:var(--warn)">
+      ⚠️ Cette entrée sera en attente de validation par le Responsable ou le Super Admin avant passage en Comptabilité.
     </div>
     <div id="stock-msg" style="font-size:10px;margin-top:.4rem"></div>
     <div style="display:flex;gap:.4rem;margin-top:.75rem">
       <button class="sbtn" style="flex:1" onclick="saveStockEntry()">💾 Enregistrer</button>
       <button class="dbtn" style="flex:1;padding:6px" onclick="G('stock-modal').classList.add('hidden')">Annuler</button>
     </div>
+  </div>
+</div>
+
+<!-- Boîte de dialogue alertes stock (péremption + seuil) -->
+<div id="stock-alert-dialog" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:500px">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+      <span style="font-size:28px">🚨</span>
+      <div>
+        <div style="font-size:14px;font-weight:800;color:var(--dng)">Alertes Stock Critiques</div>
+        <div style="font-size:10px;color:var(--t3)">À traiter en priorité</div>
+      </div>
+    </div>
+    <div id="stock-alert-content" style="max-height:400px;overflow-y:auto"></div>
+    <button onclick="G('stock-alert-dialog').classList.add('hidden')" style="width:100%;margin-top:.75rem;background:var(--dng);color:#fff;border:none;border-radius:8px;padding:10px;font-size:12px;font-weight:700;cursor:pointer">✅ J'ai pris note — Fermer</button>
   </div>
 </div>
 
@@ -3348,15 +3188,17 @@ function calcRation(){
 function sw(id){
   document.querySelectorAll('#screen-farm .pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('#screen-farm .tb').forEach(b=>b.classList.remove('active'));
-  G(id).classList.add('active');
-  ['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11','t12'].forEach((t,i)=>{
-    if(t===id)document.querySelectorAll('#screen-farm .tb')[i]?.classList.add('active');
+  const pane=G(id);if(pane)pane.classList.add('active');
+  // Match button by onclick attribute (robust, index-independent)
+  document.querySelectorAll('#screen-farm .tb').forEach(b=>{
+    if(b.getAttribute('onclick')==="sw('"+id+"')")b.classList.add('active');
   });
-  if(id==='t2')renderFeed();if(id==='t3'){renderChart();renderFCRModule();}if(id==='t4')upLog();
+  if(id==='t3'){renderChart();renderSuivi();if(typeof renderFCRModule==='function')renderFCRModule();}
+  if(id==='t4'){swLog(typeof APP_LOG_PANEL!=='undefined'&&APP_LOG_PANEL?APP_LOG_PANEL:'intrants');}
   if(id==='t5')upCompta();if(id==='t6')upCons();if(id==='t7')renderRecoltes();
   if(id==='t8')renderFiche();if(id==='t9')renderIoT();
-  if(id==='t10'){renderRespAdmin();const fc=G('rsp-bkp-farmcode');if(fc)fc.textContent=APP.farmCode||'';}
-  if(id==='t12'){renderSupplierPreview();refreshSupplierSelect();}
+  if(id==='t10'){if(typeof renderRespAdmin==='function')renderRespAdmin();const fc=G('rsp-bkp-farmcode');if(fc)fc.textContent=APP.farmCode||'';}
+  if(id==='t12'){initRatSelect();renderRationnement();}
 }
 
 // Sous-onglets Espace Responsable
@@ -3963,12 +3805,7 @@ async function loadIntrants(){
   checkStockAlerts();
 }
 
-function checkStockAlerts(){
-  const alerts=APP_INTRANTS.filter(i=>i.monitoringType==='special'&&i.seuil&&getItemCurrentStock(i.id)<i.seuil);
-  if(alerts.length>0){
-    showToast('🚨 '+alerts.length+' intrant(s) sous le seuil: '+alerts.map(a=>a.name).join(', '),'dng');
-  }
-}
+// checkStockAlerts défini plus bas avec dialog box
 
 function renderIntrants(filter='all'){
   const container=G('intrants-list');if(!container)return;
@@ -4060,43 +3897,128 @@ async function deleteIntrant(id){
 function openAddStock(preselect){
   G('stock-modal').classList.remove('hidden');
   G('stock-date').value=today();G('stock-qty').value=1;
-  G('stock-expiry').value='';G('stock-supplier').value='';G('stock-notes').value='';G('stock-msg').textContent='';
+  G('stock-expiry').value='';G('stock-supplier').value='';G('stock-notes').value='';
+  G('stock-lot').value='';G('stock-facture').value='';G('stock-cond').value='';G('stock-msg').textContent='';
   const sel=G('stock-intrant');
   sel.innerHTML=APP_INTRANTS.map(i=>'<option value="'+i.id+'"'+(i.id===preselect?' selected':'')+'>'+ i.name+' ('+i.unit+')</option>').join('');
+  // Pre-fill conditioning from intrant
+  if(preselect){const it=APP_INTRANTS.find(i=>i.id===preselect);if(it&&it.conditionnement)G('stock-cond').value=it.conditionnement;}
 }
 
 async function saveStockEntry(){
   const intrantId=G('stock-intrant').value;const qty=+G('stock-qty').value;const date=G('stock-date').value;
   const expiry=G('stock-expiry').value||null;const supplier=G('stock-supplier').value||'';const notes=G('stock-notes').value||'';
+  const lot=G('stock-lot').value||'';const facture=G('stock-facture').value||'';const cond=G('stock-cond').value||'';
   const msg=G('stock-msg');
-  if(!intrantId||qty<=0||!date){msg.style.color='var(--dng)';msg.textContent='⚠️ Champs manquants';return;}
-  const entry={id:'stock_'+Date.now(),intrantId,quantity:qty,date,expiryDate:expiry,supplier,notes,createdAt:new Date().toISOString(),createdBy:APP.user?.name||'?'};
+  if(!intrantId||qty<=0||!date){msg.style.color='var(--dng)';msg.textContent='⚠️ Champs obligatoires manquants';return;}
+  const role=APP.user?.role||'Opérateur';
+  const validated=(role==='Administrateur'||role==='Responsable');
+  const entry={id:'stock_'+Date.now(),intrantId,quantity:qty,date,expiryDate:expiry,supplier,notes,lot,facture,conditionnement:cond,
+    validated,validatedBy:validated?(APP.user?.name||'?'):null,validatedAt:validated?new Date().toISOString():null,
+    createdAt:new Date().toISOString(),createdBy:APP.user?.name||'?'};
   try{
     await withTimeout(farmCol('stock_entries').doc(entry.id).set(entry),6000);
     APP_STOCK_ENTRIES.unshift(entry);G('stock-modal').classList.add('hidden');
-    renderStockEntries();showToast('✅ Entrée stock enregistrée','acc');
+    renderStockEntries();
+    // Auto-update inventaire if active
+    if(APP_INVENTAIRE_CURRENT){
+      const existing=APP_INVENTAIRE_CURRENT.items.find(i=>i.intrantId===intrantId);
+      if(existing)existing.actualQty=(existing.actualQty||0)+qty;
+      else APP_INVENTAIRE_CURRENT.items.push({intrantId,actualQty:qty});
+    }
+    showToast(validated?'✅ Entrée enregistrée et validée':'📋 Entrée en attente de validation','acc');
   }catch(e){msg.style.color='var(--dng)';msg.textContent='❌ '+e.message;}
 }
 
 function renderStockEntries(){
   const container=G('stock-entries-list');if(!container)return;
+  const role=APP.user?.role||'Opérateur';
+  const canValidate=role==='Administrateur'||role==='Responsable';
   if(!APP_STOCK_ENTRIES.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucune entrée. Cliquez ➕ pour ajouter.</div>';return;}
   const byDate={};
   APP_STOCK_ENTRIES.forEach(e=>{if(!byDate[e.date])byDate[e.date]=[];byDate[e.date].push(e);});
-  container.innerHTML=Object.entries(byDate).sort(([a],[b])=>b.localeCompare(a)).slice(0,20).map(([date,entries])=>{
+  container.innerHTML=Object.entries(byDate).sort(([a],[b])=>b.localeCompare(a)).slice(0,30).map(([date,entries])=>{
     return '<div style="margin-bottom:.6rem"><div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:.3rem">'+date+'</div>'
       +entries.map(e=>{
         const item=APP_INTRANTS.find(i=>i.id===e.intrantId);
         const isExpired=e.expiryDate&&e.expiryDate<today();
-        const expireSoon=e.expiryDate&&!isExpired&&new Date(e.expiryDate)-new Date()<7*86400000;
-        return '<div style="display:flex;align-items:center;gap:.5rem;background:var(--card);border:1px solid '+(isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--b2)')+';border-radius:8px;padding:.4rem .7rem;margin-bottom:.3rem">'
-          +'<div style="flex:1"><span style="font-weight:700;color:var(--t1)">'+(item?.name||e.intrantId)+'</span>'
+        const expireSoon=e.expiryDate&&!isExpired&&(new Date(e.expiryDate)-new Date()<90*86400000);
+        const pending=!e.validated;
+        const borderCol=isExpired?'var(--dng)':pending?'rgba(245,166,35,.35)':expireSoon?'var(--warn)':'var(--b2)';
+        const expCol=isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)';
+        const validBtns=pending
+          ?(canValidate
+            ?('<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✅ Valider</button>'
+              +'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>')
+            :'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
+          :'<span style="font-size:9px;color:var(--acc)">✅ '+(e.validatedBy||'OK')+'</span>';
+        const deletBtn=(pending&&e.createdBy===APP.user?.name)
+          ?'<button data-delete="'+e.id+'" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑</button>':'';
+        return '<div style="background:var(--card);border:1px solid '+borderCol+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem">'
+          +'<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
+          +'<div style="flex:1;min-width:160px"><span style="font-weight:700;color:var(--t1)">'+(item?.name||e.intrantId)+'</span>'
           +'<span style="color:var(--acc);font-weight:700;margin-left:.5rem">+'+e.quantity+' '+(item?.unit||'')+'</span>'
-          +(e.supplier?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">· '+e.supplier+'</span>':'')
-          +(e.expiryDate?'<span style="color:'+(isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)')+';font-size:9px;margin-left:.4rem">⏱ '+(isExpired?'PÉRIMÉ':'')+e.expiryDate+'</span>':'')
+          +(e.lot?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Lot:'+e.lot+'</span>':'')
+          +(e.facture?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Fact:'+e.facture+'</span>':'')
+          +(e.conditionnement?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">'+e.conditionnement+'</span>':'')
+          +'<div style="font-size:9px;color:var(--t3);margin-top:2px">'
+          +(e.supplier?'Fourn: '+e.supplier+' · ':'')
+          +(e.expiryDate?'<span style="color:'+expCol+'">⏱ '+(isExpired?'⚠️PÉRIMÉ ':'')+e.expiryDate+'</span> · ':'')
+          +'Par: '+(e.createdBy||'?')+'</div></div>'
+          +'<div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+deletBtn+'</div>'
           +'</div></div>';
       }).join('')+'</div>';
   }).join('');
+  // Event delegation for validate/delete buttons
+  container.onclick=function(ev){
+    const vb=ev.target.closest('[data-validate]');if(vb)validateStockEntry(vb.dataset.validate);
+    const db=ev.target.closest('[data-delete]');if(db)deleteStockEntry(db.dataset.delete);
+  };
+}
+
+async function validateStockEntry(id){
+  const entry=APP_STOCK_ENTRIES.find(e=>e.id===id);if(!entry)return;
+  entry.validated=true;entry.validatedBy=APP.user?.name||'?';entry.validatedAt=new Date().toISOString();
+  try{
+    await withTimeout(farmCol('stock_entries').doc(id).update({validated:true,validatedBy:entry.validatedBy,validatedAt:entry.validatedAt}),6000);
+    renderStockEntries();showToast('✅ Entrée validée','acc');
+  }catch(e){showToast('❌ '+e.message,'dng');}
+}
+
+async function deleteStockEntry(id){
+  if(!confirm('Supprimer cette entrée ?'))return;
+  try{
+    await withTimeout(farmCol('stock_entries').doc(id).delete(),6000);
+    APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(e=>e.id!==id);
+    renderStockEntries();showToast('✅ Supprimé','acc');
+  }catch(e){showToast('❌ '+e.message,'dng');}
+}
+
+function checkStockAlerts(){
+  const now=new Date();
+  const in90days=new Date();in90days.setDate(in90days.getDate()+90);
+  const in90str=in90days.toISOString().split('T')[0];
+  const seuilAlerts=APP_INTRANTS.filter(i=>i.monitoringType==='special'&&i.seuil&&getItemCurrentStock(i.id)<i.seuil);
+  const expiryAlerts=[];
+  APP_STOCK_ENTRIES.filter(e=>e.expiryDate&&e.expiryDate<=in90str).forEach(e=>{
+    const item=APP_INTRANTS.find(i=>i.id===e.intrantId);
+    if(!item)return;
+    const daysLeft=Math.ceil((new Date(e.expiryDate)-now)/(86400000));
+    expiryAlerts.push({item,entry:e,daysLeft,isExpired:daysLeft<=0});
+  });
+  if(seuilAlerts.length===0&&expiryAlerts.length===0)return;
+  const container=G('stock-alert-content');if(!container)return;
+  let html='';
+  if(seuilAlerts.length>0){
+    html+='<div style="font-weight:700;color:var(--dng);margin-bottom:.4rem;font-size:11px">🚨 Seuils de stock franchis</div>';
+    html+=seuilAlerts.map(i=>'<div style="padding:.4rem .6rem;background:rgba(255,61,87,.08);border-left:3px solid var(--dng);border-radius:0 6px 6px 0;margin-bottom:.3rem"><strong>'+i.name+'</strong> — Stock: <span style="color:var(--dng);font-weight:700">'+getItemCurrentStock(i.id).toFixed(2)+' '+i.unit+'</span> / Seuil: '+i.seuil+' '+i.unit+'</div>').join('');
+  }
+  if(expiryAlerts.length>0){
+    html+='<div style="font-weight:700;color:var(--warn);margin:.5rem 0 .4rem;font-size:11px">⏱ Alertes péremption (≤ 3 mois)</div>';
+    html+=expiryAlerts.map(({item,entry,daysLeft,isExpired})=>'<div style="padding:.4rem .6rem;background:rgba(245,166,35,.08);border-left:3px solid '+(isExpired?'var(--dng)':'var(--warn)')+';border-radius:0 6px 6px 0;margin-bottom:.3rem"><strong>'+item.name+'</strong> — '+entry.quantity+' '+item.unit+(entry.lot?' · Lot:'+entry.lot:'')+'<span style="color:'+(isExpired?'var(--dng)':'var(--warn)')+';font-weight:700;margin-left:.5rem">'+(isExpired?'⚠️ PÉRIMÉ depuis '+Math.abs(daysLeft)+' jours':daysLeft+' jours restants')+'</span><div style="font-size:9px;color:var(--t3)">Exp: '+entry.expiryDate+'</div></div>').join('');
+  }
+  container.innerHTML=html;
+  G('stock-alert-dialog').classList.remove('hidden');
 }
 
 function renderInventairePanel(){
@@ -4193,17 +4115,38 @@ async function loadAnalyseStock(){
 }
 
 function calcPWA(){
-  const biomasse=+(G('pwa-biomasse')?.value||0);
-  const nbBassins=+(G('pwa-bassins')?.value||1);
+  // Synchroniser biomasse et volume depuis Config Bassins
+  const bassinsActifs=APP.state.bassins.filter(b=>b.statut==='Actif');
+  const biomasseAuto=bassinsActifs.reduce((s,b)=>{const c=calcBassin(b);return s+c.biomasse;},0);
+  const volTotalAuto=bassinsActifs.reduce((s,b)=>s+(b.vol||3.8),0);
+  const nbBassinsAuto=bassinsActifs.length;
+
+  // Utiliser valeur saisie ou auto
+  let biomasse=+(G('pwa-biomasse')?.value||0);
+  let nbBassins=+(G('pwa-bassins')?.value||1);
+  if(biomasse===0&&biomasseAuto>0){
+    biomasse=biomasseAuto;
+    if(G('pwa-biomasse'))G('pwa-biomasse').value=biomasseAuto.toFixed(2);
+  }
+  if(nbBassins===1&&nbBassinsAuto>0){
+    nbBassins=nbBassinsAuto;
+    if(G('pwa-bassins'))G('pwa-bassins').value=nbBassinsAuto;
+  }
+
   const activite=G('pwa-activite')?.value||'maintenance';
   const result=G('pwa-result');if(!result)return;
   const doses={maintenance:{food:30,water:10,extra:0},primoinoculation:{food:50,water:20,extra:10},reinoculation:{food:40,water:15,extra:5},choc:{food:80,water:30,extra:15}};
   const d=doses[activite]||doses.maintenance;
   const volFOOD=biomasse*(d.food/1000);const volWATER=nbBassins*(d.water/1000);const volExtra=d.extra>0?nbBassins*(d.extra/1000):0;
   const total=volFOOD+volWATER+volExtra;
-  result.innerHTML='<div style="font-weight:700;color:var(--acc);margin-bottom:.4rem">Volume total à préparer : '+total.toFixed(2)+' L</div>'
-    +'<div style="font-size:10px;color:var(--t2);line-height:1.8">• Dose FOOD ('+d.food+' mL/kg) : <strong>'+volFOOD.toFixed(2)+' L</strong><br>• Dose WATER ('+d.water+' mL/bassin) : <strong>'+volWATER.toFixed(2)+' L</strong><br>'+(volExtra>0?'• Extra ('+d.extra+' mL/bassin) : <strong>'+volExtra.toFixed(2)+' L</strong><br>':'')+'• Fréquence : <strong>2×/semaine</strong><br>• Validité : <strong>48–72h</strong></div>'
-    +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Ne pas préparer plus de 72h à l\'avance</div>';
+
+  // Volume total eau bassins (synchronisé)
+  const volEauTotal=volTotalAuto>0?volTotalAuto.toFixed(2)+'m³ ('+nbBassinsAuto+' bassins)':'Non renseigné';
+
+  result.innerHTML='<div style="font-size:10px;color:var(--t3);margin-bottom:.3rem">📊 Données Config Bassins: Biomasse <strong>'+biomasseAuto.toFixed(2)+'kg</strong> · Volume eau total <strong>'+volEauTotal+'</strong></div>'
+    +'<div style="font-weight:700;color:var(--acc);margin-bottom:.4rem;font-size:13px">Volume total à préparer : '+total.toFixed(2)+' L</div>'
+    +'<div style="font-size:10px;color:var(--t2);line-height:1.8">• Dose FOOD ('+d.food+' mL/kg) : <strong>'+volFOOD.toFixed(2)+' L</strong><br>• Dose WATER ('+d.water+' mL/bassin × '+nbBassins+') : <strong>'+volWATER.toFixed(2)+' L</strong><br>'+(volExtra>0?'• Extra activité ('+d.extra+' mL/bassin) : <strong>'+volExtra.toFixed(2)+' L</strong><br>':'')+'• Fréquence : <strong>2×/semaine (bihebdomadaire)</strong> · Validité : <strong>48–72h</strong></div>'
+    +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Attendre ≥2h entre PWA et mélasse · Ne jamais préparer plus de 72h à l\'avance</div>';
 }
 
 function updateLactoStatus(){
@@ -4227,6 +4170,198 @@ async function updatePWAStock(){
   try{await withTimeout(farmCol('stock_entries').doc(entry.id).set(entry),6000);APP_STOCK_ENTRIES.unshift(entry);G('pwa-stock-update').value=0;showToast('✅ Stock PWA mis à jour','acc');}
   catch(e){showToast('❌ '+e.message,'dng');}
 }
+
+// ═══════════════════════════════════════════════
+// MODULE RATIONNEMENT — Formules ICHTUS C:N Mélasse v2.0
+// ═══════════════════════════════════════════════
+
+// Constantes extraites des fichiers Excel ICHTUS
+const MELASSE_F1=0.80,MELASSE_F2=0.75,MELASSE_F3=0.50,MELASSE_F4=0.70;
+const MELASSE_FACTEUR=MELASSE_F1*MELASSE_F2*MELASSE_F3*MELASSE_F4; // 0.21
+const MELASSE_DENSITE=1.4; // kg/L
+const ALIM_C_ORGANIQUE=0.50,ALIM_POIDS_SEC=0.90,ALIM_NON_ASSIM=0.70,ALIM_N_PROT=0.155;
+
+// Ratio C:N par phase (semaine)
+function getCNRatio(semaine){
+  const s=+semaine;
+  if(s<=4)return{ratio:15,phase:'Démarrage floc (S0–S4)',color:'var(--warn)'};
+  if(s<=16)return{ratio:10,phase:'Grossissement (S4–S16)',color:'var(--acc2)'};
+  return{ratio:15,phase:'Finition (S16–S22)',color:'var(--warn)'};
+}
+
+// Tableau fréquences-aliments selon poids
+function getRatEntry(poids){
+  if(poids<1)return{aliment:'K1 Starter',freq:6,pct:0.09,color:'#a78bfa'};
+  if(poids<5)return{aliment:'K4 2mm',freq:5,pct:0.065,color:'#a78bfa'};
+  if(poids<25)return{aliment:'K4 2mm',freq:5,pct:0.04,color:'#a78bfa'};
+  if(poids<50)return{aliment:'K4 2mm',freq:6,pct:0.025,color:'#a78bfa'};
+  if(poids<100)return{aliment:'K5 3mm',freq:5,pct:0.025,color:'#34d399'};
+  if(poids<200)return{aliment:'K5 3mm',freq:4,pct:0.0175,color:'#34d399'};
+  if(poids<400)return{aliment:'K6 4.5mm',freq:4,pct:0.015,color:'#f87171'};
+  if(poids<600)return{aliment:'K6 4.5mm',freq:3,pct:0.0125,color:'#f87171'};
+  return{aliment:'K6 4.5mm',freq:3,pct:0.010,color:'#f87171'};
+}
+
+// ─── Mélasse Préventive (basée sur aliment distribué) ───
+// TCO = (g/1000) × C_org × %sec × non_assim
+// TAO = (g/1000) × (%prot/100) × %sec × non_assim × N_prot
+// RCN = TCO/TAO
+// Déficit = MAX(0, TAO × ratio_cible − TCO)
+// Poids_melasse = Déficit / 0.21
+// Volume_ml = Poids_melasse / (1.4 * 1000) × 1000 = Poids_melasse / 1.4
+function calcMelassePreventive(gAlimJour, protPct, cnRatio){
+  const g=+gAlimJour, p=+protPct/100, r=+cnRatio;
+  const TCO=(g/1000)*ALIM_C_ORGANIQUE*ALIM_POIDS_SEC*ALIM_NON_ASSIM;
+  const TAO=(g/1000)*p*ALIM_POIDS_SEC*ALIM_NON_ASSIM*ALIM_N_PROT;
+  const RCN=TAO>0?TCO/TAO:0;
+  const deficit=Math.max(0,TAO*r-TCO);
+  const poidsMel=deficit/MELASSE_FACTEUR;
+  const volMl=poidsMel/MELASSE_DENSITE;
+  return{TCO,TAO,RCN,deficit,poidsMel,volMl,cnRatio:r};
+}
+
+// ─── Mélasse Corrective (basée sur TAN mesuré) ───
+// TAN_mg = TAN(mg/L) × Vol(m³) × 1000
+// TCO_cible_g = TAN_mg × ratio_CN / 1000
+// Poids_melasse = TCO_cible / 0.21
+// Vol_ml = Poids_melasse / 1.4
+function calcMelasseCorrective(tanMgL, volM3, cnRatio){
+  const tanMg=+tanMgL*(+volM3)*1000;
+  const TCO_cible_g=tanMg*(+cnRatio)/1000;
+  const poidsMel=TCO_cible_g/MELASSE_FACTEUR;
+  const volMl=poidsMel/MELASSE_DENSITE;
+  return{tanMg,TCO_cible_g,poidsMel,volMl};
+}
+
+// ─── Rendu principal Rationnement ───
+function renderRationnement(){
+  const semaine=+(G('rat-semaine')?.value||1);
+  const protPct=+(G('rat-prot')?.value||40);
+  const bassinSel=G('rat-bassin')?.value||'all';
+  const {ratio,phase,color}=getCNRatio(semaine);
+  const container=G('rat-results');if(!container)return;
+
+  // Sélectionner bassins actifs
+  let bassins=APP.state.bassins.filter(b=>b.statut==='Actif');
+  if(bassinSel!=='all')bassins=bassins.filter(b=>b.name===bassinSel);
+  if(!bassins.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucun bassin actif.</div>';return;}
+
+  // Indicateur de phase global
+  const bgColor=ratio===15?'rgba(245,166,35,.12)':'rgba(61,142,245,.12)';
+  let html='<div style="background:'+bgColor+';border:1px solid '+color+';border-radius:10px;padding:.6rem 1rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.75rem">'
+    +'<span style="font-size:20px">📅</span>'
+    +'<div><div style="font-size:12px;font-weight:800;color:'+color+'">Semaine '+semaine+' — '+phase+'</div>'
+    +'<div style="font-size:11px;color:var(--t2)">Ratio C:N cible : <strong style="color:'+color+'">'+ratio+':1</strong> · Protéines aliment : <strong>'+protPct+'%</strong> · Facteur mélasse : 0.21</div></div></div>';
+
+  // Cartes par bassin
+  html+=bassins.map(b=>{
+    const c=calcBassin(b);
+    const ratEntry=getRatEntry(b.poids||1);
+    const biomasse=c.biomasse;
+    const alimTheo=c.alimTheo; // kg/jour (avec réduction biofloc)
+    const alimG=alimTheo*1000; // en grammes
+
+    // Mélasse préventive
+    const prev=calcMelassePreventive(alimG,protPct,ratio);
+    const prevParRepas=prev.volMl/ratEntry.freq;
+
+    // Mélasse corrective (si TAN ≥ 1)
+    const tanOk=b.TAN!==null&&b.TAN!==undefined;
+    const tanAlerte=tanOk&&b.TAN>=1;
+    let corrHtml='';
+    if(tanAlerte){
+      const corr=calcMelasseCorrective(b.TAN,b.vol,ratio);
+      corrHtml='<div style="margin-top:.5rem;padding:.4rem .6rem;background:rgba(255,61,87,.08);border:1px solid var(--dng);border-radius:6px">'
+        +'<div style="font-size:10px;font-weight:700;color:var(--dng);margin-bottom:.3rem">🚨 MÉTHODE CORRECTIVE — TAN='+b.TAN+' mg/L ≥ 1</div>'
+        +'<div style="font-size:10px;color:var(--t1)">TAN total bassin : <strong>'+corr.tanMg.toFixed(0)+' mg</strong></div>'
+        +'<div style="font-size:10px;color:var(--t1)">TCO cible : <strong>'+corr.TCO_cible_g.toFixed(2)+' g</strong></div>'
+        +'<div style="font-size:12px;font-weight:800;color:var(--dng);margin-top:.3rem">→ Dose corrective : '+corr.volMl.toFixed(1)+' mL de mélasse</div>'
+        +'<div style="font-size:9px;color:var(--t3);margin-top:.2rem">Diluer dans 2L eau bassin · Verser en pluie · Remesurer TAN à H+24</div></div>';
+    } else if(tanOk&&b.TAN<1){
+      corrHtml='<div style="font-size:9px;color:var(--acc);margin-top:.3rem">✅ TAN='+b.TAN+' mg/L &lt; 1 — Méthode corrective non nécessaire</div>';
+    } else {
+      corrHtml='<div style="font-size:9px;color:var(--t3);margin-top:.3rem">TAN non renseigné — méthode corrective non calculable</div>';
+    }
+
+    // Alertes paramètres depuis Config Bassins
+    const alertes=[];
+    if(b.DO!==null&&b.DO<4)alertes.push({txt:'DO faible ('+b.DO+' mg/L) → Aérer immédiatement',dng:true});
+    if(b.ph!==null&&b.ph>8.2)alertes.push({txt:'pH élevé ('+b.ph+') → Réduire alimentation −30% · Vérifier TAN',dng:true});
+    if(b.temp!==null&&b.temp>32)alertes.push({txt:'Temp élevée ('+b.temp+'°C) → Réduire ration −20%',dng:false});
+
+    const borderColor=tanAlerte?'var(--dng)':alertes.some(a=>a.dng)?'var(--warn)':'var(--b2)';
+
+    return '<div style="background:var(--card);border:2px solid '+borderColor+';border-radius:12px;padding:.75rem 1rem;margin-bottom:.75rem">'
+      +'<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap">'
+      +'<div style="font-size:13px;font-weight:800;color:'+borderColor+'">'+b.name+'</div>'
+      +'<div style="font-size:10px;color:var(--t3)">'+b.poids+'g · Biomasse '+biomasse.toFixed(2)+'kg · Vol '+b.vol+'m³</div>'
+      +'<div style="margin-left:auto;background:'+ratEntry.color+'20;color:'+ratEntry.color+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px">'+ratEntry.aliment+'</div></div>'
+      // Ration + fréquence
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.4rem;margin-bottom:.5rem">'
+      +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:10px;color:var(--t3)">Ration journalière</div><div style="font-size:18px;font-weight:800;color:var(--acc)">'+alimTheo.toFixed(3)+'<span style="font-size:11px"> kg</span></div></div>'
+      +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:10px;color:var(--t3)">Fréquence</div><div style="font-size:18px;font-weight:800;color:var(--acc2)">'+ratEntry.freq+'<span style="font-size:11px"> repas/j</span></div></div>'
+      +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:10px;color:var(--t3)">Ration/repas</div><div style="font-size:18px;font-weight:800;color:var(--gold)">'+(alimTheo/ratEntry.freq*1000).toFixed(0)+'<span style="font-size:11px"> g</span></div></div>'
+      +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:10px;color:var(--t3)">% Biomasse</div><div style="font-size:18px;font-weight:800;color:var(--purp)">'+(ratEntry.pct*100).toFixed(1)+'<span style="font-size:11px">%</span></div></div>'
+      +'</div>'
+      // Mélasse préventive
+      +'<div style="background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.2);border-radius:8px;padding:.5rem .7rem">'
+      +'<div style="font-size:10px;font-weight:700;color:var(--warn);margin-bottom:.3rem">🍯 MÉLASSE PRÉVENTIVE — Ratio C:N '+ratio+':1</div>'
+      +'<div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:10px;color:var(--t2)">'
+      +'<span>TCO: <strong>'+prev.TCO.toFixed(4)+'g</strong></span>'
+      +'<span>TAO: <strong>'+prev.TAO.toFixed(4)+'g</strong></span>'
+      +'<span>RCN naturel: <strong>'+prev.RCN.toFixed(2)+'</strong></span>'
+      +'<span>Déficit C: <strong>'+prev.deficit.toFixed(4)+'g</strong></span>'
+      +'</div>'
+      +'<div style="font-size:13px;font-weight:800;color:var(--warn);margin-top:.3rem">→ '
+      +(prev.deficit<=0
+        ?'<span style="color:var(--acc)">✅ Aucune mélasse nécessaire (RCN='+prev.RCN.toFixed(1)+' ≥ '+ratio+')</span>'
+        :prev.volMl.toFixed(1)+' mL/jour · <span style="font-size:11px;color:var(--t2)">'+prevParRepas.toFixed(1)+' mL/repas ('+ratEntry.freq+' repas)</span>')
+      +'</div></div>'
+      // Mélasse corrective
+      +corrHtml
+      // Alertes
+      +(alertes.length?'<div style="margin-top:.4rem">'
+        +alertes.map(a=>'<div style="font-size:10px;color:'+(a.dng?'var(--dng)':'var(--warn)')+';padding:2px 0">'+( a.dng?'🚨':'⚠️')+' '+a.txt+'</div>').join('')
+        +'</div>':'')
+      +'</div>';
+  }).join('');
+
+  container.innerHTML=html;
+}
+
+// Populer le select bassins dans t12
+function initRatSelect(){
+  const sel=G('rat-bassin');if(!sel)return;
+  sel.innerHTML='<option value="all">🔢 Tous les bassins</option>'
+    +APP.state.bassins.filter(b=>b.statut==='Actif').map(b=>'<option value="'+b.name+'">'+b.name+'</option>').join('');
+}
+
+// ═══════════════════════════════════════════════
+// MODULE FCR — Suivi Croissance · Excel ICHTUS v2.0
+// ═══════════════════════════════════════════════
+
+// Référence FCR par semaine (22 semaines)
+const FCR_REF=[0,1.9,1.8,1.6,1.4,1.25,1.15,1.1,1.05,1.0,1.0,1.02,1.05,1.08,1.1,1.15,1.18,1.2,1.22,1.25,1.28,1.3,1.35];
+
+function getFCRStatus(fcrReel, fcrRef){
+  const diff=fcrReel-fcrRef;
+  if(diff<-0.05)return{label:'EXCELLENT',color:'var(--acc)',icon:'🌟'};
+  if(diff<=0.1)return{label:'OK',color:'var(--acc2)',icon:'✅'};
+  if(diff<=0.3)return{label:'SURVEILLER',color:'var(--warn)',icon:'⚠️'};
+  return{label:'ALERTE',color:'var(--dng)',icon:'🚨'};
+}
+
+function getFCRPhase(semaine){
+  const s=+semaine;
+  if(s<=4)return{phase:'Démarrage',color:'var(--warn)'};
+  if(s<=8)return{phase:'Amélioration',color:'var(--acc2)'};
+  if(s<=12)return{phase:'Pic efficacité',color:'var(--acc)'};
+  if(s<=16)return{phase:'Grossissement',color:'var(--acc2)'};
+  return{phase:'Finition',color:'var(--warn)'};
+}
+
+// Initialiser renderRationnement lors du sw('t12')
+function onT12Show(){initRatSelect();renderRationnement();}
 
 // Stockées dans Firestore : platform/params
 // ═══════════════════════════════════════════════
@@ -5462,22 +5597,60 @@ function renderRecoltes(){
 // ═══════════════════════════════════════════════
 // FICHE COLLECTE
 // ═══════════════════════════════════════════════
+function swFiche(tab){
+  ['bassin','inventaire'].forEach(t=>{const el=G('fc-'+t);if(el)el.style.display=t===tab?'block':'none';});
+  ['fc-tab-bassin','fc-tab-inventaire'].forEach(id=>{const b=G(id);if(b)b.classList.toggle('active',id.includes(tab));});
+  if(tab==='inventaire')renderFicheInventaire();
+}
+
 function renderFiche(){
-  const tb=G('fiche-tbody');if(!tb)return;tb.innerHTML='';
-  APP.state.bassins.filter(b=>b.statut==='Actif').forEach(b=>{
-    const c=calcBassin(b);const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="cn">${b.name}</td><td class="cf">${c.nbActuel}</td><td class="cf">${fmt(b.poids,1)}</td>
-      <td><span class="badge b-gold" style="font-size:9px">${getFeedFullName(c.ft)}</span></td>
-      <td class="cf">${fmt(c.alimTheo,3)}</td>
-      <td style="background:rgba(0,201,167,.08)"><input class="ci" type="number" step="0.001" style="width:65px" placeholder="${fmt(c.alimTheo,3)}"></td>
-      <td style="background:rgba(61,142,245,.05)"><input class="ci" type="number" step="0.1" style="width:50px" placeholder="—"></td>
-      <td style="background:rgba(61,142,245,.05)"><input class="ci" type="number" step="0.01" style="width:48px" placeholder="—"></td>
-      <td style="background:rgba(61,142,245,.05)"><input class="ci" type="number" step="0.1" style="width:48px" placeholder="—"></td>
-      <td style="background:rgba(61,142,245,.05)"><input class="ci" type="number" step="0.01" style="width:52px" placeholder="—"></td>
-      <td style="background:rgba(0,201,167,.04)"><input class="ci" type="number" style="width:45px" placeholder="0"></td>
-      <td><input class="ci" type="text" style="width:95px;font-family:var(--font)" placeholder="..."></td>`;
-    tb.appendChild(tr);
-  });
+  const dateEl=G('fc-date-display');if(dateEl)dateEl.textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const farmEl=G('fc-farm-title');if(farmEl)farmEl.textContent=(APP.farmName||APP.farmCode||'Ferme')+' — Fiche de collecte journalière';
+  const tbody=G('fiche-tbody');if(!tbody)return;
+  const bassins=APP.state.bassins.filter(b=>b.statut==='Actif');
+  tbody.innerHTML=bassins.map(b=>{
+    const c=calcBassin(b);
+    const ft=getRationEntry?getRationEntry(b.poids||1):getRatEntry(b.poids||1);
+    return '<tr>'
+      +'<td style="font-weight:700">'+b.name+'</td>'
+      +'<td style="text-align:center">'+c.nbActuel+'</td>'
+      +'<td style="text-align:center">'+b.poids+'</td>'
+      +'<td style="text-align:center;font-weight:700">'+(ft?.aliment||b.feedId||'K4')+'</td>'
+      +'<td style="text-align:center;font-weight:700;color:var(--acc)">'+c.alimTheo.toFixed(3)+'</td>'
+      +'<td style="background:rgba(0,201,167,.05);width:70px;min-width:70px"></td>'
+      +'<td style="width:50px;min-width:50px"></td>'
+      +'<td style="width:50px;min-width:50px"></td>'
+      +'<td style="width:50px;min-width:50px"></td>'
+      +'<td style="width:50px;min-width:50px"></td>'
+      +'<td style="width:55px;min-width:55px"></td>'
+      +'<td style="width:55px;min-width:55px"></td>'
+      +'<td style="width:50px;min-width:50px"></td>'
+      +'<td style="width:100px;min-width:100px"></td>'
+      +'</tr>';
+  }).join('');
+}
+
+function renderFicheInventaire(){
+  const dateEl=G('fc-inv-date');if(dateEl)dateEl.textContent=new Date().toLocaleDateString('fr-FR');
+  const tbody=G('fiche-inv-tbody');if(!tbody)return;
+  tbody.innerHTML=APP_INTRANTS.map(item=>{
+    const stock=getItemCurrentStock(item.id);
+    // Find latest stock entry for lot/expiry
+    const latestEntry=APP_STOCK_ENTRIES.filter(e=>e.intrantId===item.id).sort((a,b)=>b.date?.localeCompare(a.date))[0];
+    const isExpired=latestEntry?.expiryDate&&latestEntry.expiryDate<today();
+    const expireSoon=latestEntry?.expiryDate&&!isExpired&&new Date(latestEntry.expiryDate)-new Date()<90*86400000;
+    return '<tr style="'+(isExpired?'background:rgba(255,61,87,.05)':expireSoon?'background:rgba(245,166,35,.05)':'')+'">'
+      +'<td style="font-weight:700">'+item.name+'</td>'
+      +'<td style="text-align:center">'+item.category+'</td>'
+      +'<td style="text-align:center">'+item.unit+'</td>'
+      +'<td style="text-align:center;font-weight:700;color:var(--acc)">'+stock.toFixed(3)+'</td>'
+      +'<td style="width:80px;min-width:80px"></td>'
+      +'<td style="width:70px;min-width:70px"></td>'
+      +'<td style="font-size:9px;color:'+(isExpired?'red':expireSoon?'orange':'inherit')+'">'+(latestEntry?.expiryDate||'—')+'</td>'
+      +'<td style="font-size:9px">'+(latestEntry?.lot||'—')+'</td>'
+      +'<td style="width:100px;min-width:100px"></td>'
+      +'</tr>';
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════
@@ -6892,8 +7065,9 @@ function calcTAC(){
 // ═══════════════════════════════════════════════
 // FCR DE RÉFÉRENCE PAR SEMAINE — Outil FCR & Survie v2.0 ICHTUS
 // ═══════════════════════════════════════════════
-const FCR_REF=[
-  {s:1,fcr:1.90,phase:'Démarrage'},{s:2,fcr:1.80,phase:'Démarrage'},
+// FCR_REF et getFCRStatus définis dans module Rationnement ci-dessus
+// Alias pour compatibilité
+const FCR_REF_OBJ=[
   {s:3,fcr:1.60,phase:'Démarrage'},{s:4,fcr:1.40,phase:'Démarrage'},
   {s:5,fcr:1.25,phase:'Amélioration'},{s:6,fcr:1.15,phase:'Amélioration'},
   {s:7,fcr:1.10,phase:'Amélioration'},{s:8,fcr:1.05,phase:'Amélioration'},
@@ -6950,7 +7124,7 @@ function renderFCRModule(){
     const survie=Math.round(survivants/vivants570*100);
     const fcrS=getFCRWeek(data,i+1);
     const fcrC=getFCRCumul(data,i+1);
-    const ref=FCR_REF[i];
+    const ref=FCR_REF_OBJ[i];
     const fcrColor=fcrC?fcrC>1.5?'var(--dng)':fcrC>1.3?'var(--warn)':'var(--acc)':'var(--t3)';
     const ecart=fcrC&&ref?(fcrC-ref.fcr).toFixed(2):null;
     const ecartColor=ecart?(parseFloat(ecart)>0.2?'var(--dng)':parseFloat(ecart)>0?'var(--warn)':'var(--acc)'):'var(--t3)';
