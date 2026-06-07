@@ -150,6 +150,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 .farms-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.75rem;margin-bottom:1rem}
 /* ── FEED ── */
 .feed-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+.log-pane{min-height:200px}
 .feed-card{background:var(--card);border:1px solid var(--b1);border-radius:12px;padding:1rem 1.1rem;display:flex;flex-direction:column;gap:.55rem;transition:border-color .2s}
 .feed-card:hover{border-color:var(--b2)}
 .feed-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:.6rem;border-bottom:1px solid var(--b1)}
@@ -603,9 +604,8 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
   <div class="tabnav">
     <button class="tb active" onclick="sw('t0')">📋 Mode d'emploi</button>
     <button class="tb" onclick="sw('t1')">⚙️ Config Bassins</button>
-    <button class="tb" onclick="sw('t2')">🌾 Aliments</button>
     <button class="tb" onclick="sw('t3')">📈 Suivi Croissance</button>
-    <button class="tb" onclick="sw('t4')">🧴 Logistique</button>
+    <button class="tb" onclick="sw('t4')">📦 Logistique</button>
     <button class="tb" onclick="sw('t5')">💰 Comptabilité</button>
     <button class="tb" onclick="sw('t6')">🔍 Consultation</button>
     <button class="tb" onclick="sw('t7')">🏆 Récoltes</button>
@@ -1256,44 +1256,8 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
       <div class="mgrid" style="margin-top:.8rem" id="b-metrics"></div>
     </div>
 
-    <!-- T2 ALIMENTS -->
-    <div id="t2" class="pane">
-      <!-- Explication rapide -->
-      <div class="card" style="padding:.75rem 1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;border-color:rgba(251,191,36,.2)">
-        <div style="font-size:22px">🌾</div>
-        <div style="flex:1;min-width:200px">
-          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:2px">Gestion des 5 types d'aliment — CUMP automatique</div>
-          <div style="font-size:10px;color:var(--t2);line-height:1.7">Saisissez vos <strong style="color:var(--t1)">lots d'achat</strong> (quantité + prix unitaire) pour chaque type. Le <strong style="color:var(--gold)">CUMP</strong> (Coût Unitaire Moyen Pondéré) est recalculé automatiquement à chaque ajout. Chaque bassin peut se voir attribuer un type d'aliment dans l'onglet Config Bassins.</div>
-          <!-- Bandeau prix De Heus -->
-          <div style="margin-top:.5rem;padding:.35rem .6rem;background:rgba(0,170,255,.07);border:1px solid rgba(0,170,255,.2);border-radius:6px;font-size:9px;color:var(--t2);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="color:var(--acc2);font-weight:700">📋 Tarifs De Heus Ghana</span>
-            <span>Janvier 2026 · Zone Koforidua/Cape Coast</span>
-            <span style="color:var(--t3)">·</span>
-            <span>Taux de conversion : <strong style="color:var(--t1)">1 GHS = 52 XOF</strong></span>
-            <span style="color:var(--t3)">·</span>
-            <span style="color:var(--warn)">Mettez à jour les lots d'achat si le taux de change évolue</span>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-          <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">Types disponibles</div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">
-            <span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(167,139,250,.15);color:#a78bfa;font-weight:700">9004 Poudre &lt;1g</span>
-            <span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(192,132,252,.15);color:#c084fc;font-weight:700">9004 Cr.1 1-2.5g</span>
-            <span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(52,211,153,.15);color:#34d399;font-weight:700">9004 Cr.2 2.5-5g</span>
-            <span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(96,165,250,.15);color:#60a5fa;font-weight:700">9008 2.0mm 5-50g</span>
-            <span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(245,158,11,.15);color:#f59e0b;font-weight:700">9008 3.0mm 50-200g</span>
-            <span style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(248,113,113,.15);color:#f87171;font-weight:700">9008 4.5mm 200g+</span>
-          </div>
-        </div>
-      </div>
-      <!-- Grille des 5 types -->
-      <div class="feed-grid" id="feed-grid"></div>
-      <!-- Résumé bas de page -->
-      <div class="card">
-        <div class="ctitle" style="margin-bottom:.7rem"><span class="dot"></span>Résumé — CUMP &amp; Stock par type</div>
-        <div class="feed-summary-grid" id="feed-metrics"></div>
-      </div>
-    </div>
+    <!-- T2 ALIMENTS (contenu déplacé dans t4 Logistique) -->
+    <div id="t2" class="pane" style="display:none"></div>
 
     <!-- T3 SUIVI CROISSANCE -->
     <div id="t3" class="pane">
@@ -1364,29 +1328,149 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
       </div>
     </div>
 
-    <!-- T4 LOGISTIQUE -->
+    <!-- T4 LOGISTIQUE (fusionné Aliments + Logistique) -->
     <div id="t4" class="pane">
-      <div class="two">
-        <div>
-          <div class="card">
-            <div class="ctitle"><span class="dot"></span>Paramètres fût (100 L)</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div class="gi" style="flex-direction:column;align-items:flex-start;gap:3px"><label>Stock actuel (ml)</label><input type="number" id="p-stock" value="100000" class="ci" style="width:100%" oninput="upLog()"></div>
-              <div class="gi" style="flex-direction:column;align-items:flex-start;gap:3px"><label>Seuil alerte (ml)</label><input type="number" id="p-seuil" value="15000" class="ci" style="width:100%" oninput="upLog()"></div>
-              <div class="gi" style="flex-direction:column;align-items:flex-start;gap:3px"><label>Dose FOOD (ml/kg)</label><input type="number" id="p-food" value="30" class="ci" style="width:100%" oninput="upLog()"></div>
-              <div class="gi" style="flex-direction:column;align-items:flex-start;gap:3px"><label>Dose WATER auto</label><div id="dw-disp" style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--acc);padding:.2rem 0"></div></div>
+      <!-- Sous-navigation Logistique -->
+      <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem">
+        <button class="tb active" id="lt-intrants" onclick="swLog('intrants')" style="font-size:11px">📦 Intrants</button>
+        <button class="tb" id="lt-aliments" onclick="swLog('aliments')" style="font-size:11px">🌾 Aliments</button>
+        <button class="tb" id="lt-stock" onclick="swLog('stock')" style="font-size:11px">📥 Entrées Stock</button>
+        <button class="tb" id="lt-inventaire" onclick="swLog('inventaire')" style="font-size:11px">📋 Inventaire</button>
+        <button class="tb" id="lt-analyse" onclick="swLog('analyse')" style="font-size:11px">📊 Analyse</button>
+        <button class="tb" id="lt-probio" onclick="swLog('probio')" style="font-size:11px">🧫 Probiotiques</button>
+      </div>
+
+      <!-- Panneau Intrants -->
+      <div id="lp-intrants" class="log-pane">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem">
+          <div style="font-size:13px;font-weight:700;color:var(--t1)">📦 Gestion des intrants</div>
+          <div id="intrant-admin-btns" style="display:none;gap:.4rem;flex-wrap:wrap">
+            <button class="sbtn" onclick="openAddIntrant()" style="font-size:11px">➕ Ajouter intrant</button>
+          </div>
+        </div>
+        <!-- Filtres -->
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem">
+          <button onclick="filterIntrants('all')" class="intrant-filter active" data-f="all" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--b2);background:var(--acc);color:#fff;cursor:pointer">Tous</button>
+          <button onclick="filterIntrants('aliment')" class="intrant-filter" data-f="aliment" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--b2);background:var(--inp);color:var(--t2);cursor:pointer">🌾 Aliments</button>
+          <button onclick="filterIntrants('basifiant')" class="intrant-filter" data-f="basifiant" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--b2);background:var(--inp);color:var(--t2);cursor:pointer">🧪 Basifiants</button>
+          <button onclick="filterIntrants('carbohydrate')" class="intrant-filter" data-f="carbohydrate" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--b2);background:var(--inp);color:var(--t2);cursor:pointer">🍯 Carbohydrates</button>
+          <button onclick="filterIntrants('probiotique')" class="intrant-filter" data-f="probiotique" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--b2);background:var(--inp);color:var(--t2);cursor:pointer">🧫 Probiotiques</button>
+          <button onclick="filterIntrants('additif')" class="intrant-filter" data-f="additif" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--b2);background:var(--inp);color:var(--t2);cursor:pointer">🧴 Additifs</button>
+          <button onclick="filterIntrants('materiel')" class="intrant-filter" data-f="materiel" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--b2);background:var(--inp);color:var(--t2);cursor:pointer">🔧 Matériel</button>
+        </div>
+        <div id="intrants-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem"></div>
+      </div>
+
+      <!-- Panneau Aliments (contenu de l'ancien t2) -->
+      <div id="lp-aliments" class="log-pane" style="display:none">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:.75rem">🌾 Gestion des aliments — Lots & CUMP</div>
+        <div class="card" style="padding:.75rem 1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;border-color:rgba(251,191,36,.2)">
+          <div style="font-size:28px">💡</div>
+          <div style="font-size:11px;color:var(--t2);line-height:1.7">Chaque bassin se voit attribuer un type d'aliment selon le stade de croissance. Saisissez vos lots d'achat ci-dessous — le <strong style="color:var(--gold)">CUMP</strong> (Coût Unitaire Moyen Pondéré) est calculé automatiquement.</div>
+        </div>
+        <div class="feed-grid" id="feed-grid" style="margin-top:.75rem"></div>
+        <div class="card" style="margin-top:.75rem;padding:.75rem">
+          <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Résumé coûts alimentaires</div>
+          <div id="feed-metrics"></div>
+        </div>
+      </div>
+
+      <!-- Panneau Entrées Stock -->
+      <div id="lp-stock" class="log-pane" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem">
+          <div style="font-size:13px;font-weight:700;color:var(--t1)">📥 Entrées en stock</div>
+          <button class="sbtn" onclick="openAddStock()">➕ Nouvelle entrée</button>
+        </div>
+        <div id="stock-entries-list" style="font-size:11px"></div>
+      </div>
+
+      <!-- Panneau Inventaire -->
+      <div id="lp-inventaire" class="log-pane" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--t1)">📋 Inventaire périodique</div>
+            <div style="font-size:10px;color:var(--t3)">Opérateurs : modification possible 48h après validation. Responsable/SuperAdmin : indéfini.</div>
+          </div>
+          <div style="display:flex;gap:.4rem">
+            <button class="sbtn" onclick="startInventaire()">📋 Nouvel inventaire</button>
+            <button onclick="printInventairePDF()" style="background:var(--dng);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer">📄 Imprimer PDF</button>
+          </div>
+        </div>
+        <div id="inventaire-content"></div>
+      </div>
+
+      <!-- Panneau Analyse -->
+      <div id="lp-analyse" class="log-pane" style="display:none">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:.75rem">📊 Analyse des stocks & consommation</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem">
+          <select id="analyse-period" class="si" style="font-size:11px" onchange="loadAnalyseStock()">
+            <option value="7">7 derniers jours</option>
+            <option value="30" selected>30 derniers jours</option>
+            <option value="90">3 mois</option>
+          </select>
+          <button class="sbtn" onclick="loadAnalyseStock()" style="font-size:11px">Actualiser</button>
+        </div>
+        <div id="analyse-stock-content"></div>
+      </div>
+
+      <!-- Panneau Probiotiques -->
+      <div id="lp-probio" class="log-pane" style="display:none">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:.75rem">🧫 Gestion Probiotiques</div>
+        <div class="two">
+          <div>
+            <div class="card">
+              <div class="ctitle"><span class="dot" style="background:var(--acc)"></span>💧 Préparation PWA (bihebdomadaire)</div>
+              <p style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:.75rem">Validité : 48–72h · Fréquence : 2×/semaine · Calcul basé sur biomasse et activité prévue</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.6rem">
+                <div><div class="form-lbl">Biomasse totale (kg)</div><input type="number" id="pwa-biomasse" class="form-inp" value="0" step="0.1" oninput="calcPWA()"></div>
+                <div><div class="form-lbl">Nb bassins actifs</div><input type="number" id="pwa-bassins" class="form-inp" value="1" min="1" oninput="calcPWA()"></div>
+              </div>
+              <div style="margin-bottom:.6rem">
+                <div class="form-lbl">Activité prévue</div>
+                <select id="pwa-activite" class="si" style="width:100%;font-size:11px" onchange="calcPWA()">
+                  <option value="maintenance">Maintenance (entretien floc)</option>
+                  <option value="primoinoculation">Primo-inoculation (nouveau bassin)</option>
+                  <option value="reinoculation">Ré-inoculation (post-vidange)</option>
+                  <option value="choc">Dose choc (TAN élevé)</option>
+                </select>
+              </div>
+              <div id="pwa-result" style="background:var(--inp);border-radius:8px;padding:.6rem;font-size:11px"></div>
+            </div>
+            <div class="card">
+              <div class="ctitle"><span class="dot" style="background:var(--purp)"></span>Stock probiotiques</div>
+              <div id="probio-stock-disp"></div>
+              <div style="display:flex;gap:.4rem;margin-top:.5rem">
+                <div class="form-lbl">Mise à jour stock PWA (L)</div>
+                <input type="number" id="pwa-stock-update" class="form-inp" value="0" step="0.1" style="width:80px">
+                <button class="sbtn" onclick="updatePWAStock()">Enregistrer</button>
+              </div>
             </div>
           </div>
-          <div class="card"><div class="ctitle"><span class="dot"></span>pH moyen bassins</div><div id="ph-intel"></div></div>
-          <div class="card"><div class="ctitle"><span class="dot"></span>Stock probiotiques</div><div id="stock-disp"></div></div>
-        </div>
-        <div>
-          <div class="card">
-            <div class="ctitle"><span class="dot"></span>Bilan hebdomadaire</div>
-            <div class="tw"><table>
-              <thead id="log-thead"><tr><th>Jour</th><th style="color:#a78bfa">K1</th><th style="color:#c084fc">K2</th><th style="color:#34d399">K3</th><th style="color:#60a5fa">K4</th><th style="color:#f59e0b">K5</th><th style="color:#f87171">K6</th><th>Total (kg)</th><th>FOOD (ml)</th><th>Vol (m³)</th><th>WATER (ml)</th><th>Total/j (ml)</th><th>Stock (ml)</th></tr></thead>
-              <tbody id="log-tbody"></tbody>
-            </table></div>
+          <div>
+            <div class="card">
+              <div class="ctitle"><span class="dot" style="background:var(--warn)"></span>🦠 Concentré Lactobacillus</div>
+              <p style="font-size:10px;color:var(--warn);line-height:1.6;margin-bottom:.5rem">⚠️ Anticipation requise : <strong>20 jours</strong> avant utilisation</p>
+              <div id="lacto-status" style="font-size:11px;background:var(--inp);border-radius:8px;padding:.6rem;margin-bottom:.5rem"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+                <div><div class="form-lbl">Stock actuel (L)</div><input type="number" id="lacto-stock" class="form-inp" value="0" step="0.1" oninput="updateLactoStatus()"></div>
+                <div><div class="form-lbl">Seuil alerte (L)</div><input type="number" id="lacto-seuil" class="form-inp" value="1" step="0.1" oninput="updateLactoStatus()"></div>
+              </div>
+              <div style="margin-top:.5rem">
+                <div class="form-lbl">Date prochain batch prévu</div>
+                <input type="date" id="lacto-nextbatch" class="form-inp" oninput="updateLactoStatus()">
+              </div>
+              <button class="sbtn" style="margin-top:.5rem;width:100%" onclick="saveLactoData()">💾 Enregistrer</button>
+            </div>
+            <div class="card">
+              <div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Fût probiotiques (100 L)</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="gi" style="flex-direction:column;align-items:flex-start;gap:3px"><label>Stock actuel (ml)</label><input type="number" id="p-stock" value="100000" class="ci" style="width:100%" oninput="upLog()"></div>
+                <div class="gi" style="flex-direction:column;align-items:flex-start;gap:3px"><label>Seuil alerte (ml)</label><input type="number" id="p-seuil" value="15000" class="ci" style="width:100%" oninput="upLog()"></div>
+                <div class="gi" style="flex-direction:column;align-items:flex-start;gap:3px"><label>Dose FOOD (ml/kg)</label><input type="number" id="p-food" value="30" class="ci" style="width:100%" oninput="upLog()"></div>
+                <div class="gi" style="flex-direction:column;align-items:flex-start;gap:3px"><label>Dose WATER auto</label><div id="dw-disp" style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--acc);padding:.2rem 0"></div></div>
+              </div>
+              <div class="card" style="margin-top:.5rem"><div id="stock-disp"></div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1837,6 +1921,88 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
     </div>
     <div id="forgot-msg" style="font-size:10px;text-align:center;margin-top:.5rem;line-height:1.6"></div>
     <button class="boot-link" style="margin-top:.5rem;width:100%;justify-content:center" onclick="G('forgot-modal').classList.add('hidden')">Annuler</button>
+  </div>
+</div>
+
+<!-- Modal Ajouter Intrant -->
+<div id="intrant-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title">📦 <span id="intrant-modal-title">Nouvel intrant</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+      <div style="grid-column:1/-1"><div class="form-lbl">Nom de l'intrant *</div><input id="int-name" class="form-inp" placeholder="Ex: CaCO₃ Carbonate calcium"></div>
+      <div><div class="form-lbl">Catégorie *</div>
+        <select id="int-cat" class="si" style="width:100%;font-size:11px">
+          <option value="aliment">🌾 Aliment</option>
+          <option value="basifiant">🧪 Basifiant</option>
+          <option value="carbohydrate">🍯 Carbohydrate</option>
+          <option value="probiotique">🧫 Probiotique</option>
+          <option value="additif">🧴 Additif/Sel</option>
+          <option value="materiel">🔧 Matériel</option>
+          <option value="reactif">🔬 Réactif labo</option>
+          <option value="autre">📦 Autre</option>
+        </select>
+      </div>
+      <div><div class="form-lbl">Unité de mesure *</div>
+        <select id="int-unit" class="si" style="width:100%;font-size:11px">
+          <option value="kg">kg</option><option value="g">g</option>
+          <option value="L">L</option><option value="mL">mL</option>
+          <option value="m">m</option><option value="cm">cm</option>
+          <option value="pièces">pièces</option><option value="sacs">sacs</option>
+          <option value="bidons">bidons</option><option value="bouteilles">bouteilles</option>
+          <option value="boîtes">boîtes</option><option value="rouleaux">rouleaux</option>
+          <option value="lots">lots</option><option value="doses">doses</option><option value="autre">autre</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1"><div class="form-lbl">Conditionnement indicatif</div><input id="int-cond" class="form-inp" placeholder="Ex: 25 kg/sac, 1 L/bouteille"></div>
+      <div style="grid-column:1/-1">
+        <div class="form-lbl">Type de monitoring *</div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem">
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;background:var(--inp);padding:4px 10px;border-radius:6px;border:1px solid var(--b2)">
+            <input type="radio" name="int-monitoring" value="strategic" checked> 🎯 Stratégique (Config Bassins)
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;background:var(--inp);padding:4px 10px;border-radius:6px;border:1px solid var(--b2)">
+            <input type="radio" name="int-monitoring" value="optional"> 📋 Facultatif
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;background:var(--inp);padding:4px 10px;border-radius:6px;border:1px solid var(--b2)">
+            <input type="radio" name="int-monitoring" value="special"> 🚨 Spécial (seuil alerte)
+          </label>
+        </div>
+        <div id="int-seuil-block" style="display:none;margin-top:.4rem">
+          <div class="form-lbl">Seuil d'alerte stock</div>
+          <div style="display:flex;gap:.4rem;align-items:center">
+            <input id="int-seuil" class="form-inp" type="number" value="1" step="0.1" style="width:80px">
+            <span id="int-seuil-unit" style="font-size:11px;color:var(--t3)">unité</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="int-msg" style="font-size:10px;margin-top:.4rem"></div>
+    <div style="display:flex;gap:.4rem;margin-top:.75rem">
+      <button class="sbtn" style="flex:1" onclick="saveIntrant()">💾 Enregistrer</button>
+      <button class="dbtn" style="flex:1;padding:6px" onclick="G('intrant-modal').classList.add('hidden')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Entrée Stock -->
+<div id="stock-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-title">📥 Nouvelle entrée en stock</div>
+    <div><div class="form-lbl">Intrant *</div>
+      <select id="stock-intrant" class="si" style="width:100%;font-size:11px"></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.4rem">
+      <div><div class="form-lbl">Quantité *</div><input id="stock-qty" class="form-inp" type="number" value="1" step="0.1" min="0.001"></div>
+      <div><div class="form-lbl">Date d'entrée *</div><input id="stock-date" class="form-inp" type="date"></div>
+      <div><div class="form-lbl">Date péremption</div><input id="stock-expiry" class="form-inp" type="date"></div>
+      <div><div class="form-lbl">Fournisseur</div><input id="stock-supplier" class="form-inp" placeholder="Optionnel"></div>
+      <div style="grid-column:1/-1"><div class="form-lbl">Notes</div><input id="stock-notes" class="form-inp" placeholder="Lot, facture..."></div>
+    </div>
+    <div id="stock-msg" style="font-size:10px;margin-top:.4rem"></div>
+    <div style="display:flex;gap:.4rem;margin-top:.75rem">
+      <button class="sbtn" style="flex:1" onclick="saveStockEntry()">💾 Enregistrer</button>
+      <button class="dbtn" style="flex:1;padding:6px" onclick="G('stock-modal').classList.add('hidden')">Annuler</button>
+    </div>
   </div>
 </div>
 
@@ -2461,6 +2627,7 @@ async function showFarmApp(){
   loadSpeciesFromFirestore();
   loadFarmLogo();
   loadParamLists();
+  loadIntrants(); // Module Logistique
   const role=APP.user?.role||'Opérateur';
   if(role==='Responsable'||role==='Administrateur'){
     checkNotifications();
@@ -3737,6 +3904,328 @@ async function toggleFarmActivation(farmCode, currentlyActive){
     alert(`✅ Ferme "${farmCode}" ${currentlyActive?'désactivée — utilisateurs bloqués':'réactivée — accès rétabli'}.`);
   }catch(e){alert('❌ '+e.message);}
   hideLoader();
+}
+
+// ═══════════════════════════════════════════════
+// MODULE LOGISTIQUE — Intrants, Stock, Inventaire
+// ═══════════════════════════════════════════════
+
+const UNITS_LIST=['kg','g','L','mL','m','cm','pièces','sacs','bidons','bouteilles','boîtes','rouleaux','lots','doses','autre'];
+
+const DEFAULT_INTRANTS=[
+  {id:'k1',name:'Aliment K1 Starter',unit:'kg',conditionnement:'1.2 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
+  {id:'k4',name:'Aliment K4 Granulé 2mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
+  {id:'k5',name:'Aliment K5 Granulé 3mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
+  {id:'k6',name:'Aliment K6 Granulé 4.5mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
+  {id:'caco3',name:'CaCO₃ — Carbonate de calcium',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'basifiant',isDefault:true},
+  {id:'nahco3',name:'NaHCO₃ — Bicarbonate de sodium',unit:'kg',conditionnement:'1 kg/paquet',monitoringType:'strategic',category:'basifiant',isDefault:true},
+  {id:'melasse',name:'Mélasse de canne',unit:'L',conditionnement:'25 L/bidon',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
+  {id:'farine_ble',name:'Farine de blé',unit:'kg',conditionnement:'50 kg/sac',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
+  {id:'farine_mais',name:'Farine de maïs',unit:'kg',conditionnement:'50 kg/sac',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
+  {id:'sel',name:'Sel marin non iodé',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'additif',isDefault:true},
+  {id:'bioclean',name:'BioClean 100',unit:'L',conditionnement:'1 L/bouteille',monitoringType:'special',seuil:2,category:'probiotique',isDefault:true},
+  {id:'lacto_conc',name:'Concentré de Lactobacillus',unit:'L',conditionnement:'1 L/bouteille',monitoringType:'special',seuil:1,anticipation:20,category:'probiotique',isDefault:true},
+  {id:'pwa_prep',name:'Préparation PWA',unit:'L',conditionnement:'vrac',monitoringType:'special',validite:72,category:'probiotique',isDefault:true},
+];
+
+let APP_INTRANTS=[...DEFAULT_INTRANTS];
+let APP_STOCK_ENTRIES=[];
+let APP_INVENTAIRE_CURRENT=null;
+let APP_LOG_PANEL='intrants';
+
+function swLog(panel){
+  APP_LOG_PANEL=panel;
+  document.querySelectorAll('.log-pane').forEach(p=>p.style.display='none');
+  const el=G('lp-'+panel);if(el)el.style.display='block';
+  document.querySelectorAll('[id^="lt-"]').forEach(b=>b.classList.remove('active'));
+  const btn=G('lt-'+panel);if(btn)btn.classList.add('active');
+  if(panel==='intrants')renderIntrants();
+  if(panel==='aliments'){renderFeed();if(typeof renderFeedMetrics==='function')renderFeedMetrics();}
+  if(panel==='stock')renderStockEntries();
+  if(panel==='inventaire')renderInventairePanel();
+  if(panel==='analyse')loadAnalyseStock();
+  if(panel==='probio'){calcPWA();updateLactoStatus();}
+}
+
+async function loadIntrants(){
+  try{
+    const snap=await withTimeout(farmCol('intrants').get(),6000);
+    if(snap&&!snap.empty){
+      const custom=snap.docs.map(d=>({...d.data(),id:d.id}));
+      const customIds=new Set(custom.map(i=>i.id));
+      APP_INTRANTS=[...DEFAULT_INTRANTS.filter(i=>!customIds.has(i.id)),...custom];
+    }
+  }catch(e){console.warn('Intrants:',e);}
+  try{
+    const snap=await withTimeout(farmCol('stock_entries').get(),6000);
+    if(snap&&!snap.empty)APP_STOCK_ENTRIES=snap.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  }catch(e){console.warn('Stock:',e);}
+  checkStockAlerts();
+}
+
+function checkStockAlerts(){
+  const alerts=APP_INTRANTS.filter(i=>i.monitoringType==='special'&&i.seuil&&getItemCurrentStock(i.id)<i.seuil);
+  if(alerts.length>0){
+    showToast('🚨 '+alerts.length+' intrant(s) sous le seuil: '+alerts.map(a=>a.name).join(', '),'dng');
+  }
+}
+
+function renderIntrants(filter='all'){
+  const container=G('intrants-list');if(!container)return;
+  const role=APP.user?.role||'Opérateur';
+  const isAdmin=role==='Administrateur'||role==='Responsable';
+  if(G('intrant-admin-btns'))G('intrant-admin-btns').style.display=isAdmin?'flex':'none';
+  let items=filter==='all'?APP_INTRANTS:APP_INTRANTS.filter(i=>i.category===filter);
+  const monIcons={strategic:'🎯',optional:'📋',special:'🚨'};
+  const catColors={aliment:'#f59e0b',basifiant:'#3b82f6',carbohydrate:'#a78bfa',probiotique:'#34d399',additif:'#06b6d4',materiel:'#6b7280',reactif:'#ec4899',autre:'#94a3b8'};
+  container.innerHTML=items.map(item=>{
+    const stock=getItemCurrentStock(item.id);
+    const isLow=item.monitoringType==='special'&&item.seuil&&stock<item.seuil;
+    const color=catColors[item.category]||'#94a3b8';
+    return '<div style="background:var(--card);border:1px solid '+(isLow?'var(--dng)':'var(--b2)')+';border-radius:10px;padding:.7rem;position:relative">'
+      +(item.isDefault?'<span style="position:absolute;top:6px;right:6px;font-size:8px;background:rgba(255,215,70,.15);color:var(--gold);border:1px solid rgba(255,215,70,.3);border-radius:4px;padding:1px 5px">Koudijs</span>':'')
+      +'<div style="display:flex;gap:5px;margin-bottom:.3rem"><span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+color+'20;color:'+color+';font-weight:700">'+item.category+'</span>'
+      +'<span style="font-size:10px">'+(monIcons[item.monitoringType]||'📋')+' '+(item.monitoringType==='strategic'?'Stratégique':item.monitoringType==='special'?'Spécial':'Facultatif')+'</span></div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:.2rem">'+item.name+'</div>'
+      +'<div style="font-size:10px;color:var(--t3)">'+(item.conditionnement||'—')+' · '+item.unit+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+(isLow?'var(--dng)':'var(--acc)')+';margin-top:.3rem">Stock: '+stock.toFixed(2)+' '+item.unit+(isLow?' ⚠️ SEUIL':'')+'</div>'
+      +(item.monitoringType==='special'&&item.seuil?'<div style="font-size:9px;color:var(--t3)">Seuil: '+item.seuil+' '+item.unit+'</div>':'')
+      +'<div style="display:flex;gap:.3rem;margin-top:.5rem;flex-wrap:wrap">'
+      +'<button onclick="openAddStock(\''+item.id+'\')" style="font-size:9px;background:var(--acc);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">📥 Entrée</button>'
+      +(isAdmin&&!item.isDefault?'<button onclick="deleteIntrant(\''+item.id+'\')" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑 Supprimer</button>':'')
+      +'</div></div>';
+  }).join('')||'<div style="color:var(--t3);font-size:11px;padding:1rem">Aucun intrant.</div>';
+}
+
+function filterIntrants(f){
+  document.querySelectorAll('.intrant-filter').forEach(b=>{
+    const active=b.dataset.f===f;
+    b.style.background=active?'var(--acc)':'var(--inp)';
+    b.style.color=active?'#fff':'var(--t2)';
+  });
+  renderIntrants(f);
+}
+
+function getItemCurrentStock(intrantId){
+  const entries=APP_STOCK_ENTRIES.filter(e=>e.intrantId===intrantId);
+  const totalIn=entries.reduce((s,e)=>s+(e.quantity||0),0);
+  const item=APP_INTRANTS.find(i=>i.id===intrantId);
+  if(item&&item.category==='aliment'){
+    const totalUsed=APP.state.bassins.filter(b=>b.statut==='Actif').reduce((s,b)=>s+(b.alimReel||0),0);
+    return Math.max(0,totalIn-totalUsed);
+  }
+  return totalIn;
+}
+
+function openAddIntrant(){
+  G('intrant-modal-title').textContent='Nouvel intrant';
+  G('int-name').value='';G('int-cat').value='aliment';G('int-unit').value='kg';
+  G('int-cond').value='';G('int-seuil').value='1';G('int-msg').textContent='';
+  document.querySelector('[name="int-monitoring"][value="strategic"]').checked=true;
+  G('int-seuil-block').style.display='none';
+  document.querySelectorAll('[name="int-monitoring"]').forEach(r=>{
+    r.onchange=()=>{G('int-seuil-block').style.display=r.value==='special'?'block':'none';};
+  });
+  G('intrant-modal').classList.remove('hidden');
+}
+
+async function saveIntrant(){
+  const name=(G('int-name').value||'').trim();
+  const cat=G('int-cat').value;const unit=G('int-unit').value;
+  const cond=(G('int-cond').value||'').trim();
+  const monitoring=document.querySelector('[name="int-monitoring"]:checked')?.value||'optional';
+  const seuil=monitoring==='special'?+G('int-seuil').value:null;
+  const msg=G('int-msg');
+  if(!name){msg.style.color='var(--dng)';msg.textContent='⚠️ Nom obligatoire';return;}
+  const id='int_'+Date.now();
+  const intrant={id,name,category:cat,unit,conditionnement:cond,monitoringType:monitoring,seuil,isDefault:false,createdAt:new Date().toISOString(),createdBy:APP.user?.name||'?'};
+  try{
+    await withTimeout(farmCol('intrants').doc(id).set(intrant),6000);
+    APP_INTRANTS.push(intrant);
+    G('intrant-modal').classList.add('hidden');
+    renderIntrants();showToast('✅ Intrant ajouté','acc');
+  }catch(e){msg.style.color='var(--dng)';msg.textContent='❌ '+e.message;}
+}
+
+async function deleteIntrant(id){
+  if(APP.user?.role!=='Administrateur'){showToast('❌ Réservé au Super Admin','dng');return;}
+  if(!confirm('Supprimer ?'))return;
+  try{
+    await withTimeout(farmCol('intrants').doc(id).delete(),6000);
+    APP_INTRANTS=APP_INTRANTS.filter(i=>i.id!==id);
+    renderIntrants();showToast('✅ Supprimé','acc');
+  }catch(e){showToast('❌ '+e.message,'dng');}
+}
+
+function openAddStock(preselect){
+  G('stock-modal').classList.remove('hidden');
+  G('stock-date').value=today();G('stock-qty').value=1;
+  G('stock-expiry').value='';G('stock-supplier').value='';G('stock-notes').value='';G('stock-msg').textContent='';
+  const sel=G('stock-intrant');
+  sel.innerHTML=APP_INTRANTS.map(i=>'<option value="'+i.id+'"'+(i.id===preselect?' selected':'')+'>'+ i.name+' ('+i.unit+')</option>').join('');
+}
+
+async function saveStockEntry(){
+  const intrantId=G('stock-intrant').value;const qty=+G('stock-qty').value;const date=G('stock-date').value;
+  const expiry=G('stock-expiry').value||null;const supplier=G('stock-supplier').value||'';const notes=G('stock-notes').value||'';
+  const msg=G('stock-msg');
+  if(!intrantId||qty<=0||!date){msg.style.color='var(--dng)';msg.textContent='⚠️ Champs manquants';return;}
+  const entry={id:'stock_'+Date.now(),intrantId,quantity:qty,date,expiryDate:expiry,supplier,notes,createdAt:new Date().toISOString(),createdBy:APP.user?.name||'?'};
+  try{
+    await withTimeout(farmCol('stock_entries').doc(entry.id).set(entry),6000);
+    APP_STOCK_ENTRIES.unshift(entry);G('stock-modal').classList.add('hidden');
+    renderStockEntries();showToast('✅ Entrée stock enregistrée','acc');
+  }catch(e){msg.style.color='var(--dng)';msg.textContent='❌ '+e.message;}
+}
+
+function renderStockEntries(){
+  const container=G('stock-entries-list');if(!container)return;
+  if(!APP_STOCK_ENTRIES.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucune entrée. Cliquez ➕ pour ajouter.</div>';return;}
+  const byDate={};
+  APP_STOCK_ENTRIES.forEach(e=>{if(!byDate[e.date])byDate[e.date]=[];byDate[e.date].push(e);});
+  container.innerHTML=Object.entries(byDate).sort(([a],[b])=>b.localeCompare(a)).slice(0,20).map(([date,entries])=>{
+    return '<div style="margin-bottom:.6rem"><div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:.3rem">'+date+'</div>'
+      +entries.map(e=>{
+        const item=APP_INTRANTS.find(i=>i.id===e.intrantId);
+        const isExpired=e.expiryDate&&e.expiryDate<today();
+        const expireSoon=e.expiryDate&&!isExpired&&new Date(e.expiryDate)-new Date()<7*86400000;
+        return '<div style="display:flex;align-items:center;gap:.5rem;background:var(--card);border:1px solid '+(isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--b2)')+';border-radius:8px;padding:.4rem .7rem;margin-bottom:.3rem">'
+          +'<div style="flex:1"><span style="font-weight:700;color:var(--t1)">'+(item?.name||e.intrantId)+'</span>'
+          +'<span style="color:var(--acc);font-weight:700;margin-left:.5rem">+'+e.quantity+' '+(item?.unit||'')+'</span>'
+          +(e.supplier?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">· '+e.supplier+'</span>':'')
+          +(e.expiryDate?'<span style="color:'+(isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)')+';font-size:9px;margin-left:.4rem">⏱ '+(isExpired?'PÉRIMÉ':'')+e.expiryDate+'</span>':'')
+          +'</div></div>';
+      }).join('')+'</div>';
+  }).join('');
+}
+
+function renderInventairePanel(){
+  const container=G('inventaire-content');if(!container)return;
+  if(!APP_INVENTAIRE_CURRENT){container.innerHTML='<div style="text-align:center;color:var(--t3);padding:2rem">Cliquez sur 📋 Nouvel inventaire pour démarrer.</div>';return;}
+  let rows='';
+  APP_INVENTAIRE_CURRENT.items.forEach((item,idx)=>{
+    const intrant=APP_INTRANTS.find(i=>i.id===item.intrantId);
+    const theorique=getItemCurrentStock(item.intrantId);
+    const ecart=(item.actualQty||0)-theorique;
+    const ecartColor=Math.abs(ecart)<0.01?'var(--acc)':ecart>0?'var(--warn)':'var(--dng)';
+    rows+='<tr style="border-bottom:1px solid var(--b1)"><td style="padding:6px 8px;font-weight:700">'+(intrant?.name||item.intrantId)+'</td>'
+      +'<td style="padding:6px 8px;text-align:center">'+theorique.toFixed(2)+' '+(intrant?.unit||'')+'</td>'
+      +'<td style="padding:6px 8px;text-align:center"><input type="number" value="'+(item.actualQty||0)+'" step="0.01" style="width:70px;background:var(--inp);border:1px solid var(--b2);border-radius:4px;padding:2px 4px;font-size:10px;color:var(--t1)" onchange="APP_INVENTAIRE_CURRENT.items['+idx+'].actualQty=+this.value"> '+(intrant?.unit||'')+'</td>'
+      +'<td style="padding:6px 8px;text-align:center;font-weight:700;color:'+ecartColor+'">'+(ecart>=0?'+':'')+ecart.toFixed(2)+'</td></tr>';
+  });
+  container.innerHTML='<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">'
+    +'<div style="font-size:12px;font-weight:700">Inventaire du '+APP_INVENTAIRE_CURRENT.date+'</div>'
+    +'<div style="display:flex;gap:.3rem"><button class="sbtn" onclick="validateInventaire()" style="font-size:10px">✅ Valider</button>'
+    +'<button onclick="cancelInventaire()" style="font-size:10px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:3px 8px;cursor:pointer">✕ Annuler</button></div></div>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:var(--inp)">'
+    +'<th style="padding:6px 8px;text-align:left">Intrant</th><th style="padding:6px 8px">Théorique</th><th style="padding:6px 8px">Réel</th><th style="padding:6px 8px">Écart</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
+function startInventaire(){
+  APP_INVENTAIRE_CURRENT={date:today(),items:APP_INTRANTS.map(i=>({intrantId:i.id,actualQty:getItemCurrentStock(i.id)})),validatedAt:null};
+  renderInventairePanel();showToast('📋 Inventaire démarré','acc');
+}
+
+async function validateInventaire(){
+  if(!APP_INVENTAIRE_CURRENT)return;
+  APP_INVENTAIRE_CURRENT.validatedAt=new Date().toISOString();
+  APP_INVENTAIRE_CURRENT.validatedBy=APP.user?.name||'?';
+  try{
+    await withTimeout(farmCol('inventaires').doc(APP_INVENTAIRE_CURRENT.date).set(APP_INVENTAIRE_CURRENT),6000);
+    showToast('✅ Inventaire validé','acc');renderInventairePanel();
+  }catch(e){showToast('❌ '+e.message,'dng');}
+}
+
+function cancelInventaire(){APP_INVENTAIRE_CURRENT=null;renderInventairePanel();}
+
+function printInventairePDF(){
+  if(!APP_INVENTAIRE_CURRENT){showToast('⚠️ Aucun inventaire','warn');return;}
+  const farmName=APP.farmName||APP.farmCode;
+  const rows=APP_INVENTAIRE_CURRENT.items.map(item=>{
+    const intrant=APP_INTRANTS.find(i=>i.id===item.intrantId);
+    const theorique=getItemCurrentStock(item.intrantId);
+    const ecart=(item.actualQty||0)-theorique;
+    return '<tr><td>'+(intrant?.name||item.intrantId)+'</td><td>'+(intrant?.unit||'')+'</td><td>'+theorique.toFixed(2)+'</td><td>'+(item.actualQty||0).toFixed(2)+'</td><td style="color:'+(Math.abs(ecart)<0.01?'green':ecart>0?'orange':'red')+'">'+(ecart>=0?'+':'')+ecart.toFixed(2)+'</td></tr>';
+  }).join('');
+  const w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Inventaire '+APP_INVENTAIRE_CURRENT.date+'</title>'
+    +'<style>body{font-family:Arial;padding:20px;font-size:12px}h1{font-size:16px;color:#004466}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#e0f0ff}@media print{body{margin:0}}</style></head>'
+    +'<body><h1>📋 Inventaire des stocks — '+farmName+'</h1>'
+    +'<p><strong>Date :</strong> '+APP_INVENTAIRE_CURRENT.date+' &nbsp;|&nbsp; <strong>Validé par :</strong> '+(APP_INVENTAIRE_CURRENT.validatedBy||'Non validé')+' &nbsp;|&nbsp; <strong>Généré :</strong> '+new Date().toLocaleString('fr-FR')+'</p>'
+    +'<table><thead><tr><th>Intrant</th><th>Unité</th><th>Stock théorique</th><th>Stock réel</th><th>Écart</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<p style="margin-top:20px;font-size:10px;color:#666">Bio Aqua Tech — Système de gestion aquacole</p>'
+    +'<script>window.onload=function(){window.print();window.close();}<\/script></body></html>');
+  w.document.close();
+}
+
+async function loadAnalyseStock(){
+  const container=G('analyse-stock-content');if(!container)return;
+  container.innerHTML='<div style="color:var(--t3);text-align:center;padding:1rem">⏳ Chargement…</div>';
+  const days=+(G('analyse-period')?.value||30);
+  const dateLimit=new Date();dateLimit.setDate(dateLimit.getDate()-days);
+  const limitStr=dateLimit.toISOString().split('T')[0];
+  const stockData=APP_INTRANTS.map(item=>{
+    const stock=getItemCurrentStock(item.id);
+    const entries=APP_STOCK_ENTRIES.filter(e=>e.intrantId===item.id&&e.date>=limitStr);
+    const totalIn=entries.reduce((s,e)=>s+(e.quantity||0),0);
+    const isLow=item.monitoringType==='special'&&item.seuil&&stock<item.seuil;
+    return {...item,stock,totalIn,isLow};
+  }).filter(i=>i.totalIn>0||i.stock>0);
+  const alimTheo=APP.state.bassins.filter(b=>b.statut==='Actif').reduce((s,b)=>{const c=calcBassin(b);return s+c.alimTheo;},0);
+  const alimReel=APP.state.bassins.filter(b=>b.statut==='Actif').reduce((s,b)=>s+(b.alimReel||0),0);
+  let alertCards='';
+  stockData.filter(i=>i.isLow).forEach(i=>{
+    alertCards+='<div class="card" style="padding:.6rem;text-align:center;border-color:var(--dng)"><div style="font-size:20px">🚨</div>'
+      +'<div style="font-size:11px;color:var(--dng);font-weight:700">'+i.name+'</div>'
+      +'<div style="font-size:16px;font-weight:800;color:var(--dng)">'+i.stock.toFixed(2)+' '+i.unit+'</div>'
+      +'<div style="font-size:10px;color:var(--dng)">Seuil: '+i.seuil+' '+i.unit+'</div></div>';
+  });
+  let rows='';
+  stockData.forEach(i=>{
+    rows+='<tr style="border-bottom:1px solid var(--b1)'+(i.isLow?';background:rgba(255,61,87,.05)':'')+'"><td style="padding:6px;font-weight:700">'+i.name+'</td><td style="padding:6px;text-align:center">'+i.category+'</td><td style="padding:6px;text-align:center;font-weight:700;color:'+(i.isLow?'var(--dng)':'var(--acc)')+'">'+i.stock.toFixed(2)+' '+i.unit+'</td><td style="padding:6px;text-align:center">+'+i.totalIn.toFixed(2)+' '+i.unit+'</td><td style="padding:6px;text-align:center">'+({strategic:'🎯',optional:'📋',special:'🚨'}[i.monitoringType]||'?')+'</td><td style="padding:6px;text-align:center;color:'+(i.isLow?'var(--dng)':'var(--acc)')+'">'+( i.isLow?'⚠️ SEUIL':'✅ OK')+'</td></tr>';
+  });
+  if(!rows)rows='<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:1rem">Aucune donnée de stock.</td></tr>';
+  container.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.5rem;margin-bottom:1rem">'
+    +'<div class="card" style="padding:.6rem;text-align:center"><div style="font-size:20px">🌾</div><div style="font-size:11px;color:var(--t3)">Aliment distribué aujourd\'hui</div><div style="font-size:18px;font-weight:800;color:var(--acc)">'+fmt(alimReel,3)+' kg</div><div style="font-size:10px;color:var(--t3)">Théorique: '+fmt(alimTheo,3)+' kg · Écart: '+(alimReel-alimTheo).toFixed(3)+' kg</div></div>'
+    +alertCards+'</div>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:var(--inp)"><th style="padding:6px;text-align:left">Intrant</th><th style="padding:6px">Catégorie</th><th style="padding:6px">Stock actuel</th><th style="padding:6px">Entrées ('+days+'j)</th><th style="padding:6px">Monitoring</th><th style="padding:6px">Statut</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+function calcPWA(){
+  const biomasse=+(G('pwa-biomasse')?.value||0);
+  const nbBassins=+(G('pwa-bassins')?.value||1);
+  const activite=G('pwa-activite')?.value||'maintenance';
+  const result=G('pwa-result');if(!result)return;
+  const doses={maintenance:{food:30,water:10,extra:0},primoinoculation:{food:50,water:20,extra:10},reinoculation:{food:40,water:15,extra:5},choc:{food:80,water:30,extra:15}};
+  const d=doses[activite]||doses.maintenance;
+  const volFOOD=biomasse*(d.food/1000);const volWATER=nbBassins*(d.water/1000);const volExtra=d.extra>0?nbBassins*(d.extra/1000):0;
+  const total=volFOOD+volWATER+volExtra;
+  result.innerHTML='<div style="font-weight:700;color:var(--acc);margin-bottom:.4rem">Volume total à préparer : '+total.toFixed(2)+' L</div>'
+    +'<div style="font-size:10px;color:var(--t2);line-height:1.8">• Dose FOOD ('+d.food+' mL/kg) : <strong>'+volFOOD.toFixed(2)+' L</strong><br>• Dose WATER ('+d.water+' mL/bassin) : <strong>'+volWATER.toFixed(2)+' L</strong><br>'+(volExtra>0?'• Extra ('+d.extra+' mL/bassin) : <strong>'+volExtra.toFixed(2)+' L</strong><br>':'')+'• Fréquence : <strong>2×/semaine</strong><br>• Validité : <strong>48–72h</strong></div>'
+    +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Ne pas préparer plus de 72h à l\'avance</div>';
+}
+
+function updateLactoStatus(){
+  const stock=+(G('lacto-stock')?.value||0);const seuil=+(G('lacto-seuil')?.value||1);const nextBatch=G('lacto-nextbatch')?.value||'';
+  const container=G('lacto-status');if(!container)return;
+  let alert='';
+  if(nextBatch){const daysLeft=Math.ceil((new Date(nextBatch)-new Date())/(86400000));if(daysLeft<=20)alert='<div style="color:var(--dng);font-weight:700">🚨 ANTICIPATION ! Batch dans '+daysLeft+' jours — commandez maintenant (délai 20j)</div>';else alert='<div style="color:var(--acc)">✅ Batch dans '+daysLeft+' jours</div>';}
+  container.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:.3rem"><span>Stock actuel :</span><strong style="color:'+(stock<seuil?'var(--dng)':'var(--acc)')+'">'+stock.toFixed(2)+' L '+(stock<seuil?'⚠️':'')+'</strong></div>'
+    +'<div style="display:flex;justify-content:space-between"><span>Seuil alerte :</span><strong>'+seuil.toFixed(2)+' L</strong></div>'
+    +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⚠️ Délai minimum : 20 jours</div>'+alert;
+}
+
+async function saveLactoData(){
+  const data={stock:+(G('lacto-stock')?.value||0),seuil:+(G('lacto-seuil')?.value||1),nextBatch:G('lacto-nextbatch')?.value||'',updatedAt:new Date().toISOString()};
+  try{await withTimeout(farmCol('config').doc('lacto').set(data),6000);showToast('✅ Lactobacillus enregistré','acc');}catch(e){showToast('❌ '+e.message,'dng');}
+}
+
+async function updatePWAStock(){
+  const val=+(G('pwa-stock-update')?.value||0);if(val===0)return;
+  const entry={id:'stock_pwa_'+Date.now(),intrantId:'pwa_prep',quantity:val,date:today(),createdAt:new Date().toISOString(),createdBy:APP.user?.name||'?'};
+  try{await withTimeout(farmCol('stock_entries').doc(entry.id).set(entry),6000);APP_STOCK_ENTRIES.unshift(entry);G('pwa-stock-update').value=0;showToast('✅ Stock PWA mis à jour','acc');}
+  catch(e){showToast('❌ '+e.message,'dng');}
 }
 
 // Stockées dans Firestore : platform/params
