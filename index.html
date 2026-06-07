@@ -2211,10 +2211,17 @@ function hideLoader(){G('loader').classList.remove('show');}
 // SCREENS
 // ═══════════════════════════════════════════════
 function showScreen(name){
-  // Corriger la structure HTML si screen-farm est imbriqué dans screen-admin
+  // Déplacer screen-farm hors de screen-admin si imbriqué
   const sf=document.getElementById('screen-farm');
   if(sf&&sf.parentElement&&sf.parentElement.id==='screen-admin'){
     document.body.insertBefore(sf,document.getElementById('screen-admin').nextSibling);
+  }
+  // Déplacer tous les modaux hors de screen-admin
+  const sa=document.getElementById('screen-admin');
+  if(sa){
+    sa.querySelectorAll('.modal-overlay').forEach(modal=>{
+      document.body.appendChild(modal);
+    });
   }
   ['screen-boot','screen-admin','screen-farm'].forEach(id=>{
     const el=G(id); if(!el)return;
