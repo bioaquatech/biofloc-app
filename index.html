@@ -1957,8 +1957,8 @@ const firebaseConfig={
   authDomain:"bio-aqua-tech.firebaseapp.com",
   projectId:"bio-aqua-tech",
   storageBucket:"bio-aqua-tech.firebasestorage.app",
-  messagingSenderId:"899565649316",
-  appId:"1:899565649316:web:1fc3205474122498649531"
+  messagingSenderId:"575120008556",
+  appId:"1:575120008556:web:a5cdc966c8e88fb6daff49"
 };
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
@@ -2189,6 +2189,11 @@ function hideLoader(){G('loader').classList.remove('show');}
 // SCREENS
 // ═══════════════════════════════════════════════
 function showScreen(name){
+  // Corriger la structure HTML si screen-farm est imbriqué dans screen-admin
+  const sf=document.getElementById('screen-farm');
+  if(sf&&sf.parentElement&&sf.parentElement.id==='screen-admin'){
+    document.body.insertBefore(sf,document.getElementById('screen-admin').nextSibling);
+  }
   ['screen-boot','screen-admin','screen-farm'].forEach(id=>{
     const el=G(id); if(!el)return;
     if(id===name){el.classList.remove('hidden');el.style.display='';}
@@ -2404,21 +2409,22 @@ async function doLogout(expired=false){
 async function showFarmApp(){
   const farmNameEl=G('farm-display-name');
   if(farmNameEl)farmNameEl.textContent=APP.farmName||APP.farmCode;
-  // Load user profile to get canBackup
+  // Load user profile — avec timeout pour éviter blocage
   try{
-    const uSnap=await db.collection('users').doc(APP.user.uid).get();
+    const uSnap=await withTimeout(db.collection('users').doc(APP.user.uid).get(),5000);
     if(uSnap.exists){
       const ud=uSnap.data();
       APP.user.canBackup=ud.canBackup||false;
       APP.user.role=ud.role||APP.user.role||'Opérateur';
     }
-  }catch(e){console.warn('User profile load:',e);}
+  }catch(e){console.warn('User profile:',e.message);}
+  // Afficher immédiatement — ne pas attendre d'autres Firestore
   try{G('sc-date').value=today();}catch(e){}
   try{G('cons-d').value=today();}catch(e){}
   try{updateSpeciesBadge();}catch(e){}
-  try{buildBTable();popSelects();renderFeed();}catch(e){console.warn('buildBTable:',e);}
-  try{upAll();upLog();upCompta();}catch(e){console.warn('upAll:',e);}
-  try{setupFarmListeners();}catch(e){console.warn('setupFarmListeners:',e);}
+  try{buildBTable();popSelects();renderFeed();}catch(e){console.warn('build:',e);}
+  try{upAll();upLog();upCompta();}catch(e){console.warn('up:',e);}
+  try{setupFarmListeners();}catch(e){console.warn('listeners:',e);}
   try{applyRoleRestrictions();}catch(e){}
   showScreen('screen-farm');
   startSession();
