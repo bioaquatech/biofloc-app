@@ -1267,22 +1267,60 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 
     <!-- T5 COMPTABILITÉ -->
     <div id="t5" class="pane">
-      <div class="card">
-        <div class="ctitle"><span class="dot"></span>Paramètres — XOF Franc CFA</div>
-        <div style="display:flex;flex-wrap:wrap;gap:.6rem">
-          <div class="gi"><label>Probio (XOF/L)</label><input type="number" id="c-probio" value="5500" oninput="upCompta()" class="ci" style="width:80px"></div>
-          <div class="gi"><label>Élec (XOF/kWh)</label><input type="number" id="c-elec" value="120" oninput="upCompta()" class="ci" style="width:75px"></div>
-          <div class="gi"><label>Watts/bassin</label><input type="number" id="c-watts" value="150" oninput="upCompta()" class="ci" style="width:65px"></div>
-          <div class="gi"><label>Heures/jour</label><input type="number" id="c-heures" value="24" oninput="upCompta()" class="ci" style="width:55px"></div>
-          <div class="gi"><label>Prix vente (XOF/kg)</label><input type="number" id="c-vente" value="4000" oninput="upCompta()" class="ci" style="width:80px"></div>
-        </div>
-        <p style="font-size:10px;color:var(--t3);margin-top:.4rem">Prix aliment = CUMP automatique selon type attribué à chaque bassin</p>
+      <!-- Sous-nav Comptabilité -->
+      <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem" class="no-print">
+        <button class="tb active" id="ct-tab-saisie" onclick="swCompta('saisie')" style="font-size:11px">💰 Prix & CUMP</button>
+        <button class="tb" id="ct-tab-charges" onclick="swCompta('charges')" style="font-size:11px">📋 Charges</button>
+        <button class="tb" id="ct-tab-synthese" onclick="swCompta('synthese')" style="font-size:11px">📊 Synthèse</button>
       </div>
-      <div class="mgrid" id="compta-metrics"></div>
-      <div class="tw"><table>
-        <thead><tr><th>Bassin</th><th>Statut</th><th>Type Alim</th><th>CUMP (XOF/kg)</th><th>Biomasse (kg)</th><th>Coût Alim</th><th>Coût Probio</th><th>Coût Élec</th><th>Coût Total</th><th>Revenu</th><th>Marge</th><th>Marge %</th></tr></thead>
-        <tbody id="compta-tbody"></tbody>
-      </table></div>
+
+      <!-- Sous-onglet 1 : Prix & CUMP -->
+      <div id="ct-saisie">
+        <div class="card">
+          <div class="ctitle"><span class="dot"></span>Prix des intrants validés — saisie par lot</div>
+          <div style="font-size:10px;color:var(--t3);margin-bottom:.6rem">Renseignez le prix d'achat pour chaque entrée de stock validée. Le CUMP est recalculé automatiquement.</div>
+          <div id="compta-prix-list" style="max-height:400px;overflow-y:auto"></div>
+        </div>
+        <div class="card" style="margin-top:.6rem">
+          <div class="ctitle"><span class="dot"></span>CUMP par intrant</div>
+          <div id="compta-cump-table"></div>
+        </div>
+      </div>
+
+      <!-- Sous-onglet 2 : Charges -->
+      <div id="ct-charges" style="display:none">
+        <div class="card">
+          <div class="ctitle"><span class="dot"></span>Paramètres des charges de production</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.6rem;margin-bottom:.6rem">
+            <div class="gi"><label>💡 Prix électricité (XOF/kWh)</label><input type="number" id="c-elec" value="120" oninput="calcCharges()" class="ci" style="width:90px"></div>
+            <div class="gi"><label>⚡ Watts/bassin</label><input type="number" id="c-watts" value="150" oninput="calcCharges()" class="ci" style="width:75px"></div>
+            <div class="gi"><label>⏱ Heures aération/jour</label><input type="number" id="c-heures" value="24" oninput="calcCharges()" class="ci" style="width:70px"></div>
+            <div class="gi"><label>💧 Eau (XOF/cycle)</label><input type="number" id="c-eau" value="25000" oninput="calcCharges()" class="ci" style="width:90px"></div>
+            <div class="gi"><label>🏗 Bâtiment (XOF/cycle)</label><input type="number" id="c-batiment" value="150000" oninput="calcCharges()" class="ci" style="width:90px"></div>
+            <div class="gi"><label>👷 Main d'œuvre (XOF/mois)</label><input type="number" id="c-mo" value="100000" oninput="calcCharges()" class="ci" style="width:90px"></div>
+            <div class="gi"><label>📅 Durée cycle (jours)</label><input type="number" id="c-duree" value="154" oninput="calcCharges()" class="ci" style="width:70px"></div>
+            <div class="gi"><label>🧪 Autres (XOF/cycle)</label><input type="number" id="c-autres" value="50000" oninput="calcCharges()" class="ci" style="width:90px"></div>
+            <div class="gi"><label>💰 Prix vente (XOF/kg)</label><input type="number" id="c-vente" value="4000" oninput="calcCharges()" class="ci" style="width:90px"></div>
+          </div>
+        </div>
+        <div class="card" id="charges-detail" style="margin-top:.6rem"></div>
+      </div>
+
+      <!-- Sous-onglet 3 : Synthèse -->
+      <div id="ct-synthese" style="display:none">
+        <div class="mgrid" id="compta-metrics" style="margin-bottom:.75rem"></div>
+        <div class="card" style="margin-bottom:.6rem">
+          <div class="ctitle"><span class="dot"></span>Répartition des charges de production</div>
+          <div id="compta-charges-graph" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem"></div>
+        </div>
+        <div class="tw"><table>
+          <thead><tr>
+            <th>Bassin</th><th>Aliment (XOF)</th><th>Probio (XOF)</th><th>Électricité</th><th>Eau+Bât</th><th>MO</th><th>Autres</th>
+            <th>Coût Total</th><th>Biomasse (kg)</th><th>Coût/kg</th><th>Prix Vente/kg</th><th>Revenu</th><th>Marge</th><th>Marge %</th>
+          </tr></thead>
+          <tbody id="compta-tbody"></tbody>
+        </table></div>
+      </div>
     </div>
 
     <!-- T6 CONSULTATION -->
@@ -5480,38 +5518,202 @@ function upLog(){
 }
 
 // ═══════════════════════════════════════════════
-// COMPTABILITÉ
+// COMPTABILITÉ — Système complet
 // ═══════════════════════════════════════════════
-function upCompta(){
-  const pProbio=fv('c-probio'),tarif=fv('c-elec'),watts=fv('c-watts'),heures=fv('c-heures'),pVente=fv('c-vente');
+
+let COMPTA_PRIX={}; // {entryId: prixUnitaire}
+
+function swCompta(tab){
+  ['saisie','charges','synthese'].forEach(t=>{
+    const el=G('ct-'+t);if(el)el.style.display=t===tab?'block':'none';
+    const btn=G('ct-tab-'+t);if(btn)btn.classList.toggle('active',t===tab);
+  });
+  if(tab==='saisie')renderComptaPrix();
+  if(tab==='charges')calcCharges();
+  if(tab==='synthese')upComptaSynthese();
+}
+
+function renderComptaPrix(){
+  const container=G('compta-prix-list');if(!container)return;
+  const validated=APP_STOCK_ENTRIES.filter(e=>e.validated);
+  if(!validated.length){
+    container.innerHTML='<div style="color:var(--t3);text-align:center;padding:2rem">Aucune entrée validée.<br>Validez des entrées dans Logistique → Entrées Stock.</div>';
+    renderComptaCUMP();return;
+  }
+  container.innerHTML=validated.map(e=>{
+    const item=APP_INTRANTS.find(i=>i.id===e.intrantId);
+    const hasPrix=COMPTA_PRIX[e.id]!==undefined;
+    return '<div style="background:var(--card);border:1px solid '+(hasPrix?'var(--b2)':'rgba(245,166,35,.3)')+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem">'
+      +'<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
+      +'<div style="flex:1;min-width:180px"><strong>'+(item?.name||e.intrantId)+'</strong>'
+      +' <span style="color:var(--acc);font-weight:700">'+e.quantity+' '+(item?.unit||'')+'</span>'
+      +(e.lot?' <span style="color:var(--t3);font-size:9px">Lot:'+e.lot+'</span>':'')
+      +(e.facture?' <span style="color:var(--t3);font-size:9px">Fact:'+e.facture+'</span>':'')
+      +'<div style="font-size:9px;color:var(--t3)">'+e.date+(e.supplier?' · '+e.supplier:'')+'</div></div>'
+      +'<div style="display:flex;align-items:center;gap:.4rem">'
+      +'<label style="font-size:10px;color:var(--t3)">Prix total (XOF):</label>'
+      +'<input type="number" value="'+(COMPTA_PRIX[e.id]||'')+'" placeholder="Saisir prix" '
+      +'style="width:120px;border:1px solid var(--b2);border-radius:4px;background:var(--bg);color:var(--t1);padding:3px 6px;font-size:11px" '
+      +'oninput="COMPTA_PRIX[\''+e.id+'\']=+this.value;renderComptaCUMP()">'
+      +(hasPrix?'<span style="color:var(--acc);font-size:10px">✅ '+(COMPTA_PRIX[e.id]/e.quantity).toFixed(0)+' XOF/'+item?.unit+'</span>':'<span style="color:var(--warn);font-size:10px">⚠ À saisir</span>')
+      +'</div></div></div>';
+  }).join('');
+  renderComptaCUMP();
+}
+
+function renderComptaCUMP(){
+  const container=G('compta-cump-table');if(!container)return;
+  // Calculer CUMP par intrant
+  const cumpMap={};
+  APP_INTRANTS.forEach(item=>{
+    const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===item.id&&COMPTA_PRIX[e.id]!==undefined);
+    if(!entries.length){cumpMap[item.id]=null;return;}
+    const totalQty=entries.reduce((s,e)=>s+e.quantity,0);
+    const totalCost=entries.reduce((s,e)=>s+(COMPTA_PRIX[e.id]||0),0);
+    cumpMap[item.id]=totalCost/totalQty;
+  });
+  const withCump=APP_INTRANTS.filter(i=>cumpMap[i.id]!==null);
+  if(!withCump.length){container.innerHTML='<div style="color:var(--t3);font-size:11px;padding:.5rem">Saisissez les prix ci-dessus pour calculer les CUMP.</div>';return;}
+  container.innerHTML='<table style="width:100%;font-size:10px;border-collapse:collapse"><thead><tr>'
+    +'<th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--b2)">Intrant</th>'
+    +'<th style="text-align:center;padding:4px 8px;border-bottom:1px solid var(--b2)">Unité</th>'
+    +'<th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--b2)">Total entrée (validé)</th>'
+    +'<th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--b2)">Coût total (XOF)</th>'
+    +'<th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--b2);color:var(--acc)">CUMP (XOF/unité)</th>'
+    +'</tr></thead><tbody>'
+    +withCump.map(item=>{
+      const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===item.id&&COMPTA_PRIX[e.id]!==undefined);
+      const totalQty=entries.reduce((s,e)=>s+e.quantity,0);
+      const totalCost=entries.reduce((s,e)=>s+(COMPTA_PRIX[e.id]||0),0);
+      const cump=totalCost/totalQty;
+      return '<tr style="border-bottom:1px solid var(--b1)">'
+        +'<td style="padding:4px 8px;font-weight:600">'+item.name+'</td>'
+        +'<td style="padding:4px 8px;text-align:center;color:var(--t3)">'+item.unit+'</td>'
+        +'<td style="padding:4px 8px;text-align:right">'+totalQty.toFixed(3)+'</td>'
+        +'<td style="padding:4px 8px;text-align:right">'+totalCost.toLocaleString()+' XOF</td>'
+        +'<td style="padding:4px 8px;text-align:right;font-weight:800;color:var(--acc)">'+Math.round(cump).toLocaleString()+' XOF</td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>';
+}
+
+function getCUMP(intrantId){
+  const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===intrantId&&COMPTA_PRIX[e.id]!==undefined);
+  if(!entries.length)return 0;
+  const totalQty=entries.reduce((s,e)=>s+e.quantity,0);
+  const totalCost=entries.reduce((s,e)=>s+(COMPTA_PRIX[e.id]||0),0);
+  return totalCost/totalQty;
+}
+
+function calcCharges(){
+  const tarif=fv('c-elec')||120,watts=fv('c-watts')||150,heures=fv('c-heures')||24;
+  const eau=fv('c-eau')||25000,batiment=fv('c-batiment')||150000;
+  const mo=fv('c-mo')||100000,duree=fv('c-duree')||154,autres=fv('c-autres')||50000;
+  const nBassins=APP.state.bassins.filter(b=>b.statut==='Actif').length||16;
   const cElecJour=(watts/1000)*heures*tarif;
-  let tCout=0,tRev=0,tM=0;
+  const cElecCycle=cElecJour*duree*nBassins;
+  const cMoCycle=mo*(duree/30);
+  const cTotal=cElecCycle+eau+batiment+cMoCycle+autres;
+  const detail=G('charges-detail');
+  if(!detail)return;
+  detail.innerHTML='<div class="ctitle"><span class="dot"></span>Détail des charges sur le cycle ('+duree+' jours, '+nBassins+' bassins)</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.4rem;margin-top:.5rem">'
+    +[
+      {label:'💡 Électricité',val:cElecCycle,pct:cElecCycle/cTotal},
+      {label:'💧 Eau',val:eau,pct:eau/cTotal},
+      {label:'🏗 Bâtiment/terrain',val:batiment,pct:batiment/cTotal},
+      {label:'👷 Main d\'œuvre',val:cMoCycle,pct:cMoCycle/cTotal},
+      {label:'🧪 Autres charges',val:autres,pct:autres/cTotal},
+    ].map(c=>'<div style="background:var(--card);border:1px solid var(--b2);border-radius:8px;padding:.5rem .7rem">'
+      +'<div style="font-size:10px;color:var(--t3)">'+c.label+'</div>'
+      +'<div style="font-size:14px;font-weight:800;color:var(--t1)">'+Math.round(c.val).toLocaleString()+' XOF</div>'
+      +'<div style="font-size:9px;color:var(--acc)">'+Math.round(c.pct*100)+'% du total hors aliment</div>'
+      +'</div>').join('')
+    +'<div style="background:rgba(0,201,167,.08);border:2px solid var(--acc);border-radius:8px;padding:.5rem .7rem">'
+    +'<div style="font-size:10px;color:var(--t3)">📊 Total charges fixes</div>'
+    +'<div style="font-size:14px;font-weight:800;color:var(--acc)">'+Math.round(cTotal).toLocaleString()+' XOF</div>'
+    +'<div style="font-size:9px;color:var(--t3)">'+Math.round(cTotal/nBassins).toLocaleString()+' XOF/bassin</div>'
+    +'</div>'
+    +'</div>';
+}
+
+function upComptaSynthese(){
+  const pVente=fv('c-vente')||4000,tarif=fv('c-elec')||120,watts=fv('c-watts')||150;
+  const heures=fv('c-heures')||24,eau=fv('c-eau')||25000,batiment=fv('c-batiment')||150000;
+  const mo=fv('c-mo')||100000,duree=fv('c-duree')||154,autres=fv('c-autres')||50000;
+  const cElecJour=(watts/1000)*heures*tarif;
+  const nBassins=APP.state.bassins.filter(b=>b.statut==='Actif').length||1;
+  const fixeParBassin=(cElecJour*duree+(eau+batiment+mo*(duree/30)+autres)/nBassins);
+
   const tb=G('compta-tbody');if(!tb)return;tb.innerHTML='';
+  let tAlim=0,tProbio=0,tElec=0,tFixe=0,tCout=0,tRev=0,tM=0,tBio=0;
+
   APP.state.bassins.forEach(b=>{
-    const c=calcBassin(b);const pAlim=cump(c.ft);
-    const alimMois=c.alimTheo*30,cAlim=alimMois*pAlim;
-    const cProbio=(alimMois*30+c.biomasse*100)/1000*pProbio;
-    const cElec=cElecJour*30,cTotal=cAlim+cProbio+cElec;
-    const rev=c.biomasse*pVente,marge=rev-cTotal,mp=cTotal>0?marge/cTotal:0;
-    tCout+=cTotal;tRev+=rev;tM+=marge;
+    const c=calcBassin(b);
+    // Coût aliment via CUMP
+    const feedItem=APP_INTRANTS.find(i=>i.category==='Aliments'&&(i.id===c.ft||i.feedId===c.ft||i.name?.includes(c.ft)));
+    const cumpAlim=feedItem?getCUMP(feedItem.id):0;
+    const cAlim=c.alimReel>0?c.alimReel*cumpAlim:c.alimTheo*(duree/7)*cumpAlim;
+    // Probio via CUMP
+    const probioItem=APP_INTRANTS.find(i=>i.id?.includes('PWA')||i.name?.toLowerCase().includes('pwa'));
+    const cumpProbio=probioItem?getCUMP(probioItem.id):0;
+    const cProbio=cumpProbio>0?c.biomasse*(duree/7)*0.5*cumpProbio:0;
+    const cElec=cElecJour*duree;
+    const cFixe=fixeParBassin-cElec;
+    const cTotal=cAlim+cProbio+cElec+cFixe;
+    const rev=c.biomasse*pVente,marge=rev-cTotal;
+    const mPct=cTotal>0?marge/cTotal*100:0;
+    tAlim+=cAlim;tProbio+=cProbio;tElec+=cElec;tFixe+=cFixe;tCout+=cTotal;tRev+=rev;tM+=marge;tBio+=c.biomasse;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="cn">${b.name}</td>
-      <td><span class="badge ${b.statut==='Actif'?'b-ok':b.statut==='Récolté'?'b-purp':'b-warn'}">${b.statut}</span></td>
-      <td><span class="badge b-gold" style="font-size:9px">${getFeedFullName(c.ft)}</span></td>
-      <td class="cf">${xof(cump(c.ft))}</td><td class="cf">${fmt(c.biomasse,3)}</td>
-      <td class="cf">${xof(cAlim)}</td><td class="cf">${xof(cProbio)}</td><td class="cf">${xof(cElec)}</td>
-      <td class="cf" style="font-weight:700">${xof(cTotal)}</td><td class="cf">${xof(rev)}</td>
-      <td style="font-weight:700;color:${marge>0?'var(--acc)':'var(--dng)'}">${xof(marge)}</td>
-      <td style="color:${mp>0?'var(--acc)':'var(--dng)'}">${pct(mp)}</td>`;
+    tr.innerHTML='<td class="cn">'+b.name+'</td>'
+      +'<td class="cf">'+xof(cAlim)+'</td>'
+      +'<td class="cf">'+xof(cProbio)+'</td>'
+      +'<td class="cf">'+xof(cElec)+'</td>'
+      +'<td class="cf">'+xof(cFixe)+'</td>'
+      +'<td class="cf">—</td><td class="cf">—</td>'
+      +'<td class="cf" style="font-weight:700">'+xof(cTotal)+'</td>'
+      +'<td class="cf">'+c.biomasse.toFixed(2)+'</td>'
+      +'<td class="cf">'+(c.biomasse>0?Math.round(cTotal/c.biomasse).toLocaleString():0)+'</td>'
+      +'<td class="cf">'+pVente.toLocaleString()+'</td>'
+      +'<td class="cf">'+xof(rev)+'</td>'
+      +'<td style="font-weight:700;color:'+(marge>0?'var(--acc)':'var(--dng)')+'">'+xof(marge)+'</td>'
+      +'<td style="color:'+(mPct>0?'var(--acc)':'var(--dng)')+'">'+mPct.toFixed(1)+'%</td>';
     tb.appendChild(tr);
   });
+
+  // Métriques
   const m=G('compta-metrics');
-  if(m)m.innerHTML=`
-    <div class="met"><div class="mlbl">Coût total (30j)</div><div class="mval" style="font-size:13px">${xof(tCout)}</div></div>
-    <div class="met"><div class="mlbl">Revenu estimé</div><div class="mval" style="font-size:13px">${xof(tRev)}</div></div>
-    <div class="met ${tM>0?'ok':'dng'}"><div class="mlbl">Marge totale</div><div class="mval" style="font-size:13px">${xof(tM)}</div></div>
-    <div class="met ${tCout>0&&tM/tCout>0.15?'ok':'warn'}"><div class="mlbl">Marge %</div><div class="mval">${pct(tCout>0?tM/tCout:0)}</div></div>`;
+  if(m)m.innerHTML=
+    '<div class="met"><div class="mlbl">Coût total production</div><div class="mval" style="font-size:13px">'+xof(tCout)+'</div></div>'
+    +'<div class="met"><div class="mlbl">Revenu total estimé</div><div class="mval" style="font-size:13px">'+xof(tRev)+'</div></div>'
+    +'<div class="met '+(tM>0?'ok':'dng')+'"><div class="mlbl">Marge nette</div><div class="mval" style="font-size:13px">'+xof(tM)+'</div></div>'
+    +'<div class="met '+(tBio>0&&tCout/tBio<pVente?'ok':'warn')+'"><div class="mlbl">Coût de revient/kg</div><div class="mval">'+(tBio>0?Math.round(tCout/tBio).toLocaleString():0)+' XOF</div></div>'
+    +'<div class="met"><div class="mlbl">Marge %</div><div class="mval">'+(tCout>0?(tM/tCout*100).toFixed(1):0)+'%</div></div>';
+
+  // Graphe charges
+  const graphEl=G('compta-charges-graph');
+  if(graphEl&&tCout>0){
+    const postes=[
+      {label:'Aliment',val:tAlim,color:'var(--acc)'},
+      {label:'Probiotiques',val:tProbio,color:'var(--purp)'},
+      {label:'Électricité',val:tElec,color:'var(--warn)'},
+      {label:'Eau+Bâtiment',val:tFixe,color:'var(--acc2)'},
+    ];
+    graphEl.innerHTML=postes.map(p=>{
+      const pct=tCout>0?p.val/tCout*100:0;
+      return '<div style="flex:1;min-width:130px;background:var(--card);border:1px solid var(--b2);border-radius:8px;padding:.5rem .7rem;border-left:3px solid '+p.color+'">'
+        +'<div style="font-size:10px;color:var(--t3)">'+p.label+'</div>'
+        +'<div style="font-size:13px;font-weight:800;color:var(--t1)">'+xof(p.val)+'</div>'
+        +'<div style="font-size:10px;color:'+p.color+';font-weight:700">'+pct.toFixed(1)+'% des charges</div>'
+        +'<div style="height:4px;background:var(--b2);border-radius:2px;margin-top:4px"><div style="height:4px;width:'+pct+'%;background:'+p.color+';border-radius:2px"></div></div>'
+        +'</div>';
+    }).join('');
+  }
 }
+
+// Compatibilité : upCompta appelé depuis sw()
+function upCompta(){swCompta('saisie');}
+
 
 // ═══════════════════════════════════════════════
 // CONSULTATION
