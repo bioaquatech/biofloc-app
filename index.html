@@ -2344,24 +2344,30 @@ async function doLogin(){
 // ═══════════════════════════════════════════════
 // ADMIN LOGIN
 // ═══════════════════════════════════════════════
+
+// Timeout pour éviter blocages Firestore
+function withTimeout(p,ms=8000){
+  return Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
+}
+
 async function doAdminLogin(){
   const email=(G('adm-email').value||'').trim();
   const password=(G('adm-pass').value||'').trim();
   const errEl=G('adm-err');
   if(!email||!password){errEl.textContent='⚠️ Saisir email et mot de passe';errEl.classList.add('show');return;}
-  showLoader('Connexion admin…');
+  showLoader('Connexion…');
   try{
-    await auth.signInWithEmailAndPassword(email,password);
+    await withTimeout(auth.signInWithEmailAndPassword(email,password),10000);
     APP.user={uid:auth.currentUser.uid,email,name:'Administrateur',role:'Administrateur',farmCode:null};
   }catch(e){
     hideLoader();
-    errEl.textContent='❌ Email ou mot de passe incorrect';
+    errEl.textContent=e.message==='timeout'?'❌ Connexion trop lente. Réessayez.':'❌ Email ou mot de passe incorrect';
     errEl.classList.add('show');
     G('adm-pass').value='';
     return;
   }
-  // Auth réussie — charger le dashboard (même si erreur Firestore on continue)
-  try{await loadAdminDashboard();}catch(e){console.warn('Dashboard load error:',e);}
+  showLoader('Tableau de bord…');
+  try{await withTimeout(loadAdminDashboard(),8000);}catch(e){console.warn('Dashboard:',e.message);}
   hideLoader();
   hideAdminModal();
   showScreen('screen-admin');
@@ -2805,7 +2811,7 @@ async function adminEnterFarm(farmCode){
     APP.user.canBackup=true;
   }catch(e){console.warn('Farm load error:',e);}
   // Toujours charger les données et afficher la ferme
-  try{await loadFarmData();}catch(e){console.warn('loadFarmData error:',e);}
+  try{await withTimeout(loadFarmData(),8000);}catch(e){console.warn('loadFarmData:',e.message);}
   hideLoader();
   await showFarmApp();
   setTimeout(()=>{
