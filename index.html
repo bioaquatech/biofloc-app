@@ -1113,7 +1113,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
           <button onclick="filterIntrants('additif')" class="intrant-filter" data-f="additif" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--b2);background:var(--inp);color:var(--t2);cursor:pointer">🧴 Additifs</button>
           <button onclick="filterIntrants('materiel')" class="intrant-filter" data-f="materiel" style="font-size:10px;padding:3px 10px;border-radius:6px;border:1px solid var(--b2);background:var(--inp);color:var(--t2);cursor:pointer">🔧 Matériel</button>
         </div>
-        <div id="intrants-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem"></div>
+        <div class="card" style="border-color:rgba(0,201,167,.2);font-size:10px;color:var(--t2);line-height:1.7;margin-bottom:.6rem"><strong style="color:var(--acc)">Stratégique</strong> : intrant suivi de près car il influence directement la production ou le stock critique. <strong style="color:var(--warn)">Spécial</strong> : intrant avec seuil d’alerte/validité/anticipation particulière. <strong style="color:var(--t1)">Facultatif</strong> : intrant utile mais non critique, suivi selon besoin.</div><div id="intrants-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.5rem"></div>
       </div>
 
       <!-- Panneau Aliments (contenu de l'ancien t2) -->
@@ -1175,17 +1175,19 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
           <div>
             <div class="card">
               <div class="ctitle"><span class="dot" style="background:var(--acc)"></span>💧 Préparation PWA (bihebdomadaire)</div>
-              <p style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:.75rem">Planification prospective S+1 · Sélection cumulative des activités · Majorée de 4% pour couvrir la PFA (30 ml/kg d'aliment).</p>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.6rem">
-                <div><div class="form-lbl">Activité PWA</div><select id="pwa-add-activity" class="si" style="width:100%;font-size:11px"><option value="primo">Primo inoculation J1</option><option value="entretien">Entretien J3/J5/J7/J8/J10</option><option value="rotation">Rotation croisière jeudi+lundi</option><option value="postintro">Post-introduction alevins</option></select></div>
-                <div><div class="form-lbl">Nb bassins</div><input type="number" id="pwa-add-bassins" class="form-inp" value="1" min="1"></div>
-                <div><div class="form-lbl">Volume / bassin</div><select id="pwa-add-volume" class="si" style="width:100%;font-size:11px"><option value="1.75">1,75 m³ (50 cm)</option><option value="3.8">3,80 m³ (110 cm)</option></select></div>
+              <p style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:.75rem">Planification par bassin avec anticipation H36. La plateforme calcule automatiquement la préparation à lancer l’avant-veille soir pour l’application du matin prévu, avec majoration PFA de 4%.</p>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:.5rem;margin-bottom:.6rem">
+                <div><div class="form-lbl">N° bassin</div><select id="pwa-add-bassin" class="si" style="width:100%;font-size:11px"></select></div>
+                <div><div class="form-lbl">Activité prévue</div><select id="pwa-add-activity" class="si" style="width:100%;font-size:11px"><option value="primo">Primo inoculation</option><option value="entretien">Entretien</option><option value="rotation">Rotation croisière</option><option value="postintro">Post-introduction alevins</option></select></div>
+                <div><div class="form-lbl">Volume à couvrir (m³)</div><input type="number" id="pwa-add-volume" class="form-inp" value="1.75" min="0" step="0.01"></div>
+                <div><div class="form-lbl">Fois/semaine</div><input type="number" id="pwa-add-freq" class="form-inp" value="2" min="1" max="7"></div>
+                <div><div class="form-lbl">Jour d’application</div><select id="pwa-add-day" class="si" style="width:100%;font-size:11px"><option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option><option value="4">Jeudi</option><option value="5">Vendredi</option><option value="6">Samedi</option><option value="0">Dimanche</option></select></div>
               </div>
-              <button class="sbtn" onclick="addPWAActivity()" style="font-size:11px;margin-bottom:.5rem">➕ Ajouter l'activité prévue</button>
+              <button class="sbtn" onclick="addPWAActivity()" style="font-size:11px;margin-bottom:.5rem">➕ Ajouter la ligne bassin</button>
               <div id="pwa-plan-list" style="margin-bottom:.6rem"></div>
               <div id="pwa-result" style="background:var(--inp);border-radius:8px;padding:.6rem;font-size:11px"></div>
             </div>
-            <div class="card">
+            <div class="card" style="display:none">
               <div class="ctitle"><span class="dot" style="background:var(--purp)"></span>Stock probiotiques</div>
               <div id="probio-stock-disp"></div>
               <div style="display:flex;gap:.4rem;margin-top:.5rem">
@@ -1201,7 +1203,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
               <p style="font-size:10px;color:var(--warn);line-height:1.6;margin-bottom:.5rem">⚠️ Anticipation requise : <strong>20 jours</strong> avant utilisation</p>
               <div id="lacto-status" style="font-size:11px;background:var(--inp);border-radius:8px;padding:.6rem;margin-bottom:.5rem"></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
-                <div><div class="form-lbl">Stock actuel (L)</div><input type="number" id="lacto-stock" class="form-inp" value="0" step="0.1" oninput="updateLactoStatus()"></div>
+                <input type="hidden" id="lacto-stock" value="0"><div style="font-size:10px;color:var(--t2);line-height:1.6">Le stock du concentré se renseigne dans l’inventaire. Ici, on définit uniquement le seuil d’alerte.</div>
                 <div><div class="form-lbl">Seuil alerte (L)</div><input type="number" id="lacto-seuil" class="form-inp" value="1" step="0.1" oninput="updateLactoStatus()"></div>
               </div>
               <div style="margin-top:.5rem">
@@ -2423,7 +2425,8 @@ async function doLogout(expired=false){
   FEED_TYPES[5].batches=[{id:1,qty:20,price:569}];
   G('b-farm').value='';G('b-user').value='';G('b-pass').value='';
   if(expired)alert('⏱ Session expirée — veuillez vous reconnecter.');
-  showScreen('screen-boot');
+  loadPublicSettings();
+showScreen('screen-boot');
 }
 
 // ═══════════════════════════════════════════════
@@ -2668,10 +2671,33 @@ function setupFarmListeners(){
 
 function updateBootMessage(){
   const el=G('boot-platform-name');if(!el)return;
-  const msgs=(APP.platformMessages&&APP.platformMessages.length?APP.platformMessages:['Bienvenue sur la plateforme ICHTUS']);
+  let msgs=(APP.platformMessages&&APP.platformMessages.length?APP.platformMessages:null);
+  // Amendement : le message de landing page reste permanent même avant connexion.
+  // On recharge d'abord la dernière valeur locale, puis Firestore via loadPublicSettings().
+  if(!msgs){
+    try{msgs=JSON.parse(localStorage.getItem('biofloc_platformMessages')||'[]');}catch(e){msgs=[];}
+  }
+  if(!msgs||!msgs.length)msgs=['Bienvenue sur la plateforme ICHTUS'];
+  APP.platformMessages=msgs;
   let i=0;el.textContent=msgs[0];
   if(window._bootMsgTimer)clearInterval(window._bootMsgTimer);
   if(msgs.length>1){window._bootMsgTimer=setInterval(()=>{i=(i+1)%msgs.length;el.textContent=msgs[i];},4500);}
+}
+
+async function loadPublicSettings(){
+  // Chargement public du bandeau landing page dès l'arrivée sur la page de connexion.
+  try{
+    const snap=await db.collection('superadmin').doc('settings').get();
+    if(snap.exists){
+      const d=snap.data();
+      const messages=(d.platformMessages&&d.platformMessages.length)?d.platformMessages:['Bienvenue sur la plateforme ICHTUS'];
+      APP.platformMessages=messages;
+      APP.sessionMin=d.sessionTimeout||APP.sessionMin||10;
+      APP.whatsapp=d.whatsapp||APP.whatsapp||'';
+      localStorage.setItem('biofloc_platformMessages',JSON.stringify(messages));
+      updateBootMessage();
+    }
+  }catch(e){updateBootMessage();}
 }
 
 // ═══════════════════════════════════════════════
@@ -2960,7 +2986,7 @@ async function saveSettings(){
     const messages=(G('set-platform-messages')?.value||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
     const platName='';
     await db.collection('superadmin').doc('settings').set({whatsapp:wa,sessionTimeout:timeout,platformName:platName,platformMessages:messages},{merge:true});
-    APP.whatsapp=wa;APP.sessionMin=timeout;APP.platformName=platName;APP.platformMessages=messages;updateBootMessage();
+    APP.whatsapp=wa;APP.sessionMin=timeout;APP.platformName=platName;APP.platformMessages=messages.length?messages:['Bienvenue sur la plateforme ICHTUS'];localStorage.setItem('biofloc_platformMessages',JSON.stringify(APP.platformMessages));updateBootMessage();
     updateSessionBadge();
     alert('✅ Paramètres enregistrés avec succès !');
   }catch(e){alert('❌ Erreur : '+e.message);}
@@ -3769,6 +3795,7 @@ const DEFAULT_INTRANTS=[
 ];
 
 let APP_INTRANTS=[...DEFAULT_INTRANTS];
+let EDITING_INTRANT_ID=null;
 let APP_STOCK_ENTRIES=[];
 let APP_INVENTAIRE_CURRENT=null;
 let APP_LOG_PANEL='intrants';
@@ -3784,14 +3811,14 @@ function swLog(panel){
   if(panel==='stock')renderStockEntries();
   if(panel==='inventaire')renderInventairePanel();
   if(panel==='analyse')loadAnalyseStock();
-  if(panel==='probio'){calcPWA();updateLactoStatus();}
+  if(panel==='probio'){initPWASelects();calcPWA();updateLactoStatus();}
 }
 
 async function loadIntrants(){
   try{
     const snap=await withTimeout(farmCol('intrants').get(),6000);
     if(snap&&!snap.empty){
-      const custom=snap.docs.map(d=>({...d.data(),id:d.id}));
+      const custom=snap.docs.map(d=>({...d.data(),id:d.id})).filter(i=>!i.deleted);
       const customIds=new Set(custom.map(i=>i.id));
       APP_INTRANTS=[...DEFAULT_INTRANTS.filter(i=>!customIds.has(i.id)),...custom];
     }
@@ -3800,7 +3827,7 @@ async function loadIntrants(){
     const snap=await withTimeout(farmCol('stock_entries').get(),6000);
     if(snap&&!snap.empty)APP_STOCK_ENTRIES=snap.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   }catch(e){console.warn('Stock:',e);}
-  try{const cs=await withTimeout(farmCol('config').doc('compta').get(),6000);if(cs.exists&&cs.data().prix)COMPTA_PRIX=cs.data().prix;}catch(e){console.warn('Compta prix:',e);}
+  try{const cs=await withTimeout(farmCol('config').doc('compta').get(),6000);if(cs.exists){if(cs.data().prix)COMPTA_PRIX=cs.data().prix;if(cs.data().prixValidations)COMPTA_PRIX_VALIDATIONS=cs.data().prixValidations;}}catch(e){console.warn('Compta prix:',e);}
   checkStockAlerts();
 }
 
@@ -3819,7 +3846,7 @@ function renderIntrants(filter='all'){
     const isLow=item.monitoringType==='special'&&item.seuil&&stock<item.seuil;
     const color=catColors[item.category]||'#94a3b8';
     return '<div style="background:var(--card);border:1px solid '+(isLow?'var(--dng)':'var(--b2)')+';border-radius:10px;padding:.7rem;position:relative">'
-      +(item.isDefault?'<span style="position:absolute;top:6px;right:6px;font-size:8px;background:rgba(255,215,70,.15);color:var(--gold);border:1px solid rgba(255,215,70,.3);border-radius:4px;padding:1px 5px">Koudijs</span>':'')
+      +(item.isDefault?'<span style="position:absolute;top:6px;right:6px;font-size:8px;background:rgba(255,215,70,.15);color:var(--gold);border:1px solid rgba(255,215,70,.3);border-radius:4px;padding:1px 5px">Défaut</span>':'')
       +'<div style="display:flex;gap:5px;margin-bottom:.3rem"><span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+color+'20;color:'+color+';font-weight:700">'+item.category+'</span>'
       +'<span style="font-size:10px">'+(monIcons[item.monitoringType]||'📋')+' '+(item.monitoringType==='strategic'?'Stratégique':item.monitoringType==='special'?'Spécial':'Facultatif')+'</span></div>'
       +'<div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:.2rem">'+item.name+'</div>'
@@ -3850,10 +3877,19 @@ function getItemCurrentStock(intrantId){
     const totalUsed=APP.state.bassins.filter(b=>b.statut==='Actif').reduce((s,b)=>s+(b.alimReel||0),0);
     return Math.max(0,totalIn-totalUsed);
   }
+  if(item&&item.category==='basifiant'){
+    const totalUsed=APP.state.bassins.reduce((s,b)=>s+((b.basType===item.name?b.bas:0)||0),0);
+    return Math.max(0,totalIn-totalUsed);
+  }
+  if(item&&item.category==='carbohydrate'){
+    const totalUsed=APP.state.bassins.reduce((s,b)=>s+((b.carbType===item.name?b.carb:0)||0),0);
+    return Math.max(0,totalIn-totalUsed);
+  }
   return totalIn;
 }
 
 function openAddIntrant(){
+  EDITING_INTRANT_ID=null;
   G('intrant-modal-title').textContent='Nouvel intrant';
   G('int-name').value='';G('int-cat').value='aliment';G('int-unit').value='kg';
   G('int-cond').value='';G('int-seuil').value='1';G('int-msg').textContent='';
@@ -3865,6 +3901,31 @@ function openAddIntrant(){
   G('intrant-modal').classList.remove('hidden');
 }
 
+function openEditIntrant(id){
+  const item=APP_INTRANTS.find(i=>i.id===id);if(!item)return;
+  EDITING_INTRANT_ID=id;
+  G('intrant-modal-title').textContent='Modifier intrant';
+  G('int-name').value=item.name||'';G('int-cat').value=item.category||'aliment';G('int-unit').value=item.unit||'kg';
+  G('int-cond').value=item.conditionnement||'';G('int-seuil').value=item.seuil||1;G('int-msg').textContent='';
+  const mt=item.monitoringType||'optional';
+  const radio=document.querySelector('[name="int-monitoring"][value="'+mt+'"]');if(radio)radio.checked=true;
+  G('int-seuil-block').style.display=mt==='special'?'block':'none';
+  document.querySelectorAll('[name="int-monitoring"]').forEach(r=>{r.onchange=()=>{G('int-seuil-block').style.display=r.value==='special'?'block':'none';};});
+  G('intrant-modal').classList.remove('hidden');
+}
+
+function syncParamListsFromIntrant(intrant){
+  if(!intrant)return;
+  const cat=intrant.category;
+  if(cat!=='basifiant'&&cat!=='carbohydrate')return;
+  const list=cat==='basifiant'?PARAM_LISTS.basifiants:PARAM_LISTS.carbohydrates;
+  const label=intrant.name;
+  const unit=intrant.unit||'g';
+  const found=list.find(x=>x.label===label);
+  if(found)found.unit=unit;else list.push({label,unit});
+  saveParamLists();
+}
+
 async function saveIntrant(){
   const name=(G('int-name').value||'').trim();
   const cat=G('int-cat').value;const unit=G('int-unit').value;
@@ -3873,23 +3934,26 @@ async function saveIntrant(){
   const seuil=monitoring==='special'?+G('int-seuil').value:null;
   const msg=G('int-msg');
   if(!name){msg.style.color='var(--dng)';msg.textContent='⚠️ Nom obligatoire';return;}
-  const id='int_'+Date.now();
-  const intrant={id,name,category:cat,unit,conditionnement:cond,monitoringType:monitoring,seuil,isDefault:false,createdAt:new Date().toISOString(),createdBy:APP.user?.name||'?'};
+  const id=EDITING_INTRANT_ID||('int_'+Date.now());
+  const old=APP_INTRANTS.find(i=>i.id===id)||{};
+  const intrant={...old,id,name,category:cat,unit,conditionnement:cond,monitoringType:monitoring,seuil,isDefault:old.isDefault||false,updatedAt:new Date().toISOString(),updatedBy:APP.user?.name||'?',createdAt:old.createdAt||new Date().toISOString(),createdBy:old.createdBy||APP.user?.name||'?'};
   try{
-    await withTimeout(farmCol('intrants').doc(id).set(intrant),6000);
-    APP_INTRANTS.push(intrant);
-    G('intrant-modal').classList.add('hidden');
-    renderIntrants();showToast('✅ Intrant ajouté','acc');
+    await withTimeout(farmCol('intrants').doc(id).set(intrant,{merge:true}),6000);
+    const ix=APP_INTRANTS.findIndex(i=>i.id===id);if(ix>=0)APP_INTRANTS[ix]=intrant;else APP_INTRANTS.push(intrant);
+    syncParamListsFromIntrant(intrant);
+    G('intrant-modal').classList.add('hidden');EDITING_INTRANT_ID=null;
+    renderIntrants();if(APP.farmCode)buildBTable();showToast('✅ Intrant enregistré','acc');
   }catch(e){msg.style.color='var(--dng)';msg.textContent='❌ '+e.message;}
 }
 
 async function deleteIntrant(id){
-  if(APP.user?.role!=='Administrateur'){showToast('❌ Réservé au Super Admin','dng');return;}
-  if(!confirm('Supprimer ?'))return;
+  const role=APP.user?.role||'Opérateur';
+  if(!(role==='Administrateur'||role==='Responsable')){showToast('❌ Réservé Responsable/SuperAdmin','dng');return;}
+  if(!confirm('Supprimer cet intrant ? Les anciennes données de stock ne seront pas effacées.'))return;
   try{
-    await withTimeout(farmCol('intrants').doc(id).delete(),6000);
+    await withTimeout(farmCol('intrants').doc(id).set({deleted:true,deletedAt:new Date().toISOString(),deletedBy:APP.user?.name||'?'},{merge:true}),6000);
     APP_INTRANTS=APP_INTRANTS.filter(i=>i.id!==id);
-    renderIntrants();showToast('✅ Supprimé','acc');
+    renderIntrants();if(APP.farmCode)buildBTable();showToast('✅ Supprimé','acc');
   }catch(e){showToast('❌ '+e.message,'dng');}
 }
 
@@ -4131,61 +4195,72 @@ async function loadAnalyseStock(){
 
 let PWA_PLAN=[];
 const PWA_RATES={
-  primo:{label:'Primo inoculation J1 mardi',moment:'Soirée · après bullage 24h',dose:4.7},
-  entretien:{label:'Entretien J3 · J5 · J7 · J8 · J10',moment:'Soirée · après bullage 24h',dose:0.2},
-  rotation:{label:'Rotation croisière jeudi + lundi',moment:'Soirée · rotation continue',dose:0.2,vol380Fixed:0.38},
-  postintro:{label:'Post-introduction alevins J14–J21',moment:'Hebdomadaire',dose:0.1}
+  primo:{label:'Primo inoculation',dose:4.7},
+  entretien:{label:'Entretien',dose:0.2},
+  rotation:{label:'Rotation croisière',dose:0.2,vol380Fixed:0.38},
+  postintro:{label:'Post-introduction alevins',dose:0.1}
 };
+const PWA_DAYS={0:'Dimanche',1:'Lundi',2:'Mardi',3:'Mercredi',4:'Jeudi',5:'Vendredi',6:'Samedi'};
+function initPWASelects(){
+  const sel=G('pwa-add-bassin');if(sel){sel.innerHTML=(APP.state.bassins||[]).map(b=>'<option value="'+b.name+'">'+b.name+'</option>').join('')||'<option value="B1">B1</option>';}
+}
+function pwaPrepDay(appDay){return (Number(appDay)+5)%7;} // H36 : préparation l'avant-veille soir pour application matin
 function addPWAActivity(){
-  const a=G('pwa-add-activity')?.value||'entretien';
-  const nb=Math.max(1,parseInt(G('pwa-add-bassins')?.value||'1'));
+  initPWASelects();
+  const bassin=G('pwa-add-bassin')?.value||'B1';
+  const activity=G('pwa-add-activity')?.value||'entretien';
   const vol=+(G('pwa-add-volume')?.value||1.75);
-  PWA_PLAN.push({id:Date.now()+Math.random(),activity:a,nb,vol});
+  const freq=Math.max(1,Math.min(7,parseInt(G('pwa-add-freq')?.value||'1')));
+  const day=+(G('pwa-add-day')?.value||1);
+  PWA_PLAN.push({id:Date.now()+Math.random(),bassin,activity,vol,freq,day});
   calcPWA();
 }
 function removePWAActivity(id){PWA_PLAN=PWA_PLAN.filter(x=>String(x.id)!==String(id));calcPWA();}
 function pwaDoseLitres(row){
   const r=PWA_RATES[row.activity]||PWA_RATES.entretien;
-  if(row.activity==='rotation'&&Math.abs(row.vol-3.8)<0.01)return 0.38*row.nb; // dossier technique : 380 ml à hauteur 110 cm
-  return r.dose*row.vol*row.nb;
+  if(row.activity==='rotation'&&Math.abs(row.vol-3.8)<0.01)return 0.38;
+  return r.dose*row.vol;
 }
 function calcPWA(){
+  initPWASelects();
   const list=G('pwa-plan-list'),res=G('pwa-result');if(!res)return;
-  if(!PWA_PLAN.length){
-    PWA_PLAN=[{id:'def1',activity:'rotation',nb:1,vol:1.75}];
-  }
+  if(!PWA_PLAN.length&&APP.state.bassins?.length){PWA_PLAN=[{id:'def1',bassin:APP.state.bassins[0].name,activity:'rotation',vol:1.75,freq:2,day:1}];}
   if(list)list.innerHTML=PWA_PLAN.map(row=>{
     const r=PWA_RATES[row.activity]||PWA_RATES.entretien;
     const q=pwaDoseLitres(row);
     return '<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">'
-      +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+r.label+'</strong><div style="font-size:9px;color:var(--t3)">'+r.moment+' · '+row.nb+' bassin(s) × '+row.vol.toFixed(2).replace('.',',')+' m³</div></div>'
-      +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+q.toFixed(2).replace('.',',')+' L</div>'
+      +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+row.bassin+' · '+r.label+'</strong><div style="font-size:9px;color:var(--t3)">Volume '+row.vol.toFixed(2).replace('.',',')+' m³ · '+row.freq+' fois/semaine · application '+PWA_DAYS[row.day]+' matin · préparation '+PWA_DAYS[pwaPrepDay(row.day)]+' soir (H36)</div></div>'
+      +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+q.toFixed(2).replace('.',',')+' L/application</div>'
       +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
   }).join('');
-  const base=PWA_PLAN.reduce((s,row)=>s+pwaDoseLitres(row),0);
-  const pfa=base*0.04;
-  const total=base+pfa;
-  res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
-    +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+base.toFixed(2).replace('.',',')+' L</div></div>'
-    +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+pfa.toFixed(2).replace('.',',')+' L</div></div>'
-    +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+total.toFixed(2).replace('.',',')+' L</div></div></div>'
-    +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Référence dossier : primo ≈4,7 L/m³ ; entretien 200 ml/m³ ; rotation croisière 200 ml/m³ avec cas 3,80 m³ = 380 ml ; post-introduction 100 ml/m³. PFA : préparation administrée à 30 ml/kg d’aliments, provisionnée ici par +4%.</div>'
-    +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Préparation prospective pour la semaine S+1 · Validité 48–72h</div>';
+  const byPrepDay={};
+  PWA_PLAN.forEach(row=>{const d=pwaPrepDay(row.day);const q=pwaDoseLitres(row);byPrepDay[d]=(byPrepDay[d]||0)+q;});
+  const rows=Object.keys(PWA_DAYS).map(k=>{
+    const base=byPrepDay[k]||0;const pfa=base*0.04;const total=base+pfa;
+    return '<tr><td>'+PWA_DAYS[k]+' soir</td><td style="color:var(--acc);font-weight:700">'+base.toFixed(2).replace('.',',')+' L</td><td style="color:var(--warn)">'+pfa.toFixed(2).replace('.',',')+' L</td><td style="color:var(--gold);font-weight:800">'+total.toFixed(2).replace('.',',')+' L</td></tr>';
+  }).join('');
+  const baseTotal=Object.values(byPrepDay).reduce((s,v)=>s+v,0);const pfaTotal=baseTotal*0.04;const total=baseTotal+pfaTotal;
+  res.innerHTML='<div style="font-size:10px;color:var(--t2);margin-bottom:.4rem">Synthèse des quantités à préparer, organisée par jour de préparation H36.</div>'
+    +'<div class="tw"><table style="font-size:10px"><thead><tr><th>Préparation</th><th>PWA base</th><th>Majoration PFA 4%</th><th>Total</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.5rem">'
+    +'<div><div style="font-size:9px;color:var(--t3)">PWA semaine</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+baseTotal.toFixed(2).replace('.',',')+' L</div></div>'
+    +'<div><div style="font-size:9px;color:var(--t3)">PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+pfaTotal.toFixed(2).replace('.',',')+' L</div></div>'
+    +'<div><div style="font-size:9px;color:var(--t3)">Total</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+total.toFixed(2).replace('.',',')+' L</div></div></div>'
+    +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Règle : préparation le soir J-2, utilisation le matin J, soit environ H36. Validité courte : pas de stock PWA durable.</div>';
 }
 
 function updateLactoStatus(){
-  const stock=+(G('lacto-stock')?.value||0);const seuil=+(G('lacto-seuil')?.value||1);const nextBatch=G('lacto-nextbatch')?.value||'';
+  const seuil=+(G('lacto-seuil')?.value||1);const nextBatch=G('lacto-nextbatch')?.value||'';
   const container=G('lacto-status');if(!container)return;
   let alert='';
-  if(nextBatch){const daysLeft=Math.ceil((new Date(nextBatch)-new Date())/(86400000));if(daysLeft<=20)alert='<div style="color:var(--dng);font-weight:700">🚨 ANTICIPATION ! Batch dans '+daysLeft+' jours — commandez maintenant (délai 20j)</div>';else alert='<div style="color:var(--acc)">✅ Batch dans '+daysLeft+' jours</div>';}
-  container.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:.3rem"><span>Stock actuel :</span><strong style="color:'+(stock<seuil?'var(--dng)':'var(--acc)')+'">'+stock.toFixed(2)+' L '+(stock<seuil?'⚠️':'')+'</strong></div>'
-    +'<div style="display:flex;justify-content:space-between"><span>Seuil alerte :</span><strong>'+seuil.toFixed(2)+' L</strong></div>'
-    +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⚠️ Délai minimum : 20 jours</div>'+alert;
+  if(nextBatch){const daysLeft=Math.ceil((new Date(nextBatch)-new Date())/(86400000));if(daysLeft<=20)alert='<div style="color:var(--dng);font-weight:700">🚨 ANTICIPATION ! Batch dans '+daysLeft+' jours — préparez/commandez maintenant</div>';else alert='<div style="color:var(--acc)">✅ Batch prévu dans '+daysLeft+' jours</div>';}
+  container.innerHTML='<div style="display:flex;justify-content:space-between"><span>Seuil alerte concentré :</span><strong>'+seuil.toFixed(2)+' L</strong></div>'
+    +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⚠️ Validité des préparations de concentré Lactobacillus : 6 mois. Le stock réel se suit dans Inventaire.</div>'+alert;
 }
 
 async function saveLactoData(){
-  const data={stock:+(G('lacto-stock')?.value||0),seuil:+(G('lacto-seuil')?.value||1),nextBatch:G('lacto-nextbatch')?.value||'',updatedAt:new Date().toISOString()};
-  try{await withTimeout(farmCol('config').doc('lacto').set(data),6000);showToast('✅ Lactobacillus enregistré','acc');}catch(e){showToast('❌ '+e.message,'dng');}
+  const data={seuil:+(G('lacto-seuil')?.value||1),nextBatch:G('lacto-nextbatch')?.value||'',validiteMois:6,updatedAt:new Date().toISOString()};
+  try{await withTimeout(farmCol('config').doc('lacto').set(data,{merge:true}),6000);showToast('✅ Seuil Lactobacillus enregistré','acc');}catch(e){showToast('❌ '+e.message,'dng');}
 }
 
 async function updatePWAStock(){
@@ -5508,7 +5583,8 @@ function upLog(){
 // ═══════════════════════════════════════════════
 
 let COMPTA_PRIX={}; // {entryId: prix total XOF}
-function saveComptaPrixDebounced(){debounce('compta_prix',()=>farmCol('config').doc('compta').set({prix:COMPTA_PRIX},{merge:true}).catch(console.error),600);}
+let COMPTA_PRIX_VALIDATIONS={}; // {entryId:{validated:true,by,at}}
+function saveComptaPrixDebounced(){debounce('compta_prix',()=>farmCol('config').doc('compta').set({prix:COMPTA_PRIX,prixValidations:COMPTA_PRIX_VALIDATIONS},{merge:true}).catch(console.error),600);}
 
 function swCompta(tab){
   ['saisie','charges','synthese'].forEach(t=>{
@@ -5520,6 +5596,18 @@ function swCompta(tab){
   if(tab==='synthese')upComptaSynthese();
 }
 
+function canValidatePrices(){const r=APP.user?.role||'Opérateur';return r==='Administrateur'||r==='Responsable';}
+function validateComptaPrix(entryId){
+  if(!canValidatePrices()){showToast('❌ Validation réservée au Responsable admin et SuperAdmin','dng');return;}
+  if(COMPTA_PRIX[entryId]===undefined||COMPTA_PRIX[entryId]<=0){showToast('⚠️ Saisissez d’abord un prix valide','warn');return;}
+  COMPTA_PRIX_VALIDATIONS[entryId]={validated:true,by:APP.user?.name||'?',at:new Date().toISOString()};
+  saveComptaPrixDebounced();renderComptaPrix();showToast('✅ Prix validé','acc');
+}
+function unvalidateComptaPrix(entryId){
+  if(!canValidatePrices()){showToast('❌ Réservé Responsable/SuperAdmin','dng');return;}
+  delete COMPTA_PRIX_VALIDATIONS[entryId];saveComptaPrixDebounced();renderComptaPrix();
+}
+
 function renderComptaPrix(){
   const container=G('compta-prix-list');if(!container)return;
   const validated=APP_STOCK_ENTRIES.filter(e=>e.validated);
@@ -5527,22 +5615,27 @@ function renderComptaPrix(){
     container.innerHTML='<div style="color:var(--t3);text-align:center;padding:2rem">Aucune entrée validée.<br>Validez des entrées dans Logistique → Entrées Stock.</div>';
     renderComptaCUMP();return;
   }
+  const canVal=canValidatePrices();
   container.innerHTML=validated.map(e=>{
     const item=APP_INTRANTS.find(i=>i.id===e.intrantId);
-    const hasPrix=COMPTA_PRIX[e.id]!==undefined;
-    return '<div style="background:var(--card);border:1px solid '+(hasPrix?'var(--b2)':'rgba(245,166,35,.3)')+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem">'
+    const hasPrix=COMPTA_PRIX[e.id]!==undefined&&COMPTA_PRIX[e.id]>0;
+    const v=COMPTA_PRIX_VALIDATIONS[e.id];
+    const isVal=!!(v&&v.validated);
+    return '<div style="background:var(--card);border:1px solid '+(isVal?'rgba(0,201,167,.45)':hasPrix?'var(--b2)':'rgba(245,166,35,.3)')+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem">'
       +'<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
       +'<div style="flex:1;min-width:180px"><strong>'+(item?.name||e.intrantId)+'</strong>'
       +' <span style="color:var(--acc);font-weight:700">'+e.quantity+' '+(item?.unit||'')+'</span>'
       +(e.lot?' <span style="color:var(--t3);font-size:9px">Lot:'+e.lot+'</span>':'')
       +(e.facture?' <span style="color:var(--t3);font-size:9px">Fact:'+e.facture+'</span>':'')
       +'<div style="font-size:9px;color:var(--t3)">'+e.date+(e.supplier?' · '+e.supplier:'')+'</div></div>'
-      +'<div style="display:flex;align-items:center;gap:.4rem">'
+      +'<div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">'
       +'<label style="font-size:10px;color:var(--t3)">Prix total (XOF):</label>'
-      +'<input type="number" value="'+(COMPTA_PRIX[e.id]||'')+'" placeholder="Saisir prix" '
-      +'style="width:120px;border:1px solid var(--b2);border-radius:4px;background:var(--bg);color:var(--t1);padding:3px 6px;font-size:11px" '
-      +'oninput="COMPTA_PRIX[\''+e.id+'\']=+this.value;renderComptaCUMP()">'
-      +(hasPrix?'<span style="color:var(--acc);font-size:10px">✅ '+(COMPTA_PRIX[e.id]/e.quantity).toFixed(0)+' XOF/'+item?.unit+'</span>':'<span style="color:var(--warn);font-size:10px">⚠ À saisir</span>')
+      +'<input type="number" value="'+(COMPTA_PRIX[e.id]||'')+'" placeholder="Saisir prix" '+(isVal?'disabled':'')
+      +' style="width:120px;border:1px solid var(--b2);border-radius:4px;background:var(--bg);color:var(--t1);padding:3px 6px;font-size:11px" '
+      +'oninput="COMPTA_PRIX[\''+e.id+'\']=+this.value;delete COMPTA_PRIX_VALIDATIONS[\''+e.id+'\'];saveComptaPrixDebounced();renderComptaCUMP()">'
+      +(hasPrix?'<span style="color:var(--acc);font-size:10px">'+Math.round(COMPTA_PRIX[e.id]/e.quantity).toLocaleString()+' XOF/'+(item?.unit||'u')+'</span>':'<span style="color:var(--warn);font-size:10px">⚠ À saisir</span>')
+      +(isVal?'<span class="badge b-ok">✅ Validé '+(v.by||'')+'</span>':(canVal&&hasPrix?'<button class="sbtn" style="font-size:9px;padding:3px 7px" onclick="validateComptaPrix(\''+e.id+'\')">Valider prix</button>':'<span style="font-size:9px;color:var(--t3)">En attente validation</span>'))
+      +(isVal&&canVal?'<button class="ebtn" onclick="unvalidateComptaPrix(\''+e.id+'\')">Déverrouiller</button>':'')
       +'</div></div></div>';
   }).join('');
   renderComptaCUMP();
@@ -5553,7 +5646,7 @@ function renderComptaCUMP(){
   // Calculer CUMP par intrant
   const cumpMap={};
   APP_INTRANTS.forEach(item=>{
-    const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===item.id&&COMPTA_PRIX[e.id]!==undefined);
+    const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===item.id&&COMPTA_PRIX[e.id]!==undefined&&COMPTA_PRIX_VALIDATIONS[e.id]?.validated);
     if(!entries.length){cumpMap[item.id]=null;return;}
     const totalQty=entries.reduce((s,e)=>s+e.quantity,0);
     const totalCost=entries.reduce((s,e)=>s+(COMPTA_PRIX[e.id]||0),0);
@@ -5569,7 +5662,7 @@ function renderComptaCUMP(){
     +'<th style="text-align:right;padding:4px 8px;border-bottom:1px solid var(--b2);color:var(--acc)">CUMP (XOF/unité)</th>'
     +'</tr></thead><tbody>'
     +withCump.map(item=>{
-      const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===item.id&&COMPTA_PRIX[e.id]!==undefined);
+      const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===item.id&&COMPTA_PRIX[e.id]!==undefined&&COMPTA_PRIX_VALIDATIONS[e.id]?.validated);
       const totalQty=entries.reduce((s,e)=>s+e.quantity,0);
       const totalCost=entries.reduce((s,e)=>s+(COMPTA_PRIX[e.id]||0),0);
       const cump=totalCost/totalQty;
@@ -5585,7 +5678,7 @@ function renderComptaCUMP(){
 }
 
 function getCUMP(intrantId){
-  const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===intrantId&&COMPTA_PRIX[e.id]!==undefined);
+  const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===intrantId&&COMPTA_PRIX[e.id]!==undefined&&COMPTA_PRIX_VALIDATIONS[e.id]?.validated);
   if(!entries.length)return 0;
   const totalQty=entries.reduce((s,e)=>s+e.quantity,0);
   const totalCost=entries.reduce((s,e)=>s+(COMPTA_PRIX[e.id]||0),0);
@@ -7349,6 +7442,7 @@ function renderFCRModule(){
 }
 
 
+loadPublicSettings();
 showScreen('screen-boot');
 </script>
 </body>
