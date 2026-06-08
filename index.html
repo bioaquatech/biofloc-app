@@ -1322,20 +1322,49 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 
       <!-- Sous-onglet 2 : Charges -->
       <div id="ct-charges" style="display:none">
-        <div class="card">
-          <div class="ctitle"><span class="dot"></span>Paramètres des charges de production</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.6rem;margin-bottom:.6rem">
-            <div class="gi"><label>💡 Prix électricité (XOF/kWh)</label><input type="number" id="c-elec" value="120" oninput="calcCharges()" class="ci" style="width:90px"></div>
-            <div class="gi"><label>⚡ Watts/bassin</label><input type="number" id="c-watts" value="150" oninput="calcCharges()" class="ci" style="width:75px"></div>
-            <div class="gi"><label>⏱ Heures aération/jour</label><input type="number" id="c-heures" value="24" oninput="calcCharges()" class="ci" style="width:70px"></div>
-            <div class="gi"><label>💧 Eau (XOF/cycle)</label><input type="number" id="c-eau" value="25000" oninput="calcCharges()" class="ci" style="width:90px"></div>
-            <div class="gi"><label>🏗 Bâtiment (XOF/cycle)</label><input type="number" id="c-batiment" value="150000" oninput="calcCharges()" class="ci" style="width:90px"></div>
-            <div class="gi"><label>👷 Main d'œuvre (XOF/mois)</label><input type="number" id="c-mo" value="100000" oninput="calcCharges()" class="ci" style="width:90px"></div>
-            <div class="gi"><label>📅 Durée cycle (jours)</label><input type="number" id="c-duree" value="154" oninput="calcCharges()" class="ci" style="width:70px"></div>
-            <div class="gi"><label>🧪 Autres (XOF/cycle)</label><input type="number" id="c-autres" value="50000" oninput="calcCharges()" class="ci" style="width:90px"></div>
-            <div class="gi"><label>💰 Prix vente (XOF/kg)</label><input type="number" id="c-vente" value="4000" oninput="calcCharges()" class="ci" style="width:90px"></div>
+        <div class="card" style="border-color:rgba(255,179,71,.22)">
+          <div class="ctitle"><span class="dot" style="background:var(--warn)"></span>Charges d'exploitation — saisie de gestion</div>
+          <div style="font-size:11px;color:var(--t2);line-height:1.7">
+            Ici, le comptable renseigne les dépenses de gestion : énergie, eau, main-d'œuvre, maintenance, transport, administration, fiscalité et divers.
+            Le système convertit automatiquement en XOF pour les statistiques et conserve la devise d'origine pour la traçabilité.
           </div>
         </div>
+
+        <div class="card" id="charge-form-card">
+          <div class="ctitle"><span class="dot"></span>Nouvelle charge / modification</div>
+          <input type="hidden" id="chg-id">
+          <div class="admin-form" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+            <div class="form-group"><label class="form-lbl">Date</label><input type="date" id="chg-date" class="form-inp"></div>
+            <div class="form-group"><label class="form-lbl">Cycle de production</label><input id="chg-cycle" class="form-inp" placeholder="Ex : Cycle 2026-01"></div>
+            <div class="form-group"><label class="form-lbl">Catégorie</label><select id="chg-category" class="form-inp" onchange="updateChargeSubcats()"></select></div>
+            <div class="form-group"><label class="form-lbl">Sous-catégorie</label><select id="chg-subcategory" class="form-inp"></select></div>
+            <div class="form-group" style="grid-column:span 2"><label class="form-lbl">Désignation</label><input id="chg-label" class="form-inp" placeholder="Ex : Facture CEET mai 2026"></div>
+            <div class="form-group"><label class="form-lbl">Type</label><select id="chg-type" class="form-inp"><option>Variable</option><option>Fixe</option></select></div>
+            <div class="form-group"><label class="form-lbl">Montant payé</label><input type="number" id="chg-amount" class="form-inp" min="0" step="0.01" oninput="updateChargeXOF()"></div>
+            <div class="form-group"><label class="form-lbl">Devise</label><select id="chg-currency" class="form-inp" onchange="updateChargeXOF()"><option>XOF</option><option>EUR</option><option>USD</option><option>CNY</option><option>RMB</option><option>GHS</option></select></div>
+            <div class="form-group"><label class="form-lbl">Taux vers XOF</label><input type="number" id="chg-rate" class="form-inp" min="0" step="0.0001" value="1" oninput="updateChargeXOF()"></div>
+            <div class="form-group"><label class="form-lbl">Montant converti XOF</label><input id="chg-amount-xof" class="form-inp" readonly style="color:var(--acc);font-weight:800"></div>
+            <div class="form-group"><label class="form-lbl">Quantité</label><input type="number" id="chg-qty" class="form-inp" min="0" step="0.001" value="1"></div>
+            <div class="form-group"><label class="form-lbl">Unité</label><select id="chg-unit" class="form-inp"><option>forfait</option><option>kWh</option><option>m³</option><option>litre</option><option>kg</option><option>heure</option><option>jour</option><option>mois</option><option>pièce</option><option>autre</option></select></div>
+            <div class="form-group"><label class="form-lbl">Affectation</label><select id="chg-affectation" class="form-inp"><option>Ferme entière</option><option>Quatrinome</option><option>Bassin spécifique</option><option>Administration</option><option>Laboratoire</option><option>Maintenance générale</option></select></div>
+            <div class="form-group"><label class="form-lbl">Détail affectation</label><input id="chg-affect-detail" class="form-inp" placeholder="Ex : Bassin 4 / Q2"></div>
+            <div class="form-group"><label class="form-lbl">Fournisseur</label><input id="chg-supplier" class="form-inp" placeholder="À renseigner"></div>
+            <div class="form-group"><label class="form-lbl">N° facture / reçu</label><input id="chg-invoice" class="form-inp" placeholder="Obligatoire si facture"></div>
+            <div class="form-group" style="grid-column:span 2"><label class="form-lbl">Lien justificatif / référence</label><input id="chg-proof" class="form-inp" placeholder="PDF, image ou référence papier"></div>
+            <div class="form-group" style="grid-column:1/-1"><label class="form-lbl">Commentaire</label><textarea id="chg-comment" class="form-inp" rows="2" placeholder="Optionnel"></textarea></div>
+          </div>
+          <div id="charge-form-alert" style="font-size:10px;color:var(--warn);margin:.3rem 0 .6rem"></div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="sbtn" onclick="saveChargeFromForm()">💾 Enregistrer la charge</button>
+            <button class="abtn" onclick="resetChargeForm()">↺ Nouveau</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Charges proposées par défaut</div>
+          <div id="charge-defaults" style="display:flex;gap:.35rem;flex-wrap:wrap"></div>
+        </div>
+
         <div class="card" id="charges-detail" style="margin-top:.6rem"></div>
       </div>
 
@@ -8101,5 +8130,97 @@ function refreshAnalyseERP(){
 
 </script>
 
+
+<script id="ichtus-charges-v9-accessible">
+(function(){
+'use strict';
+const G=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const today=()=>new Date().toISOString().slice(0,10);
+const money=v=>(Math.round(Number(v)||0)).toLocaleString('fr-FR')+' XOF';
+function role(){return (window.APP&&APP.user&&APP.user.role)||'';}
+function canWrite(){const r=role().toLowerCase();return ['responsable','responsable ferme','administrateur','superadmin','super admin'].some(x=>r.includes(x));}
+function canValidate(){const r=role().toLowerCase();return ['responsable administratif','admin','administrateur','superadmin','super admin'].some(x=>r.includes(x));}
+function canDelete(){const r=role().toLowerCase();return r.includes('super')||r.includes('administrateur');}
+window.APP_CHARGES=window.APP_CHARGES||[];
+window.CHARGE_CATS={
+ 'Énergie':['Électricité CEET','Groupe électrogène','Carburant','Gaz'],
+ 'Eau':['Eau forage','Eau réseau','Traitement eau'],
+ 'Personnel':['Salaires','Primes','Main d’œuvre journalière'],
+ 'Maintenance':['Souffleurs','Pompes','Plomberie','Électricité','Générateur'],
+ 'Transport':['Alevins','Intrants','Poissons'],
+ 'Administration':['Internet','Téléphone','Fournitures administratives'],
+ 'Fiscalité':['Taxes','Redevances','Assurance'],
+ 'Divers':['Autres charges']
+};
+window.DEFAULT_CHARGES_V9=[
+ ['Énergie','Électricité CEET','Variable','kWh'],['Énergie','Groupe électrogène','Variable','forfait'],['Énergie','Carburant','Variable','litre'],['Énergie','Gaz','Variable','forfait'],
+ ['Eau','Eau forage','Variable','m³'],['Eau','Eau réseau','Variable','m³'],['Eau','Traitement eau','Variable','forfait'],
+ ['Personnel','Salaires','Fixe','mois'],['Personnel','Primes','Fixe','forfait'],['Personnel','Main d’œuvre journalière','Variable','jour'],
+ ['Maintenance','Souffleurs','Variable','forfait'],['Maintenance','Pompes','Variable','forfait'],['Maintenance','Plomberie','Variable','forfait'],['Maintenance','Générateur','Variable','forfait'],
+ ['Transport','Alevins','Variable','forfait'],['Transport','Intrants','Variable','forfait'],['Transport','Poissons','Variable','forfait'],
+ ['Administration','Internet','Fixe','mois'],['Administration','Téléphone','Fixe','mois'],['Administration','Fournitures administratives','Variable','forfait'],
+ ['Fiscalité','Taxes','Fixe','forfait'],['Fiscalité','Redevances','Fixe','forfait'],['Fiscalité','Assurance','Fixe','forfait'],['Divers','Autres charges','Variable','forfait']
+].map((x,i)=>({id:'def_'+i,category:x[0],subcategory:x[1],type:x[2],unit:x[3]}));
+function setVal(id,v){const el=G(id); if(el) el.value=v??'';}
+function getVal(id){return (G(id)&&G(id).value)||'';}
+window.initChargeForm=function(){
+ const cat=G('chg-category'); if(cat && !cat.options.length){cat.innerHTML=Object.keys(window.CHARGE_CATS).map(c=>`<option>${esc(c)}</option>`).join('');}
+ updateChargeSubcats();
+ const date=G('chg-date'); if(date && !date.value) date.value=today();
+ updateChargeXOF(); renderChargeDefaults(); renderChargesPanelV9();
+};
+window.updateChargeSubcats=function(){
+ const cat=getVal('chg-category')||Object.keys(window.CHARGE_CATS)[0]; const sub=G('chg-subcategory'); if(!sub)return;
+ const old=sub.value; sub.innerHTML=(window.CHARGE_CATS[cat]||[]).map(x=>`<option>${esc(x)}</option>`).join(''); if(old)sub.value=old;
+};
+window.updateChargeXOF=function(){
+ const cur=getVal('chg-currency').toUpperCase(); const rateEl=G('chg-rate'); if(rateEl && (!rateEl.value || cur==='XOF')) rateEl.value=(cur==='XOF'?'1':rateEl.value||'');
+ const amount=Number(getVal('chg-amount'))||0, rate=Number(getVal('chg-rate'))||0;
+ setVal('chg-amount-xof', money(amount*(rate||1)));
+ const alert=G('charge-form-alert'); if(alert){alert.textContent=(cur!=='XOF' && !rate)?'⚠️ Renseigner le taux de change vers XOF pour permettre les statistiques.':'';}
+};
+window.fillDefaultCharge=function(i){const d=window.DEFAULT_CHARGES_V9[i]; if(!d)return; setVal('chg-category',d.category); updateChargeSubcats(); setVal('chg-subcategory',d.subcategory); setVal('chg-label',d.subcategory); setVal('chg-type',d.type); setVal('chg-unit',d.unit); setVal('chg-currency','XOF'); setVal('chg-rate','1'); setVal('chg-qty','1'); setVal('chg-date',today()); updateChargeXOF(); const el=G('chg-label'); if(el)el.focus();};
+function readForm(){
+ const amount=Number(getVal('chg-amount'))||0, rate=Number(getVal('chg-rate'))||0, cur=getVal('chg-currency')||'XOF';
+ return {id:getVal('chg-id')||('charge_'+Date.now()), date:getVal('chg-date')||today(), cycle:getVal('chg-cycle'), category:getVal('chg-category'), subcategory:getVal('chg-subcategory'), label:getVal('chg-label'), name:getVal('chg-label'), type:getVal('chg-type')||'Variable', amount, currency:cur, exchangeRate:(cur.toUpperCase()==='XOF'?1:rate), amountXOF:amount*(cur.toUpperCase()==='XOF'?1:rate), quantity:Number(getVal('chg-qty'))||0, unit:getVal('chg-unit')||'forfait', affectation:getVal('chg-affectation'), affectationDetail:getVal('chg-affect-detail'), supplier:getVal('chg-supplier'), invoice:getVal('chg-invoice'), proof:getVal('chg-proof'), comment:getVal('chg-comment'), status:'Brouillon'};
+}
+function validateCharge(c){
+ const miss=[]; if(!c.date)miss.push('date'); if(!c.category)miss.push('catégorie'); if(!c.label)miss.push('désignation'); if(!c.amount)miss.push('montant'); if(!c.currency)miss.push('devise'); if(c.currency.toUpperCase()!=='XOF'&&!c.exchangeRate)miss.push('taux de change'); if(!c.quantity)miss.push('quantité'); if(!c.unit)miss.push('unité');
+ return miss;
+}
+window.saveChargeFromForm=async function(){
+ if(!canWrite()){alert('Création/modification réservée au Responsable ferme, Responsable administratif ou SuperAdmin.');return;}
+ const c=readForm(); const miss=validateCharge(c); if(miss.length){alert('Champs obligatoires manquants : '+miss.join(', '));return;}
+ const now=new Date().toISOString(); c.modifiedAt=now; c.modifiedBy=(window.APP&&APP.user&&APP.user.name)||role()||'?'; if(!c.createdAt){c.createdAt=now;c.createdBy=c.modifiedBy;}
+ try{ if(window.farmCol) await farmCol('charges').doc(c.id).set(c,{merge:true}); }catch(e){console.warn('Sauvegarde Firestore charge:',e);}
+ const ix=(window.APP_CHARGES||[]).findIndex(x=>x.id===c.id); if(ix>=0)APP_CHARGES[ix]=c; else APP_CHARGES.unshift(c);
+ if(window.showToast) showToast('✅ Charge enregistrée','acc'); else alert('Charge enregistrée');
+ resetChargeForm(); renderChargesPanelV9(); if(window.refreshAnalyseERP)refreshAnalyseERP();
+};
+window.resetChargeForm=function(){['chg-id','chg-cycle','chg-label','chg-amount','chg-supplier','chg-invoice','chg-proof','chg-comment','chg-affect-detail'].forEach(id=>setVal(id,'')); setVal('chg-date',today()); setVal('chg-type','Variable'); setVal('chg-currency','XOF'); setVal('chg-rate','1'); setVal('chg-qty','1'); setVal('chg-unit','forfait'); updateChargeXOF();};
+window.editChargeV9=function(id){const c=(window.APP_CHARGES||[]).find(x=>x.id===id); if(!c)return; setVal('chg-id',c.id); setVal('chg-date',c.date); setVal('chg-cycle',c.cycle); setVal('chg-category',c.category); updateChargeSubcats(); setVal('chg-subcategory',c.subcategory); setVal('chg-label',c.label||c.name); setVal('chg-type',c.type||'Variable'); setVal('chg-amount',c.amount); setVal('chg-currency',c.currency||'XOF'); setVal('chg-rate',c.exchangeRate||1); setVal('chg-qty',c.quantity||1); setVal('chg-unit',c.unit||'forfait'); setVal('chg-affectation',c.affectation||'Ferme entière'); setVal('chg-affect-detail',c.affectationDetail); setVal('chg-supplier',c.supplier); setVal('chg-invoice',c.invoice); setVal('chg-proof',c.proof); setVal('chg-comment',c.comment); updateChargeXOF(); const card=G('charge-form-card'); if(card)card.scrollIntoView({behavior:'smooth',block:'start'});};
+window.deleteChargeV9=async function(id){ if(!canDelete()){alert('Suppression réservée au SuperAdmin.');return;} if(!confirm('Supprimer cette charge ?'))return; try{if(window.farmCol)await farmCol('charges').doc(id).delete();}catch(e){console.warn(e);} window.APP_CHARGES=(APP_CHARGES||[]).filter(x=>x.id!==id); renderChargesPanelV9();};
+window.validateChargeV9=async function(id,status){ if(!canValidate()){alert('Validation réservée au Responsable administratif et au SuperAdmin.');return;} const c=(APP_CHARGES||[]).find(x=>x.id===id); if(!c)return; c.status=status; c.validatedAt=new Date().toISOString(); c.validatedBy=(window.APP&&APP.user&&APP.user.name)||role()||'?'; try{if(window.farmCol)await farmCol('charges').doc(id).set(c,{merge:true});}catch(e){console.warn(e);} renderChargesPanelV9();};
+window.renderChargeDefaults=function(){const el=G('charge-defaults'); if(!el)return; el.innerHTML=window.DEFAULT_CHARGES_V9.map((d,i)=>`<button class="abtn" style="font-size:10px;padding:4px 8px" onclick="fillDefaultCharge(${i})">${esc(d.category)} · ${esc(d.subcategory)}</button>`).join('');};
+function dateIn(c,from,to){const d=c.date||''; return (!from||d>=from)&&(!to||d<=to);}
+window.renderChargesPanelV9=function(){
+ const el=G('charges-detail'); if(!el)return; const from=getVal('charges-from-v9'), to=getVal('charges-to-v9'); const rows=(APP_CHARGES||[]).filter(c=>dateIn(c,from,to));
+ const total=rows.reduce((s,c)=>s+(Number(c.amountXOF)||((Number(c.amount)||0)*(Number(c.exchangeRate)||1))),0); const fixed=rows.filter(c=>c.type==='Fixe').reduce((s,c)=>s+(Number(c.amountXOF)||0),0); const variable=rows.filter(c=>c.type!=='Fixe').reduce((s,c)=>s+(Number(c.amountXOF)||0),0);
+ const bycat={}; rows.forEach(c=>{bycat[c.category||'Divers']=(bycat[c.category||'Divers']||0)+(Number(c.amountXOF)||0);});
+ el.innerHTML=`<div class="ctitle"><span class="dot"></span>Historique, validation et statistiques des charges</div>
+ <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem"><label style="font-size:10px;color:var(--t3)">Du</label><input class="di2" id="charges-from-v9" type="date" value="${esc(from)}" onchange="renderChargesPanelV9()"><label style="font-size:10px;color:var(--t3)">au</label><input class="di2" id="charges-to-v9" type="date" value="${esc(to)}" onchange="renderChargesPanelV9()"><span class="badge b-ok">${rows.length} lignes</span></div>
+ <div class="mgrid"><div class="met ok"><div class="mlbl">Total période</div><div class="mval" style="font-size:15px">${money(total)}</div></div><div class="met"><div class="mlbl">Charges fixes</div><div class="mval" style="font-size:15px">${money(fixed)}</div></div><div class="met warn"><div class="mlbl">Charges variables</div><div class="mval" style="font-size:15px">${money(variable)}</div></div></div>
+ <div style="display:flex;gap:.35rem;flex-wrap:wrap;margin:.45rem 0">${Object.entries(bycat).map(([k,v])=>`<span class="badge b-purp">${esc(k)} : ${money(v)}</span>`).join('')}</div>
+ <div class="tw"><table><thead><tr><th>Date</th><th>Cycle</th><th>Catégorie</th><th>Désignation</th><th>Type</th><th>Qté</th><th>Unité</th><th>Montant</th><th>Devise</th><th>XOF</th><th>Affectation</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${rows.map(c=>`<tr><td>${esc(c.date)}</td><td>${esc(c.cycle||'—')}</td><td>${esc(c.category||'')}</td><td class="cn">${esc(c.label||c.name||'')}</td><td>${esc(c.type||'')}</td><td class="cf">${Number(c.quantity||0).toLocaleString('fr-FR')}</td><td>${esc(c.unit||'')}</td><td class="cf">${Number(c.amount||0).toLocaleString('fr-FR')}</td><td>${esc(c.currency||'XOF')}</td><td class="cf" style="color:var(--acc);font-weight:800">${money(Number(c.amountXOF)||0)}</td><td>${esc(c.affectation||'')}</td><td><span class="badge ${c.status==='Validée'?'b-ok':c.status==='Rejetée'?'b-dng':'b-warn'}">${esc(c.status||'Brouillon')}</span></td><td>${canWrite()?`<button class="ebtn" onclick="editChargeV9('${esc(c.id)}')">✏️</button>`:''}${canValidate()?` <button class="abtn" style="padding:2px 6px;font-size:10px" onclick="validateChargeV9('${esc(c.id)}','Validée')">✓</button> <button class="dbtn" onclick="validateChargeV9('${esc(c.id)}','Rejetée')">↯</button>`:''}${canDelete()?` <button class="dbtn" onclick="deleteChargeV9('${esc(c.id)}')">🗑</button>`:''}</td></tr>`).join('')||'<tr><td colspan="13" style="padding:1rem;color:var(--t3)">Aucune charge enregistrée.</td></tr>'}</tbody></table></div>`;
+};
+window.loadChargesV9=async function(){try{if(window.farmCol){const snap=await farmCol('charges').orderBy('date','desc').limit(1000).get(); window.APP_CHARGES=snap.docs.map(d=>({id:d.id,...d.data()}));}}catch(e){console.warn('loadChargesV9',e);} renderChargesPanelV9();};
+const oldSwCompta=window.swCompta;
+window.swCompta=function(tab){ if(typeof oldSwCompta==='function') oldSwCompta.apply(this,arguments); if(tab==='charges'){setTimeout(()=>{initChargeForm(); loadChargesV9();},0);} };
+const oldLoad=window.loadFarmData;
+if(typeof oldLoad==='function'){ window.loadFarmData=async function(){const r=await oldLoad.apply(this,arguments); try{await loadChargesV9();}catch(e){} return r;}; }
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initChargeForm);else initChargeForm();
+})();
+</script>
 </body>
 </html>
