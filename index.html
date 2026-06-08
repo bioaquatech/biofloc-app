@@ -870,18 +870,18 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
                 <td style="font-weight:700;color:var(--acc)">TAN &lt;0.5 ✅</td>
                 <td style="background:rgba(0,201,167,.06);font-size:10px"><strong style="color:var(--acc)">✅ SYSTÈME SAIN</strong><br>Cycle complet établi → Régime nominal</td>
                 <td style="background:rgba(245,166,35,.06);font-size:10px"><strong style="color:var(--warn)">Nitrospira faibles</strong><br>Inoculer Nitrospira → NaCl 1–2 g/L</td>
-                <td style="background:rgba(255,61,87,.06);font-size:10px"><strong style="color:var(--dng)">Nitrospira en crise</strong><br>Vidange 15% + NaCl 3–5 g/L + BioClean 100</td>
+                <td style="background:rgba(255,61,87,.06);font-size:10px"><strong style="color:var(--dng)">Nitrospira en crise</strong><br>Vidange 15% + NaCl 3–5 g/L + BC 100</td>
               </tr>
               <tr>
                 <td style="font-weight:700;color:var(--warn)">TAN 0.5–1.0 ⚠️</td>
                 <td style="background:rgba(245,166,35,.04);font-size:10px"><strong style="color:var(--warn)">Nitrosomonas sous pression</strong><br>Réduire ration 20% → vérifier C/N mélasse</td>
                 <td style="background:rgba(245,166,35,.08);font-size:10px"><strong style="color:var(--warn)">Double pression</strong><br>−50% ration + inoculation + NaCl 2 g/L + vidange 10%</td>
-                <td style="background:rgba(255,61,87,.08);font-size:10px"><strong style="color:var(--dng)">Système déséquilibré</strong><br>Arrêt alim + vidange 15% + NaCl 5 g/L + BioClean 100</td>
+                <td style="background:rgba(255,61,87,.08);font-size:10px"><strong style="color:var(--dng)">Système déséquilibré</strong><br>Arrêt alim + vidange 15% + NaCl 5 g/L + BC 100</td>
               </tr>
               <tr>
                 <td style="font-weight:700;color:var(--dng)">TAN &gt;1.0 🚨</td>
                 <td style="background:rgba(255,61,87,.06);font-size:10px"><strong style="color:var(--dng)">Nitrosomonas en crise</strong><br>Arrêt alim + vidange 15% + mélasse urgence + Nitroso.</td>
-                <td style="background:rgba(255,61,87,.1);font-size:10px"><strong style="color:var(--dng)">Crise grave</strong><br>Arrêt alim + vidange 20% + NaCl 5 g/L + BioClean 100 + eau mature</td>
+                <td style="background:rgba(255,61,87,.1);font-size:10px"><strong style="color:var(--dng)">Crise grave</strong><br>Arrêt alim + vidange 20% + NaCl 5 g/L + BC 100 + eau mature</td>
                 <td style="background:rgba(255,61,87,.15);font-size:10px"><strong style="color:var(--dng)">🚨 EFFONDREMENT TOTAL</strong><br>O₂ pur + vidange max + BioClean dose choc · Urgence absolue</td>
               </tr>
             </tbody>
@@ -1093,6 +1093,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         <button class="tb" id="lt-inventaire" onclick="swLog('inventaire')" style="font-size:11px">📋 Inventaire</button>
         <button class="tb" id="lt-analyse" onclick="swLog('analyse')" style="font-size:11px">📊 Analyse</button>
         <button class="tb" id="lt-probio" onclick="swLog('probio')" style="font-size:11px">🧫 Probiotiques</button>
+        <button class="tb" id="lt-seuils" onclick="swLog('seuils')" style="font-size:11px">🚨 Seuils d'alerte</button>
       </div>
 
       <!-- Panneau Intrants -->
@@ -1178,12 +1179,15 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
               <p style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:.75rem">Planification par bassin avec anticipation H36. La plateforme calcule automatiquement la préparation à lancer l’avant-veille soir pour l’application du matin prévu, avec majoration PFA de 4%.</p>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:.5rem;margin-bottom:.6rem">
                 <div><div class="form-lbl">N° bassin</div><select id="pwa-add-bassin" class="si" style="width:100%;font-size:11px"></select></div>
-                <div><div class="form-lbl">Activité prévue</div><select id="pwa-add-activity" class="si" style="width:100%;font-size:11px"><option value="primo">Primo inoculation</option><option value="entretien">Entretien</option><option value="rotation">Rotation croisière</option><option value="postintro">Post-introduction alevins</option></select></div>
+                <div><div class="form-lbl">Activité prévue</div><select id="pwa-add-activity" class="si" style="width:100%;font-size:11px"><option value="primo">Primo-inoculation</option><option value="entretien">Entretien</option><option value="rotation">Système mature_post introduction alevins</option><option value="postintro">Système immature_post introduction alevins</option></select></div>
                 <div><div class="form-lbl">Volume à couvrir (m³)</div><input type="number" id="pwa-add-volume" class="form-inp" value="1.75" min="0" step="0.01"></div>
                 <div><div class="form-lbl">Fois/semaine</div><input type="number" id="pwa-add-freq" class="form-inp" value="2" min="1" max="7"></div>
                 <div><div class="form-lbl">Jour d’application</div><select id="pwa-add-day" class="si" style="width:100%;font-size:11px"><option value="1">Lundi</option><option value="2">Mardi</option><option value="3">Mercredi</option><option value="4">Jeudi</option><option value="5">Vendredi</option><option value="6">Samedi</option><option value="0">Dimanche</option></select></div>
               </div>
               <button class="sbtn" onclick="addPWAActivity()" style="font-size:11px;margin-bottom:.5rem">➕ Ajouter la ligne bassin</button>
+              <div id="pwa-modalites-help" style="font-size:10px;color:var(--t2);line-height:1.65;background:rgba(0,201,167,.06);border:1px solid rgba(0,201,167,.15);border-radius:8px;padding:.55rem;margin:.45rem 0">
+                <strong style="color:var(--acc)">Modalités :</strong> Primo-inoculation = traitement de l'eau avant mise en charge ; Entretien = traitement pour maintenir un bon Imhoff ; Système mature_post introduction alevins = suivi de croisière après introduction ; Système immature_post introduction alevins = phase jeune/instable après introduction. La préparation est anticipée à H36 : préparation l'avant-veille soir pour utilisation le surlendemain matin. La PFA ajoute 4% de majoration.
+              </div>
               <div id="pwa-plan-list" style="margin-bottom:.6rem"></div>
               <div id="pwa-result" style="background:var(--inp);border-radius:8px;padding:.6rem;font-size:11px"></div>
             </div>
@@ -1216,6 +1220,25 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         </div>
       </div>
     </div>
+
+
+
+      <!-- Panneau Seuils d'alerte centralisés -->
+      <div id="lp-seuils" class="log-pane" style="display:none">
+        <div class="card">
+          <div class="ctitle"><span class="dot" style="background:var(--dng)"></span>Définition centralisée des seuils d'alerte par intrant</div>
+          <div style="font-size:10px;color:var(--t2);line-height:1.7;margin-bottom:.7rem">
+            Les seuils ne se saisissent plus à l'entrée en stock. Ils sont définis ici, dans l'unité habituelle de l'intrant, puis validés par le Responsable ferme ou le SuperAdmin. Tous les tableaux de bord lisent cette même valeur synchronisée.
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:.5rem;align-items:end;margin-bottom:.7rem">
+            <div><div class="form-lbl">Intrant</div><select id="seuil-intrant" class="form-inp si" onchange="syncSeuilForm()"></select></div>
+            <div><div class="form-lbl">Seuil d'alerte</div><input id="seuil-valeur" type="number" class="form-inp" min="0" step="0.01"></div>
+            <div><div class="form-lbl">Unité</div><input id="seuil-unite" class="form-inp" disabled></div>
+            <button class="sbtn" onclick="saveIntrantSeuil()">✅ Valider seuil</button>
+          </div>
+          <div id="seuils-table"></div>
+        </div>
+      </div>
 
     <!-- T5 COMPTABILITÉ -->
     <div id="t5" class="pane">
@@ -1255,11 +1278,34 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
             <div class="gi"><label>💰 Prix vente (XOF/kg)</label><input type="number" id="c-vente" value="4000" oninput="calcCharges()" class="ci" style="width:90px"></div>
           </div>
         </div>
+        <div class="card" style="margin-top:.6rem">
+          <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Saisie continue des charges réelles</div>
+          <div style="font-size:10px;color:var(--t2);line-height:1.6;margin-bottom:.6rem">Le comptable saisit les charges jour par jour ou mois par mois. Le Responsable ferme et le SuperAdmin peuvent créer/modifier ; seul le SuperAdmin peut supprimer.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.5rem;align-items:end">
+            <div><div class="form-lbl">Date</div><input id="charge-date" type="date" class="form-inp"></div>
+            <div><div class="form-lbl">Charge</div><select id="charge-type" class="form-inp si"></select></div>
+            <div><div class="form-lbl">Montant</div><input id="charge-montant" type="number" class="form-inp" min="0" step="0.01"></div>
+            <div><div class="form-lbl">Monnaie</div><select id="charge-monnaie" class="form-inp si"><option>XOF</option><option>USD</option><option>YUAN</option><option>RMB</option><option>CEDIS</option><option>EUROS</option></select></div>
+            <div><div class="form-lbl">Quantité</div><input id="charge-quantite" type="number" class="form-inp" min="0" step="0.01" placeholder="ex: 120"></div>
+            <div><div class="form-lbl">Unité</div><input id="charge-unite" class="form-inp" placeholder="kWh, m³, forfait..."></div>
+            <div><div class="form-lbl">Note</div><input id="charge-note" class="form-inp" placeholder="facultatif"></div>
+            <button class="sbtn" onclick="saveProductionCharge()">💾 Enregistrer</button>
+          </div>
+          <div id="charge-entry-list" style="margin-top:.7rem"></div>
+        </div>
         <div class="card" id="charges-detail" style="margin-top:.6rem"></div>
       </div>
 
       <!-- Sous-onglet 3 : Synthèse -->
       <div id="ct-synthese" style="display:none">
+        <div class="card" style="margin-bottom:.6rem">
+          <div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Valeur de stock et charges — date T ou rétrospective</div>
+          <div style="display:flex;gap:.5rem;align-items:end;flex-wrap:wrap;margin-bottom:.5rem">
+            <div><div class="form-lbl">Date d'analyse</div><input id="stock-value-date" type="date" class="form-inp" onchange="renderStockValueSynthese()"></div>
+            <button class="sbtn" onclick="G('stock-value-date').value=today();renderStockValueSynthese()">Aujourd'hui</button>
+          </div>
+          <div id="stock-value-synthese"></div>
+        </div>
         <div class="mgrid" id="compta-metrics" style="margin-bottom:.75rem"></div>
         <div class="card" style="margin-bottom:.6rem">
           <div class="ctitle"><span class="dot"></span>Répartition des charges de production</div>
@@ -3430,7 +3476,7 @@ const ANALYSE_RULES={
         actions:['Réduire ration 50%','Vidange 10%','Augmenter mélasse','Inoculer nitrifiants (9–14 L eau mature)','Remesurer le lendemain matin']},
       {min:1, level:'URGENCE', color:'var(--dng)',
         interpretation:'Intoxication NH₃ imminente — branchies en danger.',
-        actions:['Arrêt alimentation immédiat','Vidange 15–20%','BioClean 100 dose choc (1,2 L/bassin)','Mesurer pH — si > 7,8 : corriger en priorité','Aération maximale — remesurer toutes les 6h']},
+        actions:['Arrêt alimentation immédiat','Vidange 15–20%','BC 100 dose choc (1,2 L/bassin)','Mesurer pH — si > 7,8 : corriger en priorité','Aération maximale — remesurer toutes les 6h']},
     ]
   },
   NO2:{
@@ -3444,7 +3490,7 @@ const ANALYSE_RULES={
         actions:['Vidange 10% immédiate','NaCl 2 g/L','Inoculer eau mature riche en Nitrospira (15–20 L/m³)','Réduire ration 30%','Remesurer 24h']},
       {min:1,max:2, level:'URGENCE', color:'var(--dng)',
         interpretation:'Méthémoglobinémie active — poissons suffoquent malgré DO correct.',
-        actions:['Vidange 15% urgente','NaCl 3–5 g/L','BioClean 100 dose choc (1,2 L/bassin)','Arrêt alimentation','Vérifier DO > 6 ppm','Remesurer toutes les 12h']},
+        actions:['Vidange 15% urgente','NaCl 3–5 g/L','BC 100 dose choc (1,2 L/bassin)','Arrêt alimentation','Vérifier DO > 6 ppm','Remesurer toutes les 12h']},
       {min:2, level:'CRISE', color:'#ff1744',
         interpretation:'Crise nitrification grave — mortalité probable si non traité.',
         actions:['Vidange 20% immédiate','NaCl 5 g/L','Arrêt alimentation et mélasse 48h','Inoculation massive Nitrospira','Identifier cause : choc pH ? antibiotique ? température ?']},
@@ -3461,10 +3507,10 @@ const ANALYSE_RULES={
         actions:['Réduire ration 50%','Vidange 10%','Augmenter mélasse (méthode corrective)','Inoculer nitrifiants (9–14 L eau mature)','Remesurer le lendemain matin']},
       {min:2,max:3, level:'URGENCE', color:'var(--dng)',
         interpretation:'Intoxication NH₃ imminente — branchies en danger.',
-        actions:['Arrêt alimentation immédiat','Vidange 15–20%','Dose de choc BioClean 100 (1,2 L/bassin)','Mesurer pH — si > 7,8 : corriger en priorité','Aération maximale — remesurer toutes les 6h']},
+        actions:['Arrêt alimentation immédiat','Vidange 15–20%','Dose de choc BC 100 (1,2 L/bassin)','Mesurer pH — si > 7,8 : corriger en priorité','Aération maximale — remesurer toutes les 6h']},
       {min:3, level:'CRISE', color:'#ff1744',
         interpretation:'Mortalité en cours ou imminente — effondrement du système.',
-        actions:['Arrêt alimentation','Vidange 20% immédiate','O₂ pur si disponible','BioClean 100 dose choc','Séparer les poissons si possible','Identifier la cause : panne aération ? pluie ? sur-alimentation ?']},
+        actions:['Arrêt alimentation','Vidange 20% immédiate','O₂ pur si disponible','BC 100 dose choc','Séparer les poissons si possible','Identifier la cause : panne aération ? pluie ? sur-alimentation ?']},
     ]
   },
   TAC:{
@@ -3489,7 +3535,7 @@ const ANALYSE_RULES={
     rules:[
       {max:5, level:'INSUFFISANT', color:'var(--dng)',
         interpretation:'Floc inexistant ou détruit — risque NH₃ immédiat — système non protecteur.',
-        actions:['Arrêt de toute vidange immédiatement','Mélasse dose max (150–180 ml/m³/j) 2×/jour','Inoculer eau mature ou BioClean 100','Mesurer TAN quotidiennement','Vérifier DO ≥ 5 ppm']},
+        actions:['Arrêt de toute vidange immédiatement','Mélasse dose max (150–180 ml/m³/j) 2×/jour','Inoculer eau mature ou BC 100','Mesurer TAN quotidiennement','Vérifier DO ≥ 5 ppm']},
       {min:5,max:10, level:'VIGILANCE', color:'var(--warn)',
         interpretation:'Floc insuffisant — système en démarrage ou floc dilué.',
         actions:['Pas de vidange','Mélasse 130–150 ml/m³/j','Surveiller TAN 2×/semaine','Laisser le floc se développer naturellement']},
@@ -3663,7 +3709,105 @@ function exportAnalysePDF(){
         if(bg&&bg.includes('rgba'))el.style.background='';
       });
       window.onload=()=>{window.print();window.close();}
-    <\/script></body></html>`);
+    <\/script>
+<script id="ichtus-amendements-v2">
+(function(){
+  const oldSwLog = window.swLog;
+  const DEFAULT_CHARGE_TYPES=[
+    {name:'Électricité',unit:'kWh'},{name:'Eau',unit:'m³'},{name:'Main d’œuvre',unit:'forfait'},
+    {name:'Loyer / bâtiment',unit:'forfait'},{name:'Maintenance équipements',unit:'forfait'},
+    {name:'Transport',unit:'forfait'},{name:'Communication',unit:'forfait'},{name:'Analyses laboratoire',unit:'analyse'},
+    {name:'Médicaments / traitements',unit:'forfait'},{name:'Divers production',unit:'forfait'}
+  ];
+  window.PRODUCTION_CHARGES = window.PRODUCTION_CHARGES || [];
+  window.canManageCharges = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur'||r==='Responsable';};
+  window.isSuperAdmin = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur';};
+  window.swLog = function(panel){
+    if(panel==='seuils'){
+      window.APP_LOG_PANEL='seuils';
+      document.querySelectorAll('.log-pane').forEach(p=>p.style.display='none');
+      const el=G('lp-seuils'); if(el) el.style.display='block';
+      document.querySelectorAll('[id^="lt-"]').forEach(b=>b.classList.remove('active'));
+      const btn=G('lt-seuils'); if(btn)btn.classList.add('active');
+      renderSeuilsPanel();
+    } else if(typeof oldSwLog==='function') oldSwLog(panel);
+  };
+  window.syncSeuilForm=function(){
+    const id=G('seuil-intrant')?.value; const it=(APP_INTRANTS||[]).find(x=>x.id===id);
+    if(!it)return; G('seuil-valeur').value=it.seuil||0; G('seuil-unite').value=it.unit||'';
+  };
+  window.renderSeuilsPanel=function(){
+    const sel=G('seuil-intrant'), table=G('seuils-table'); if(!sel||!table)return;
+    const items=APP_INTRANTS||[];
+    sel.innerHTML=items.map(i=>'<option value="'+i.id+'">'+i.name+' ('+(i.unit||'')+')</option>').join('');
+    if(!sel.value&&items[0])sel.value=items[0].id; syncSeuilForm();
+    const can=canValidatePrices();
+    table.innerHTML='<div class="tw"><table><thead><tr><th>Intrant</th><th>Catégorie</th><th>Stock actuel</th><th>Seuil validé</th><th>Statut</th><th>Dernière validation</th></tr></thead><tbody>'+items.map(i=>{
+      const stock=(typeof getItemCurrentStock==='function'?getItemCurrentStock(i.id):0); const seuil=Number(i.seuil||0); const low=seuil>0&&stock<seuil;
+      return '<tr><td style="text-align:left;font-weight:700">'+i.name+'</td><td>'+i.category+'</td><td>'+stock.toFixed(2)+' '+(i.unit||'')+'</td><td>'+(seuil?seuil+' '+(i.unit||''):'<span style="color:var(--warn)">Non défini</span>')+'</td><td>'+(low?'<span class="badge b-dng">⚠ Sous seuil</span>':'<span class="badge b-ok">OK</span>')+'</td><td style="font-size:9px;color:var(--t3)">'+(i.seuilValidatedBy||'—')+'</td></tr>';
+    }).join('')+'</tbody></table></div>'+(can?'':'<div style="font-size:10px;color:var(--warn);margin-top:.5rem">Validation réservée au Responsable ferme / SuperAdmin.</div>');
+  };
+  window.saveIntrantSeuil=async function(){
+    if(!canValidatePrices()){showToast('❌ Validation réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const id=G('seuil-intrant')?.value; const val=Number(G('seuil-valeur')?.value||0); if(!id||val<0){showToast('⚠️ Seuil invalide','warn');return;}
+    const ix=APP_INTRANTS.findIndex(i=>i.id===id); if(ix<0)return;
+    const intrant={...APP_INTRANTS[ix],seuil:val,monitoringType:val>0?(APP_INTRANTS[ix].monitoringType||'special'):APP_INTRANTS[ix].monitoringType,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};
+    try{await withTimeout(farmCol('intrants').doc(id).set(intrant,{merge:true}),6000);APP_INTRANTS[ix]=intrant;renderSeuilsPanel();renderIntrants();if(typeof updateLactoStatus==='function')updateLactoStatus();showToast('✅ Seuil synchronisé','acc');}
+    catch(e){showToast('❌ '+e.message,'dng');}
+  };
+  // Intrants dashboard now reads central seuil for every item, not only special items.
+  window.renderIntrants=function(filter='all'){
+    const container=G('intrants-list');if(!container)return; const role=APP.user?.role||'Opérateur'; const isAdmin=role==='Administrateur'||role==='Responsable';
+    if(G('intrant-admin-btns'))G('intrant-admin-btns').style.display=isAdmin?'flex':'none';
+    const items=filter==='all'?APP_INTRANTS:APP_INTRANTS.filter(i=>i.category===filter);
+    const monIcons={strategic:'🎯',optional:'📋',special:'🚨'}; const catColors={aliment:'#f59e0b',basifiant:'#3b82f6',carbohydrate:'#a78bfa',probiotique:'#34d399',additif:'#06b6d4',materiel:'#6b7280',reactif:'#ec4899',autre:'#94a3b8'};
+    container.innerHTML=items.map(item=>{const stock=getItemCurrentStock(item.id);const seuil=Number(item.seuil||0);const isLow=seuil>0&&stock<seuil;const color=catColors[item.category]||'#94a3b8';
+      return '<div style="background:var(--card);border:1px solid '+(isLow?'var(--dng)':'var(--b2)')+';border-radius:10px;padding:.7rem;position:relative">'
+      +(item.isDefault?'<span style="position:absolute;top:6px;right:6px;font-size:8px;background:rgba(255,215,70,.15);color:var(--gold);border:1px solid rgba(255,215,70,.3);border-radius:4px;padding:1px 5px">Défaut synchronisé</span>':'')
+      +'<div style="display:flex;gap:5px;margin-bottom:.3rem"><span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+color+'20;color:'+color+';font-weight:700">'+item.category+'</span><span style="font-size:10px">'+(monIcons[item.monitoringType]||'📋')+' '+(item.monitoringType==='strategic'?'Stratégique':item.monitoringType==='special'?'Spécial':'Facultatif')+'</span></div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:.2rem">'+item.name+'</div><div style="font-size:10px;color:var(--t3)">'+(item.conditionnement||'—')+' · '+(item.unit||'')+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+(isLow?'var(--dng)':'var(--acc)')+';margin-top:.3rem">Stock: '+stock.toFixed(2)+' '+(item.unit||'')+(isLow?' ⚠️ SEUIL':'')+'</div>'
+      +'<div style="font-size:9px;color:var(--t3)">Seuil centralisé: '+(seuil?seuil+' '+(item.unit||''):'non défini')+'</div>'
+      +'<div style="display:flex;gap:.3rem;margin-top:.5rem;flex-wrap:wrap"><button onclick="openAddStock(\''+item.id+'\')" style="font-size:9px;background:var(--acc);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">📥 Entrée</button>'
+      +(isAdmin?'<button onclick="openEditIntrant(\''+item.id+'\')" class="ebtn">✏️ Modifier</button><button onclick="deleteIntrant(\''+item.id+'\')" class="dbtn">🗑 Supprimer</button>':'')+'</div></div>';}).join('')||'<div style="color:var(--t3);font-size:11px;padding:1rem">Aucun intrant.</div>';
+  };
+  const oldUpdateLacto=window.updateLactoStatus;
+  window.updateLactoStatus=function(){
+    const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc'); if(it&&G('lacto-seuil'))G('lacto-seuil').value=it.seuil||0;
+    if(typeof oldUpdateLacto==='function')oldUpdateLacto();
+  };
+  const oldSaveLacto=window.saveLactoData;
+  window.saveLactoData=function(){
+    const val=Number(G('lacto-seuil')?.value||0); const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc');
+    if(it){const ix=APP_INTRANTS.findIndex(i=>i.id===it.id);APP_INTRANTS[ix]={...it,seuil:val,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};farmCol('intrants').doc(it.id).set(APP_INTRANTS[ix],{merge:true}).catch(console.error);}
+    if(typeof oldSaveLacto==='function')oldSaveLacto(); if(typeof renderIntrants==='function')renderIntrants();
+  };
+  // PWA modalities
+  window.PWA_RATES={primo:{label:'Primo-inoculation',dose:4.7},entretien:{label:'Entretien',dose:0.2},rotation:{label:'Système mature_post introduction alevins',dose:0.2,vol380Fixed:0.38},postintro:{label:'Système immature_post introduction alevins',dose:0.1}};
+  // Charges réelles
+  async function loadProductionCharges(){try{const d=await withTimeout(farmCol('config').doc('charges_reelles').get(),6000); if(d.exists) window.PRODUCTION_CHARGES=d.data().items||[];}catch(e){console.warn(e)}}
+  function saveProductionCharges(){return farmCol('config').doc('charges_reelles').set({items:window.PRODUCTION_CHARGES,updatedAt:new Date().toISOString()},{merge:true}).catch(console.error)}
+  window.initChargeTypes=function(){const sel=G('charge-type'); if(!sel)return; sel.innerHTML=DEFAULT_CHARGE_TYPES.map(c=>'<option value="'+c.name+'" data-unit="'+c.unit+'">'+c.name+'</option>').join(''); sel.onchange=()=>{const opt=sel.options[sel.selectedIndex]; if(G('charge-unite'))G('charge-unite').value=opt?.dataset.unit||'forfait';}; if(G('charge-date'))G('charge-date').value=today(); sel.onchange();};
+  window.saveProductionCharge=function(){
+    if(!canManageCharges()){showToast('❌ Création/modification réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const ch={id:'ch_'+Date.now(),date:G('charge-date')?.value||today(),type:G('charge-type')?.value||'Divers production',montant:Number(G('charge-montant')?.value||0),monnaie:G('charge-monnaie')?.value||'XOF',quantite:Number(G('charge-quantite')?.value||0),unite:G('charge-unite')?.value||'forfait',note:G('charge-note')?.value||'',createdBy:APP.user?.name||'?',createdAt:new Date().toISOString()};
+    if(ch.montant<=0){showToast('⚠️ Montant obligatoire','warn');return;} window.PRODUCTION_CHARGES.push(ch); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese(); showToast('✅ Charge enregistrée','acc');
+  };
+  window.deleteProductionCharge=function(id){if(!isSuperAdmin()){showToast('❌ Suppression réservée au SuperAdmin','dng');return;} window.PRODUCTION_CHARGES=window.PRODUCTION_CHARGES.filter(c=>c.id!==id); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese();};
+  window.renderProductionCharges=function(){const el=G('charge-entry-list'); if(!el)return; const data=[...window.PRODUCTION_CHARGES].sort((a,b)=>(b.date||'').localeCompare(a.date||'')); const total=data.reduce((s,c)=>s+(Number(c.montant)||0),0); el.innerHTML='<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:.4rem">Total charges réelles saisies : '+total.toLocaleString()+' (monnaies mélangées à vérifier)</div><div class="tw"><table><thead><tr><th>Date</th><th>Charge</th><th>Montant</th><th>Qté</th><th>Unité</th><th>Créateur</th><th>Action</th></tr></thead><tbody>'+data.map(c=>'<tr><td>'+c.date+'</td><td style="text-align:left">'+c.type+'<div style="font-size:9px;color:var(--t3)">'+(c.note||'')+'</div></td><td>'+Number(c.montant).toLocaleString()+' '+c.monnaie+'</td><td>'+((c.quantite||'')||'—')+'</td><td>'+c.unite+'</td><td>'+c.createdBy+'</td><td>'+(isSuperAdmin()?'<button class="dbtn" onclick="deleteProductionCharge(\''+c.id+'\')">Supprimer</button>':'—')+'</td></tr>').join('')+'</tbody></table></div>';};
+  const oldSwCompta=window.swCompta;
+  window.swCompta=function(tab){if(typeof oldSwCompta==='function')oldSwCompta(tab); if(tab==='charges'){loadProductionCharges().then(()=>{initChargeTypes();renderProductionCharges();});} if(tab==='synthese'){renderStockValueSynthese();}};
+  window.stockValueAtDate=function(dateStr){
+    const until=dateStr||today(); let available=0, consumed=0; const rows=[];
+    (APP_INTRANTS||[]).forEach(item=>{const entries=(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===item.id&&(!e.date||e.date<=until)); const qtyIn=entries.reduce((s,e)=>s+Number(e.quantity||0),0); const current=getItemCurrentStock(item.id); const qtyConsumed=Math.max(0,qtyIn-current); const unitCost=getCumpForItem(item.id); const valAvail=current*unitCost, valCons=qtyConsumed*unitCost; available+=valAvail; consumed+=valCons; rows.push({item,qtyIn,current,qtyConsumed,unitCost,valAvail,valCons});}); return {available,consumed,rows};
+  };
+  window.getCumpForItem=function(id){let q=0,p=0;(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===id&&COMPTA_PRIX_VALIDATIONS[e.id]?.validated).forEach(e=>{q+=Number(e.quantity||0);p+=Number(COMPTA_PRIX[e.id]||0)});return q>0?p/q:0;};
+  window.renderStockValueSynthese=function(){const el=G('stock-value-synthese'); if(!el)return; if(G('stock-value-date')&&!G('stock-value-date').value)G('stock-value-date').value=today(); const d=G('stock-value-date')?.value||today(); const r=stockValueAtDate(d); const charges=(window.PRODUCTION_CHARGES||[]).filter(c=>(c.date||'')<=d).reduce((s,c)=>s+Number(c.montant||0),0); el.innerHTML='<div class="mgrid"><div class="met ok"><div class="mlbl">Stock disponible valorisé</div><div class="mval">'+Math.round(r.available).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met warn"><div class="mlbl">Stock consommé valorisé</div><div class="mval">'+Math.round(r.consumed).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met"><div class="mlbl">Charges cumulées</div><div class="mval">'+Math.round(charges).toLocaleString()+'</div><span class="munit">unités monétaires</span></div></div><div class="tw"><table><thead><tr><th>Intrant</th><th>Stock actuel</th><th>CUMP validé</th><th>Valeur stock</th><th>Qté consommée estimée</th><th>Valeur consommée</th></tr></thead><tbody>'+r.rows.map(x=>'<tr><td style="text-align:left">'+x.item.name+'</td><td>'+x.current.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.unitCost).toLocaleString()+'</td><td>'+Math.round(x.valAvail).toLocaleString()+'</td><td>'+x.qtyConsumed.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.valCons).toLocaleString()+'</td></tr>').join('')+'</tbody></table></div>';};
+  setTimeout(()=>{initChargeTypes(); if(G('stock-value-date'))G('stock-value-date').value=today();},1000);
+})();
+</script>
+
+</body></html>`);
   printWin.document.close();
 }
 
@@ -3789,7 +3933,7 @@ const DEFAULT_INTRANTS=[
   {id:'farine_ble',name:'Farine de blé',unit:'kg',conditionnement:'50 kg/sac',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
   {id:'farine_mais',name:'Farine de maïs',unit:'kg',conditionnement:'50 kg/sac',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
   {id:'sel',name:'Sel marin non iodé',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'additif',isDefault:true},
-  {id:'bioclean',name:'BioClean 100',unit:'L',conditionnement:'1 L/bouteille',monitoringType:'special',seuil:2,category:'probiotique',isDefault:true},
+  {id:'bioclean',name:'BC 100',unit:'L',conditionnement:'1 L/bouteille',monitoringType:'special',seuil:2,category:'probiotique',isDefault:true},
   {id:'lacto_conc',name:'Concentré de Lactobacillus',unit:'L',conditionnement:'1 L/bouteille',monitoringType:'special',seuil:1,anticipation:20,category:'probiotique',isDefault:true},
   {id:'pwa_prep',name:'Préparation PWA',unit:'L',conditionnement:'vrac',monitoringType:'special',validite:72,category:'probiotique',isDefault:true},
 ];
@@ -4156,7 +4300,105 @@ function printInventairePDF(){
     +'<p><strong>Date :</strong> '+APP_INVENTAIRE_CURRENT.date+' &nbsp;|&nbsp; <strong>Validé par :</strong> '+(APP_INVENTAIRE_CURRENT.validatedBy||'Non validé')+' &nbsp;|&nbsp; <strong>Généré :</strong> '+new Date().toLocaleString('fr-FR')+'</p>'
     +'<table><thead><tr><th>Intrant</th><th>Unité</th><th>Stock théorique</th><th>Stock réel</th><th>Écart</th></tr></thead><tbody>'+rows+'</tbody></table>'
     +'<p style="margin-top:20px;font-size:10px;color:#666">Bio Aqua Tech — Système de gestion aquacole</p>'
-    +'<script>window.onload=function(){window.print();window.close();}<\/script></body></html>');
+    +'<script>window.onload=function(){window.print();window.close();}<\/script>
+<script id="ichtus-amendements-v2">
+(function(){
+  const oldSwLog = window.swLog;
+  const DEFAULT_CHARGE_TYPES=[
+    {name:'Électricité',unit:'kWh'},{name:'Eau',unit:'m³'},{name:'Main d’œuvre',unit:'forfait'},
+    {name:'Loyer / bâtiment',unit:'forfait'},{name:'Maintenance équipements',unit:'forfait'},
+    {name:'Transport',unit:'forfait'},{name:'Communication',unit:'forfait'},{name:'Analyses laboratoire',unit:'analyse'},
+    {name:'Médicaments / traitements',unit:'forfait'},{name:'Divers production',unit:'forfait'}
+  ];
+  window.PRODUCTION_CHARGES = window.PRODUCTION_CHARGES || [];
+  window.canManageCharges = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur'||r==='Responsable';};
+  window.isSuperAdmin = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur';};
+  window.swLog = function(panel){
+    if(panel==='seuils'){
+      window.APP_LOG_PANEL='seuils';
+      document.querySelectorAll('.log-pane').forEach(p=>p.style.display='none');
+      const el=G('lp-seuils'); if(el) el.style.display='block';
+      document.querySelectorAll('[id^="lt-"]').forEach(b=>b.classList.remove('active'));
+      const btn=G('lt-seuils'); if(btn)btn.classList.add('active');
+      renderSeuilsPanel();
+    } else if(typeof oldSwLog==='function') oldSwLog(panel);
+  };
+  window.syncSeuilForm=function(){
+    const id=G('seuil-intrant')?.value; const it=(APP_INTRANTS||[]).find(x=>x.id===id);
+    if(!it)return; G('seuil-valeur').value=it.seuil||0; G('seuil-unite').value=it.unit||'';
+  };
+  window.renderSeuilsPanel=function(){
+    const sel=G('seuil-intrant'), table=G('seuils-table'); if(!sel||!table)return;
+    const items=APP_INTRANTS||[];
+    sel.innerHTML=items.map(i=>'<option value="'+i.id+'">'+i.name+' ('+(i.unit||'')+')</option>').join('');
+    if(!sel.value&&items[0])sel.value=items[0].id; syncSeuilForm();
+    const can=canValidatePrices();
+    table.innerHTML='<div class="tw"><table><thead><tr><th>Intrant</th><th>Catégorie</th><th>Stock actuel</th><th>Seuil validé</th><th>Statut</th><th>Dernière validation</th></tr></thead><tbody>'+items.map(i=>{
+      const stock=(typeof getItemCurrentStock==='function'?getItemCurrentStock(i.id):0); const seuil=Number(i.seuil||0); const low=seuil>0&&stock<seuil;
+      return '<tr><td style="text-align:left;font-weight:700">'+i.name+'</td><td>'+i.category+'</td><td>'+stock.toFixed(2)+' '+(i.unit||'')+'</td><td>'+(seuil?seuil+' '+(i.unit||''):'<span style="color:var(--warn)">Non défini</span>')+'</td><td>'+(low?'<span class="badge b-dng">⚠ Sous seuil</span>':'<span class="badge b-ok">OK</span>')+'</td><td style="font-size:9px;color:var(--t3)">'+(i.seuilValidatedBy||'—')+'</td></tr>';
+    }).join('')+'</tbody></table></div>'+(can?'':'<div style="font-size:10px;color:var(--warn);margin-top:.5rem">Validation réservée au Responsable ferme / SuperAdmin.</div>');
+  };
+  window.saveIntrantSeuil=async function(){
+    if(!canValidatePrices()){showToast('❌ Validation réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const id=G('seuil-intrant')?.value; const val=Number(G('seuil-valeur')?.value||0); if(!id||val<0){showToast('⚠️ Seuil invalide','warn');return;}
+    const ix=APP_INTRANTS.findIndex(i=>i.id===id); if(ix<0)return;
+    const intrant={...APP_INTRANTS[ix],seuil:val,monitoringType:val>0?(APP_INTRANTS[ix].monitoringType||'special'):APP_INTRANTS[ix].monitoringType,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};
+    try{await withTimeout(farmCol('intrants').doc(id).set(intrant,{merge:true}),6000);APP_INTRANTS[ix]=intrant;renderSeuilsPanel();renderIntrants();if(typeof updateLactoStatus==='function')updateLactoStatus();showToast('✅ Seuil synchronisé','acc');}
+    catch(e){showToast('❌ '+e.message,'dng');}
+  };
+  // Intrants dashboard now reads central seuil for every item, not only special items.
+  window.renderIntrants=function(filter='all'){
+    const container=G('intrants-list');if(!container)return; const role=APP.user?.role||'Opérateur'; const isAdmin=role==='Administrateur'||role==='Responsable';
+    if(G('intrant-admin-btns'))G('intrant-admin-btns').style.display=isAdmin?'flex':'none';
+    const items=filter==='all'?APP_INTRANTS:APP_INTRANTS.filter(i=>i.category===filter);
+    const monIcons={strategic:'🎯',optional:'📋',special:'🚨'}; const catColors={aliment:'#f59e0b',basifiant:'#3b82f6',carbohydrate:'#a78bfa',probiotique:'#34d399',additif:'#06b6d4',materiel:'#6b7280',reactif:'#ec4899',autre:'#94a3b8'};
+    container.innerHTML=items.map(item=>{const stock=getItemCurrentStock(item.id);const seuil=Number(item.seuil||0);const isLow=seuil>0&&stock<seuil;const color=catColors[item.category]||'#94a3b8';
+      return '<div style="background:var(--card);border:1px solid '+(isLow?'var(--dng)':'var(--b2)')+';border-radius:10px;padding:.7rem;position:relative">'
+      +(item.isDefault?'<span style="position:absolute;top:6px;right:6px;font-size:8px;background:rgba(255,215,70,.15);color:var(--gold);border:1px solid rgba(255,215,70,.3);border-radius:4px;padding:1px 5px">Défaut synchronisé</span>':'')
+      +'<div style="display:flex;gap:5px;margin-bottom:.3rem"><span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+color+'20;color:'+color+';font-weight:700">'+item.category+'</span><span style="font-size:10px">'+(monIcons[item.monitoringType]||'📋')+' '+(item.monitoringType==='strategic'?'Stratégique':item.monitoringType==='special'?'Spécial':'Facultatif')+'</span></div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:.2rem">'+item.name+'</div><div style="font-size:10px;color:var(--t3)">'+(item.conditionnement||'—')+' · '+(item.unit||'')+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+(isLow?'var(--dng)':'var(--acc)')+';margin-top:.3rem">Stock: '+stock.toFixed(2)+' '+(item.unit||'')+(isLow?' ⚠️ SEUIL':'')+'</div>'
+      +'<div style="font-size:9px;color:var(--t3)">Seuil centralisé: '+(seuil?seuil+' '+(item.unit||''):'non défini')+'</div>'
+      +'<div style="display:flex;gap:.3rem;margin-top:.5rem;flex-wrap:wrap"><button onclick="openAddStock(\''+item.id+'\')" style="font-size:9px;background:var(--acc);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">📥 Entrée</button>'
+      +(isAdmin?'<button onclick="openEditIntrant(\''+item.id+'\')" class="ebtn">✏️ Modifier</button><button onclick="deleteIntrant(\''+item.id+'\')" class="dbtn">🗑 Supprimer</button>':'')+'</div></div>';}).join('')||'<div style="color:var(--t3);font-size:11px;padding:1rem">Aucun intrant.</div>';
+  };
+  const oldUpdateLacto=window.updateLactoStatus;
+  window.updateLactoStatus=function(){
+    const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc'); if(it&&G('lacto-seuil'))G('lacto-seuil').value=it.seuil||0;
+    if(typeof oldUpdateLacto==='function')oldUpdateLacto();
+  };
+  const oldSaveLacto=window.saveLactoData;
+  window.saveLactoData=function(){
+    const val=Number(G('lacto-seuil')?.value||0); const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc');
+    if(it){const ix=APP_INTRANTS.findIndex(i=>i.id===it.id);APP_INTRANTS[ix]={...it,seuil:val,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};farmCol('intrants').doc(it.id).set(APP_INTRANTS[ix],{merge:true}).catch(console.error);}
+    if(typeof oldSaveLacto==='function')oldSaveLacto(); if(typeof renderIntrants==='function')renderIntrants();
+  };
+  // PWA modalities
+  window.PWA_RATES={primo:{label:'Primo-inoculation',dose:4.7},entretien:{label:'Entretien',dose:0.2},rotation:{label:'Système mature_post introduction alevins',dose:0.2,vol380Fixed:0.38},postintro:{label:'Système immature_post introduction alevins',dose:0.1}};
+  // Charges réelles
+  async function loadProductionCharges(){try{const d=await withTimeout(farmCol('config').doc('charges_reelles').get(),6000); if(d.exists) window.PRODUCTION_CHARGES=d.data().items||[];}catch(e){console.warn(e)}}
+  function saveProductionCharges(){return farmCol('config').doc('charges_reelles').set({items:window.PRODUCTION_CHARGES,updatedAt:new Date().toISOString()},{merge:true}).catch(console.error)}
+  window.initChargeTypes=function(){const sel=G('charge-type'); if(!sel)return; sel.innerHTML=DEFAULT_CHARGE_TYPES.map(c=>'<option value="'+c.name+'" data-unit="'+c.unit+'">'+c.name+'</option>').join(''); sel.onchange=()=>{const opt=sel.options[sel.selectedIndex]; if(G('charge-unite'))G('charge-unite').value=opt?.dataset.unit||'forfait';}; if(G('charge-date'))G('charge-date').value=today(); sel.onchange();};
+  window.saveProductionCharge=function(){
+    if(!canManageCharges()){showToast('❌ Création/modification réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const ch={id:'ch_'+Date.now(),date:G('charge-date')?.value||today(),type:G('charge-type')?.value||'Divers production',montant:Number(G('charge-montant')?.value||0),monnaie:G('charge-monnaie')?.value||'XOF',quantite:Number(G('charge-quantite')?.value||0),unite:G('charge-unite')?.value||'forfait',note:G('charge-note')?.value||'',createdBy:APP.user?.name||'?',createdAt:new Date().toISOString()};
+    if(ch.montant<=0){showToast('⚠️ Montant obligatoire','warn');return;} window.PRODUCTION_CHARGES.push(ch); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese(); showToast('✅ Charge enregistrée','acc');
+  };
+  window.deleteProductionCharge=function(id){if(!isSuperAdmin()){showToast('❌ Suppression réservée au SuperAdmin','dng');return;} window.PRODUCTION_CHARGES=window.PRODUCTION_CHARGES.filter(c=>c.id!==id); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese();};
+  window.renderProductionCharges=function(){const el=G('charge-entry-list'); if(!el)return; const data=[...window.PRODUCTION_CHARGES].sort((a,b)=>(b.date||'').localeCompare(a.date||'')); const total=data.reduce((s,c)=>s+(Number(c.montant)||0),0); el.innerHTML='<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:.4rem">Total charges réelles saisies : '+total.toLocaleString()+' (monnaies mélangées à vérifier)</div><div class="tw"><table><thead><tr><th>Date</th><th>Charge</th><th>Montant</th><th>Qté</th><th>Unité</th><th>Créateur</th><th>Action</th></tr></thead><tbody>'+data.map(c=>'<tr><td>'+c.date+'</td><td style="text-align:left">'+c.type+'<div style="font-size:9px;color:var(--t3)">'+(c.note||'')+'</div></td><td>'+Number(c.montant).toLocaleString()+' '+c.monnaie+'</td><td>'+((c.quantite||'')||'—')+'</td><td>'+c.unite+'</td><td>'+c.createdBy+'</td><td>'+(isSuperAdmin()?'<button class="dbtn" onclick="deleteProductionCharge(\''+c.id+'\')">Supprimer</button>':'—')+'</td></tr>').join('')+'</tbody></table></div>';};
+  const oldSwCompta=window.swCompta;
+  window.swCompta=function(tab){if(typeof oldSwCompta==='function')oldSwCompta(tab); if(tab==='charges'){loadProductionCharges().then(()=>{initChargeTypes();renderProductionCharges();});} if(tab==='synthese'){renderStockValueSynthese();}};
+  window.stockValueAtDate=function(dateStr){
+    const until=dateStr||today(); let available=0, consumed=0; const rows=[];
+    (APP_INTRANTS||[]).forEach(item=>{const entries=(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===item.id&&(!e.date||e.date<=until)); const qtyIn=entries.reduce((s,e)=>s+Number(e.quantity||0),0); const current=getItemCurrentStock(item.id); const qtyConsumed=Math.max(0,qtyIn-current); const unitCost=getCumpForItem(item.id); const valAvail=current*unitCost, valCons=qtyConsumed*unitCost; available+=valAvail; consumed+=valCons; rows.push({item,qtyIn,current,qtyConsumed,unitCost,valAvail,valCons});}); return {available,consumed,rows};
+  };
+  window.getCumpForItem=function(id){let q=0,p=0;(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===id&&COMPTA_PRIX_VALIDATIONS[e.id]?.validated).forEach(e=>{q+=Number(e.quantity||0);p+=Number(COMPTA_PRIX[e.id]||0)});return q>0?p/q:0;};
+  window.renderStockValueSynthese=function(){const el=G('stock-value-synthese'); if(!el)return; if(G('stock-value-date')&&!G('stock-value-date').value)G('stock-value-date').value=today(); const d=G('stock-value-date')?.value||today(); const r=stockValueAtDate(d); const charges=(window.PRODUCTION_CHARGES||[]).filter(c=>(c.date||'')<=d).reduce((s,c)=>s+Number(c.montant||0),0); el.innerHTML='<div class="mgrid"><div class="met ok"><div class="mlbl">Stock disponible valorisé</div><div class="mval">'+Math.round(r.available).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met warn"><div class="mlbl">Stock consommé valorisé</div><div class="mval">'+Math.round(r.consumed).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met"><div class="mlbl">Charges cumulées</div><div class="mval">'+Math.round(charges).toLocaleString()+'</div><span class="munit">unités monétaires</span></div></div><div class="tw"><table><thead><tr><th>Intrant</th><th>Stock actuel</th><th>CUMP validé</th><th>Valeur stock</th><th>Qté consommée estimée</th><th>Valeur consommée</th></tr></thead><tbody>'+r.rows.map(x=>'<tr><td style="text-align:left">'+x.item.name+'</td><td>'+x.current.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.unitCost).toLocaleString()+'</td><td>'+Math.round(x.valAvail).toLocaleString()+'</td><td>'+x.qtyConsumed.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.valCons).toLocaleString()+'</td></tr>').join('')+'</tbody></table></div>';};
+  setTimeout(()=>{initChargeTypes(); if(G('stock-value-date'))G('stock-value-date').value=today();},1000);
+})();
+</script>
+
+</body></html>');
   w.document.close();
 }
 
@@ -4195,10 +4437,10 @@ async function loadAnalyseStock(){
 
 let PWA_PLAN=[];
 const PWA_RATES={
-  primo:{label:'Primo inoculation',dose:4.7},
+  primo:{label:'Primo-inoculation',dose:4.7},
   entretien:{label:'Entretien',dose:0.2},
-  rotation:{label:'Rotation croisière',dose:0.2,vol380Fixed:0.38},
-  postintro:{label:'Post-introduction alevins',dose:0.1}
+  rotation:{label:'Système mature_post introduction alevins',dose:0.2,vol380Fixed:0.38},
+  postintro:{label:'Système immature_post introduction alevins',dose:0.1}
 };
 const PWA_DAYS={0:'Dimanche',1:'Lundi',2:'Mardi',3:'Mercredi',4:'Jeudi',5:'Vendredi',6:'Samedi'};
 function initPWASelects(){
@@ -6435,7 +6677,105 @@ function exportJournalPDF(){
       <td><span class="badge ${tc}">${e.type||'—'}</span></td>
       <td>${e.action||'—'}</td><td>${e.detail||'—'}</td><td>${e.device||'—'}</td></tr>`;
   }).join('')}</tbody></table>
-  </body></html>`;
+  
+<script id="ichtus-amendements-v2">
+(function(){
+  const oldSwLog = window.swLog;
+  const DEFAULT_CHARGE_TYPES=[
+    {name:'Électricité',unit:'kWh'},{name:'Eau',unit:'m³'},{name:'Main d’œuvre',unit:'forfait'},
+    {name:'Loyer / bâtiment',unit:'forfait'},{name:'Maintenance équipements',unit:'forfait'},
+    {name:'Transport',unit:'forfait'},{name:'Communication',unit:'forfait'},{name:'Analyses laboratoire',unit:'analyse'},
+    {name:'Médicaments / traitements',unit:'forfait'},{name:'Divers production',unit:'forfait'}
+  ];
+  window.PRODUCTION_CHARGES = window.PRODUCTION_CHARGES || [];
+  window.canManageCharges = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur'||r==='Responsable';};
+  window.isSuperAdmin = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur';};
+  window.swLog = function(panel){
+    if(panel==='seuils'){
+      window.APP_LOG_PANEL='seuils';
+      document.querySelectorAll('.log-pane').forEach(p=>p.style.display='none');
+      const el=G('lp-seuils'); if(el) el.style.display='block';
+      document.querySelectorAll('[id^="lt-"]').forEach(b=>b.classList.remove('active'));
+      const btn=G('lt-seuils'); if(btn)btn.classList.add('active');
+      renderSeuilsPanel();
+    } else if(typeof oldSwLog==='function') oldSwLog(panel);
+  };
+  window.syncSeuilForm=function(){
+    const id=G('seuil-intrant')?.value; const it=(APP_INTRANTS||[]).find(x=>x.id===id);
+    if(!it)return; G('seuil-valeur').value=it.seuil||0; G('seuil-unite').value=it.unit||'';
+  };
+  window.renderSeuilsPanel=function(){
+    const sel=G('seuil-intrant'), table=G('seuils-table'); if(!sel||!table)return;
+    const items=APP_INTRANTS||[];
+    sel.innerHTML=items.map(i=>'<option value="'+i.id+'">'+i.name+' ('+(i.unit||'')+')</option>').join('');
+    if(!sel.value&&items[0])sel.value=items[0].id; syncSeuilForm();
+    const can=canValidatePrices();
+    table.innerHTML='<div class="tw"><table><thead><tr><th>Intrant</th><th>Catégorie</th><th>Stock actuel</th><th>Seuil validé</th><th>Statut</th><th>Dernière validation</th></tr></thead><tbody>'+items.map(i=>{
+      const stock=(typeof getItemCurrentStock==='function'?getItemCurrentStock(i.id):0); const seuil=Number(i.seuil||0); const low=seuil>0&&stock<seuil;
+      return '<tr><td style="text-align:left;font-weight:700">'+i.name+'</td><td>'+i.category+'</td><td>'+stock.toFixed(2)+' '+(i.unit||'')+'</td><td>'+(seuil?seuil+' '+(i.unit||''):'<span style="color:var(--warn)">Non défini</span>')+'</td><td>'+(low?'<span class="badge b-dng">⚠ Sous seuil</span>':'<span class="badge b-ok">OK</span>')+'</td><td style="font-size:9px;color:var(--t3)">'+(i.seuilValidatedBy||'—')+'</td></tr>';
+    }).join('')+'</tbody></table></div>'+(can?'':'<div style="font-size:10px;color:var(--warn);margin-top:.5rem">Validation réservée au Responsable ferme / SuperAdmin.</div>');
+  };
+  window.saveIntrantSeuil=async function(){
+    if(!canValidatePrices()){showToast('❌ Validation réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const id=G('seuil-intrant')?.value; const val=Number(G('seuil-valeur')?.value||0); if(!id||val<0){showToast('⚠️ Seuil invalide','warn');return;}
+    const ix=APP_INTRANTS.findIndex(i=>i.id===id); if(ix<0)return;
+    const intrant={...APP_INTRANTS[ix],seuil:val,monitoringType:val>0?(APP_INTRANTS[ix].monitoringType||'special'):APP_INTRANTS[ix].monitoringType,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};
+    try{await withTimeout(farmCol('intrants').doc(id).set(intrant,{merge:true}),6000);APP_INTRANTS[ix]=intrant;renderSeuilsPanel();renderIntrants();if(typeof updateLactoStatus==='function')updateLactoStatus();showToast('✅ Seuil synchronisé','acc');}
+    catch(e){showToast('❌ '+e.message,'dng');}
+  };
+  // Intrants dashboard now reads central seuil for every item, not only special items.
+  window.renderIntrants=function(filter='all'){
+    const container=G('intrants-list');if(!container)return; const role=APP.user?.role||'Opérateur'; const isAdmin=role==='Administrateur'||role==='Responsable';
+    if(G('intrant-admin-btns'))G('intrant-admin-btns').style.display=isAdmin?'flex':'none';
+    const items=filter==='all'?APP_INTRANTS:APP_INTRANTS.filter(i=>i.category===filter);
+    const monIcons={strategic:'🎯',optional:'📋',special:'🚨'}; const catColors={aliment:'#f59e0b',basifiant:'#3b82f6',carbohydrate:'#a78bfa',probiotique:'#34d399',additif:'#06b6d4',materiel:'#6b7280',reactif:'#ec4899',autre:'#94a3b8'};
+    container.innerHTML=items.map(item=>{const stock=getItemCurrentStock(item.id);const seuil=Number(item.seuil||0);const isLow=seuil>0&&stock<seuil;const color=catColors[item.category]||'#94a3b8';
+      return '<div style="background:var(--card);border:1px solid '+(isLow?'var(--dng)':'var(--b2)')+';border-radius:10px;padding:.7rem;position:relative">'
+      +(item.isDefault?'<span style="position:absolute;top:6px;right:6px;font-size:8px;background:rgba(255,215,70,.15);color:var(--gold);border:1px solid rgba(255,215,70,.3);border-radius:4px;padding:1px 5px">Défaut synchronisé</span>':'')
+      +'<div style="display:flex;gap:5px;margin-bottom:.3rem"><span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+color+'20;color:'+color+';font-weight:700">'+item.category+'</span><span style="font-size:10px">'+(monIcons[item.monitoringType]||'📋')+' '+(item.monitoringType==='strategic'?'Stratégique':item.monitoringType==='special'?'Spécial':'Facultatif')+'</span></div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:.2rem">'+item.name+'</div><div style="font-size:10px;color:var(--t3)">'+(item.conditionnement||'—')+' · '+(item.unit||'')+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+(isLow?'var(--dng)':'var(--acc)')+';margin-top:.3rem">Stock: '+stock.toFixed(2)+' '+(item.unit||'')+(isLow?' ⚠️ SEUIL':'')+'</div>'
+      +'<div style="font-size:9px;color:var(--t3)">Seuil centralisé: '+(seuil?seuil+' '+(item.unit||''):'non défini')+'</div>'
+      +'<div style="display:flex;gap:.3rem;margin-top:.5rem;flex-wrap:wrap"><button onclick="openAddStock(\''+item.id+'\')" style="font-size:9px;background:var(--acc);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">📥 Entrée</button>'
+      +(isAdmin?'<button onclick="openEditIntrant(\''+item.id+'\')" class="ebtn">✏️ Modifier</button><button onclick="deleteIntrant(\''+item.id+'\')" class="dbtn">🗑 Supprimer</button>':'')+'</div></div>';}).join('')||'<div style="color:var(--t3);font-size:11px;padding:1rem">Aucun intrant.</div>';
+  };
+  const oldUpdateLacto=window.updateLactoStatus;
+  window.updateLactoStatus=function(){
+    const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc'); if(it&&G('lacto-seuil'))G('lacto-seuil').value=it.seuil||0;
+    if(typeof oldUpdateLacto==='function')oldUpdateLacto();
+  };
+  const oldSaveLacto=window.saveLactoData;
+  window.saveLactoData=function(){
+    const val=Number(G('lacto-seuil')?.value||0); const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc');
+    if(it){const ix=APP_INTRANTS.findIndex(i=>i.id===it.id);APP_INTRANTS[ix]={...it,seuil:val,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};farmCol('intrants').doc(it.id).set(APP_INTRANTS[ix],{merge:true}).catch(console.error);}
+    if(typeof oldSaveLacto==='function')oldSaveLacto(); if(typeof renderIntrants==='function')renderIntrants();
+  };
+  // PWA modalities
+  window.PWA_RATES={primo:{label:'Primo-inoculation',dose:4.7},entretien:{label:'Entretien',dose:0.2},rotation:{label:'Système mature_post introduction alevins',dose:0.2,vol380Fixed:0.38},postintro:{label:'Système immature_post introduction alevins',dose:0.1}};
+  // Charges réelles
+  async function loadProductionCharges(){try{const d=await withTimeout(farmCol('config').doc('charges_reelles').get(),6000); if(d.exists) window.PRODUCTION_CHARGES=d.data().items||[];}catch(e){console.warn(e)}}
+  function saveProductionCharges(){return farmCol('config').doc('charges_reelles').set({items:window.PRODUCTION_CHARGES,updatedAt:new Date().toISOString()},{merge:true}).catch(console.error)}
+  window.initChargeTypes=function(){const sel=G('charge-type'); if(!sel)return; sel.innerHTML=DEFAULT_CHARGE_TYPES.map(c=>'<option value="'+c.name+'" data-unit="'+c.unit+'">'+c.name+'</option>').join(''); sel.onchange=()=>{const opt=sel.options[sel.selectedIndex]; if(G('charge-unite'))G('charge-unite').value=opt?.dataset.unit||'forfait';}; if(G('charge-date'))G('charge-date').value=today(); sel.onchange();};
+  window.saveProductionCharge=function(){
+    if(!canManageCharges()){showToast('❌ Création/modification réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const ch={id:'ch_'+Date.now(),date:G('charge-date')?.value||today(),type:G('charge-type')?.value||'Divers production',montant:Number(G('charge-montant')?.value||0),monnaie:G('charge-monnaie')?.value||'XOF',quantite:Number(G('charge-quantite')?.value||0),unite:G('charge-unite')?.value||'forfait',note:G('charge-note')?.value||'',createdBy:APP.user?.name||'?',createdAt:new Date().toISOString()};
+    if(ch.montant<=0){showToast('⚠️ Montant obligatoire','warn');return;} window.PRODUCTION_CHARGES.push(ch); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese(); showToast('✅ Charge enregistrée','acc');
+  };
+  window.deleteProductionCharge=function(id){if(!isSuperAdmin()){showToast('❌ Suppression réservée au SuperAdmin','dng');return;} window.PRODUCTION_CHARGES=window.PRODUCTION_CHARGES.filter(c=>c.id!==id); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese();};
+  window.renderProductionCharges=function(){const el=G('charge-entry-list'); if(!el)return; const data=[...window.PRODUCTION_CHARGES].sort((a,b)=>(b.date||'').localeCompare(a.date||'')); const total=data.reduce((s,c)=>s+(Number(c.montant)||0),0); el.innerHTML='<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:.4rem">Total charges réelles saisies : '+total.toLocaleString()+' (monnaies mélangées à vérifier)</div><div class="tw"><table><thead><tr><th>Date</th><th>Charge</th><th>Montant</th><th>Qté</th><th>Unité</th><th>Créateur</th><th>Action</th></tr></thead><tbody>'+data.map(c=>'<tr><td>'+c.date+'</td><td style="text-align:left">'+c.type+'<div style="font-size:9px;color:var(--t3)">'+(c.note||'')+'</div></td><td>'+Number(c.montant).toLocaleString()+' '+c.monnaie+'</td><td>'+((c.quantite||'')||'—')+'</td><td>'+c.unite+'</td><td>'+c.createdBy+'</td><td>'+(isSuperAdmin()?'<button class="dbtn" onclick="deleteProductionCharge(\''+c.id+'\')">Supprimer</button>':'—')+'</td></tr>').join('')+'</tbody></table></div>';};
+  const oldSwCompta=window.swCompta;
+  window.swCompta=function(tab){if(typeof oldSwCompta==='function')oldSwCompta(tab); if(tab==='charges'){loadProductionCharges().then(()=>{initChargeTypes();renderProductionCharges();});} if(tab==='synthese'){renderStockValueSynthese();}};
+  window.stockValueAtDate=function(dateStr){
+    const until=dateStr||today(); let available=0, consumed=0; const rows=[];
+    (APP_INTRANTS||[]).forEach(item=>{const entries=(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===item.id&&(!e.date||e.date<=until)); const qtyIn=entries.reduce((s,e)=>s+Number(e.quantity||0),0); const current=getItemCurrentStock(item.id); const qtyConsumed=Math.max(0,qtyIn-current); const unitCost=getCumpForItem(item.id); const valAvail=current*unitCost, valCons=qtyConsumed*unitCost; available+=valAvail; consumed+=valCons; rows.push({item,qtyIn,current,qtyConsumed,unitCost,valAvail,valCons});}); return {available,consumed,rows};
+  };
+  window.getCumpForItem=function(id){let q=0,p=0;(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===id&&COMPTA_PRIX_VALIDATIONS[e.id]?.validated).forEach(e=>{q+=Number(e.quantity||0);p+=Number(COMPTA_PRIX[e.id]||0)});return q>0?p/q:0;};
+  window.renderStockValueSynthese=function(){const el=G('stock-value-synthese'); if(!el)return; if(G('stock-value-date')&&!G('stock-value-date').value)G('stock-value-date').value=today(); const d=G('stock-value-date')?.value||today(); const r=stockValueAtDate(d); const charges=(window.PRODUCTION_CHARGES||[]).filter(c=>(c.date||'')<=d).reduce((s,c)=>s+Number(c.montant||0),0); el.innerHTML='<div class="mgrid"><div class="met ok"><div class="mlbl">Stock disponible valorisé</div><div class="mval">'+Math.round(r.available).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met warn"><div class="mlbl">Stock consommé valorisé</div><div class="mval">'+Math.round(r.consumed).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met"><div class="mlbl">Charges cumulées</div><div class="mval">'+Math.round(charges).toLocaleString()+'</div><span class="munit">unités monétaires</span></div></div><div class="tw"><table><thead><tr><th>Intrant</th><th>Stock actuel</th><th>CUMP validé</th><th>Valeur stock</th><th>Qté consommée estimée</th><th>Valeur consommée</th></tr></thead><tbody>'+r.rows.map(x=>'<tr><td style="text-align:left">'+x.item.name+'</td><td>'+x.current.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.unitCost).toLocaleString()+'</td><td>'+Math.round(x.valAvail).toLocaleString()+'</td><td>'+x.qtyConsumed.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.valCons).toLocaleString()+'</td></tr>').join('')+'</tbody></table></div>';};
+  setTimeout(()=>{initChargeTypes(); if(G('stock-value-date'))G('stock-value-date').value=today();},1000);
+})();
+</script>
+
+</body></html>`;
   const win=window.open('','_blank');
   if(!win){alert('⚠️ Autorisez les popups pour exporter le PDF.');return;}
   win.document.write(html);win.document.close();
@@ -6715,7 +7055,105 @@ function exportAdminJournalPDF(){
       <td><span class="badge ${tc}">${e.type||'—'}</span></td>
       <td>${e.action||'—'}</td><td>${e.detail||'—'}</td><td>${e.device||'—'}</td></tr>`;
   }).join('')}</tbody></table>
-  </body></html>`;
+  
+<script id="ichtus-amendements-v2">
+(function(){
+  const oldSwLog = window.swLog;
+  const DEFAULT_CHARGE_TYPES=[
+    {name:'Électricité',unit:'kWh'},{name:'Eau',unit:'m³'},{name:'Main d’œuvre',unit:'forfait'},
+    {name:'Loyer / bâtiment',unit:'forfait'},{name:'Maintenance équipements',unit:'forfait'},
+    {name:'Transport',unit:'forfait'},{name:'Communication',unit:'forfait'},{name:'Analyses laboratoire',unit:'analyse'},
+    {name:'Médicaments / traitements',unit:'forfait'},{name:'Divers production',unit:'forfait'}
+  ];
+  window.PRODUCTION_CHARGES = window.PRODUCTION_CHARGES || [];
+  window.canManageCharges = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur'||r==='Responsable';};
+  window.isSuperAdmin = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur';};
+  window.swLog = function(panel){
+    if(panel==='seuils'){
+      window.APP_LOG_PANEL='seuils';
+      document.querySelectorAll('.log-pane').forEach(p=>p.style.display='none');
+      const el=G('lp-seuils'); if(el) el.style.display='block';
+      document.querySelectorAll('[id^="lt-"]').forEach(b=>b.classList.remove('active'));
+      const btn=G('lt-seuils'); if(btn)btn.classList.add('active');
+      renderSeuilsPanel();
+    } else if(typeof oldSwLog==='function') oldSwLog(panel);
+  };
+  window.syncSeuilForm=function(){
+    const id=G('seuil-intrant')?.value; const it=(APP_INTRANTS||[]).find(x=>x.id===id);
+    if(!it)return; G('seuil-valeur').value=it.seuil||0; G('seuil-unite').value=it.unit||'';
+  };
+  window.renderSeuilsPanel=function(){
+    const sel=G('seuil-intrant'), table=G('seuils-table'); if(!sel||!table)return;
+    const items=APP_INTRANTS||[];
+    sel.innerHTML=items.map(i=>'<option value="'+i.id+'">'+i.name+' ('+(i.unit||'')+')</option>').join('');
+    if(!sel.value&&items[0])sel.value=items[0].id; syncSeuilForm();
+    const can=canValidatePrices();
+    table.innerHTML='<div class="tw"><table><thead><tr><th>Intrant</th><th>Catégorie</th><th>Stock actuel</th><th>Seuil validé</th><th>Statut</th><th>Dernière validation</th></tr></thead><tbody>'+items.map(i=>{
+      const stock=(typeof getItemCurrentStock==='function'?getItemCurrentStock(i.id):0); const seuil=Number(i.seuil||0); const low=seuil>0&&stock<seuil;
+      return '<tr><td style="text-align:left;font-weight:700">'+i.name+'</td><td>'+i.category+'</td><td>'+stock.toFixed(2)+' '+(i.unit||'')+'</td><td>'+(seuil?seuil+' '+(i.unit||''):'<span style="color:var(--warn)">Non défini</span>')+'</td><td>'+(low?'<span class="badge b-dng">⚠ Sous seuil</span>':'<span class="badge b-ok">OK</span>')+'</td><td style="font-size:9px;color:var(--t3)">'+(i.seuilValidatedBy||'—')+'</td></tr>';
+    }).join('')+'</tbody></table></div>'+(can?'':'<div style="font-size:10px;color:var(--warn);margin-top:.5rem">Validation réservée au Responsable ferme / SuperAdmin.</div>');
+  };
+  window.saveIntrantSeuil=async function(){
+    if(!canValidatePrices()){showToast('❌ Validation réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const id=G('seuil-intrant')?.value; const val=Number(G('seuil-valeur')?.value||0); if(!id||val<0){showToast('⚠️ Seuil invalide','warn');return;}
+    const ix=APP_INTRANTS.findIndex(i=>i.id===id); if(ix<0)return;
+    const intrant={...APP_INTRANTS[ix],seuil:val,monitoringType:val>0?(APP_INTRANTS[ix].monitoringType||'special'):APP_INTRANTS[ix].monitoringType,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};
+    try{await withTimeout(farmCol('intrants').doc(id).set(intrant,{merge:true}),6000);APP_INTRANTS[ix]=intrant;renderSeuilsPanel();renderIntrants();if(typeof updateLactoStatus==='function')updateLactoStatus();showToast('✅ Seuil synchronisé','acc');}
+    catch(e){showToast('❌ '+e.message,'dng');}
+  };
+  // Intrants dashboard now reads central seuil for every item, not only special items.
+  window.renderIntrants=function(filter='all'){
+    const container=G('intrants-list');if(!container)return; const role=APP.user?.role||'Opérateur'; const isAdmin=role==='Administrateur'||role==='Responsable';
+    if(G('intrant-admin-btns'))G('intrant-admin-btns').style.display=isAdmin?'flex':'none';
+    const items=filter==='all'?APP_INTRANTS:APP_INTRANTS.filter(i=>i.category===filter);
+    const monIcons={strategic:'🎯',optional:'📋',special:'🚨'}; const catColors={aliment:'#f59e0b',basifiant:'#3b82f6',carbohydrate:'#a78bfa',probiotique:'#34d399',additif:'#06b6d4',materiel:'#6b7280',reactif:'#ec4899',autre:'#94a3b8'};
+    container.innerHTML=items.map(item=>{const stock=getItemCurrentStock(item.id);const seuil=Number(item.seuil||0);const isLow=seuil>0&&stock<seuil;const color=catColors[item.category]||'#94a3b8';
+      return '<div style="background:var(--card);border:1px solid '+(isLow?'var(--dng)':'var(--b2)')+';border-radius:10px;padding:.7rem;position:relative">'
+      +(item.isDefault?'<span style="position:absolute;top:6px;right:6px;font-size:8px;background:rgba(255,215,70,.15);color:var(--gold);border:1px solid rgba(255,215,70,.3);border-radius:4px;padding:1px 5px">Défaut synchronisé</span>':'')
+      +'<div style="display:flex;gap:5px;margin-bottom:.3rem"><span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+color+'20;color:'+color+';font-weight:700">'+item.category+'</span><span style="font-size:10px">'+(monIcons[item.monitoringType]||'📋')+' '+(item.monitoringType==='strategic'?'Stratégique':item.monitoringType==='special'?'Spécial':'Facultatif')+'</span></div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:.2rem">'+item.name+'</div><div style="font-size:10px;color:var(--t3)">'+(item.conditionnement||'—')+' · '+(item.unit||'')+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+(isLow?'var(--dng)':'var(--acc)')+';margin-top:.3rem">Stock: '+stock.toFixed(2)+' '+(item.unit||'')+(isLow?' ⚠️ SEUIL':'')+'</div>'
+      +'<div style="font-size:9px;color:var(--t3)">Seuil centralisé: '+(seuil?seuil+' '+(item.unit||''):'non défini')+'</div>'
+      +'<div style="display:flex;gap:.3rem;margin-top:.5rem;flex-wrap:wrap"><button onclick="openAddStock(\''+item.id+'\')" style="font-size:9px;background:var(--acc);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">📥 Entrée</button>'
+      +(isAdmin?'<button onclick="openEditIntrant(\''+item.id+'\')" class="ebtn">✏️ Modifier</button><button onclick="deleteIntrant(\''+item.id+'\')" class="dbtn">🗑 Supprimer</button>':'')+'</div></div>';}).join('')||'<div style="color:var(--t3);font-size:11px;padding:1rem">Aucun intrant.</div>';
+  };
+  const oldUpdateLacto=window.updateLactoStatus;
+  window.updateLactoStatus=function(){
+    const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc'); if(it&&G('lacto-seuil'))G('lacto-seuil').value=it.seuil||0;
+    if(typeof oldUpdateLacto==='function')oldUpdateLacto();
+  };
+  const oldSaveLacto=window.saveLactoData;
+  window.saveLactoData=function(){
+    const val=Number(G('lacto-seuil')?.value||0); const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc');
+    if(it){const ix=APP_INTRANTS.findIndex(i=>i.id===it.id);APP_INTRANTS[ix]={...it,seuil:val,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};farmCol('intrants').doc(it.id).set(APP_INTRANTS[ix],{merge:true}).catch(console.error);}
+    if(typeof oldSaveLacto==='function')oldSaveLacto(); if(typeof renderIntrants==='function')renderIntrants();
+  };
+  // PWA modalities
+  window.PWA_RATES={primo:{label:'Primo-inoculation',dose:4.7},entretien:{label:'Entretien',dose:0.2},rotation:{label:'Système mature_post introduction alevins',dose:0.2,vol380Fixed:0.38},postintro:{label:'Système immature_post introduction alevins',dose:0.1}};
+  // Charges réelles
+  async function loadProductionCharges(){try{const d=await withTimeout(farmCol('config').doc('charges_reelles').get(),6000); if(d.exists) window.PRODUCTION_CHARGES=d.data().items||[];}catch(e){console.warn(e)}}
+  function saveProductionCharges(){return farmCol('config').doc('charges_reelles').set({items:window.PRODUCTION_CHARGES,updatedAt:new Date().toISOString()},{merge:true}).catch(console.error)}
+  window.initChargeTypes=function(){const sel=G('charge-type'); if(!sel)return; sel.innerHTML=DEFAULT_CHARGE_TYPES.map(c=>'<option value="'+c.name+'" data-unit="'+c.unit+'">'+c.name+'</option>').join(''); sel.onchange=()=>{const opt=sel.options[sel.selectedIndex]; if(G('charge-unite'))G('charge-unite').value=opt?.dataset.unit||'forfait';}; if(G('charge-date'))G('charge-date').value=today(); sel.onchange();};
+  window.saveProductionCharge=function(){
+    if(!canManageCharges()){showToast('❌ Création/modification réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const ch={id:'ch_'+Date.now(),date:G('charge-date')?.value||today(),type:G('charge-type')?.value||'Divers production',montant:Number(G('charge-montant')?.value||0),monnaie:G('charge-monnaie')?.value||'XOF',quantite:Number(G('charge-quantite')?.value||0),unite:G('charge-unite')?.value||'forfait',note:G('charge-note')?.value||'',createdBy:APP.user?.name||'?',createdAt:new Date().toISOString()};
+    if(ch.montant<=0){showToast('⚠️ Montant obligatoire','warn');return;} window.PRODUCTION_CHARGES.push(ch); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese(); showToast('✅ Charge enregistrée','acc');
+  };
+  window.deleteProductionCharge=function(id){if(!isSuperAdmin()){showToast('❌ Suppression réservée au SuperAdmin','dng');return;} window.PRODUCTION_CHARGES=window.PRODUCTION_CHARGES.filter(c=>c.id!==id); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese();};
+  window.renderProductionCharges=function(){const el=G('charge-entry-list'); if(!el)return; const data=[...window.PRODUCTION_CHARGES].sort((a,b)=>(b.date||'').localeCompare(a.date||'')); const total=data.reduce((s,c)=>s+(Number(c.montant)||0),0); el.innerHTML='<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:.4rem">Total charges réelles saisies : '+total.toLocaleString()+' (monnaies mélangées à vérifier)</div><div class="tw"><table><thead><tr><th>Date</th><th>Charge</th><th>Montant</th><th>Qté</th><th>Unité</th><th>Créateur</th><th>Action</th></tr></thead><tbody>'+data.map(c=>'<tr><td>'+c.date+'</td><td style="text-align:left">'+c.type+'<div style="font-size:9px;color:var(--t3)">'+(c.note||'')+'</div></td><td>'+Number(c.montant).toLocaleString()+' '+c.monnaie+'</td><td>'+((c.quantite||'')||'—')+'</td><td>'+c.unite+'</td><td>'+c.createdBy+'</td><td>'+(isSuperAdmin()?'<button class="dbtn" onclick="deleteProductionCharge(\''+c.id+'\')">Supprimer</button>':'—')+'</td></tr>').join('')+'</tbody></table></div>';};
+  const oldSwCompta=window.swCompta;
+  window.swCompta=function(tab){if(typeof oldSwCompta==='function')oldSwCompta(tab); if(tab==='charges'){loadProductionCharges().then(()=>{initChargeTypes();renderProductionCharges();});} if(tab==='synthese'){renderStockValueSynthese();}};
+  window.stockValueAtDate=function(dateStr){
+    const until=dateStr||today(); let available=0, consumed=0; const rows=[];
+    (APP_INTRANTS||[]).forEach(item=>{const entries=(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===item.id&&(!e.date||e.date<=until)); const qtyIn=entries.reduce((s,e)=>s+Number(e.quantity||0),0); const current=getItemCurrentStock(item.id); const qtyConsumed=Math.max(0,qtyIn-current); const unitCost=getCumpForItem(item.id); const valAvail=current*unitCost, valCons=qtyConsumed*unitCost; available+=valAvail; consumed+=valCons; rows.push({item,qtyIn,current,qtyConsumed,unitCost,valAvail,valCons});}); return {available,consumed,rows};
+  };
+  window.getCumpForItem=function(id){let q=0,p=0;(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===id&&COMPTA_PRIX_VALIDATIONS[e.id]?.validated).forEach(e=>{q+=Number(e.quantity||0);p+=Number(COMPTA_PRIX[e.id]||0)});return q>0?p/q:0;};
+  window.renderStockValueSynthese=function(){const el=G('stock-value-synthese'); if(!el)return; if(G('stock-value-date')&&!G('stock-value-date').value)G('stock-value-date').value=today(); const d=G('stock-value-date')?.value||today(); const r=stockValueAtDate(d); const charges=(window.PRODUCTION_CHARGES||[]).filter(c=>(c.date||'')<=d).reduce((s,c)=>s+Number(c.montant||0),0); el.innerHTML='<div class="mgrid"><div class="met ok"><div class="mlbl">Stock disponible valorisé</div><div class="mval">'+Math.round(r.available).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met warn"><div class="mlbl">Stock consommé valorisé</div><div class="mval">'+Math.round(r.consumed).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met"><div class="mlbl">Charges cumulées</div><div class="mval">'+Math.round(charges).toLocaleString()+'</div><span class="munit">unités monétaires</span></div></div><div class="tw"><table><thead><tr><th>Intrant</th><th>Stock actuel</th><th>CUMP validé</th><th>Valeur stock</th><th>Qté consommée estimée</th><th>Valeur consommée</th></tr></thead><tbody>'+r.rows.map(x=>'<tr><td style="text-align:left">'+x.item.name+'</td><td>'+x.current.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.unitCost).toLocaleString()+'</td><td>'+Math.round(x.valAvail).toLocaleString()+'</td><td>'+x.qtyConsumed.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.valCons).toLocaleString()+'</td></tr>').join('')+'</tbody></table></div>';};
+  setTimeout(()=>{initChargeTypes(); if(G('stock-value-date'))G('stock-value-date').value=today();},1000);
+})();
+</script>
+
+</body></html>`;
   const win=window.open('','_blank');
   if(!win){alert('⚠️ Autorisez les popups pour exporter le PDF.');return;}
   win.document.write(html);
@@ -7445,5 +7883,103 @@ function renderFCRModule(){
 loadPublicSettings();
 showScreen('screen-boot');
 </script>
+
+<script id="ichtus-amendements-v2">
+(function(){
+  const oldSwLog = window.swLog;
+  const DEFAULT_CHARGE_TYPES=[
+    {name:'Électricité',unit:'kWh'},{name:'Eau',unit:'m³'},{name:'Main d’œuvre',unit:'forfait'},
+    {name:'Loyer / bâtiment',unit:'forfait'},{name:'Maintenance équipements',unit:'forfait'},
+    {name:'Transport',unit:'forfait'},{name:'Communication',unit:'forfait'},{name:'Analyses laboratoire',unit:'analyse'},
+    {name:'Médicaments / traitements',unit:'forfait'},{name:'Divers production',unit:'forfait'}
+  ];
+  window.PRODUCTION_CHARGES = window.PRODUCTION_CHARGES || [];
+  window.canManageCharges = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur'||r==='Responsable';};
+  window.isSuperAdmin = function(){const r=APP.user?.role||'Opérateur';return r==='Administrateur';};
+  window.swLog = function(panel){
+    if(panel==='seuils'){
+      window.APP_LOG_PANEL='seuils';
+      document.querySelectorAll('.log-pane').forEach(p=>p.style.display='none');
+      const el=G('lp-seuils'); if(el) el.style.display='block';
+      document.querySelectorAll('[id^="lt-"]').forEach(b=>b.classList.remove('active'));
+      const btn=G('lt-seuils'); if(btn)btn.classList.add('active');
+      renderSeuilsPanel();
+    } else if(typeof oldSwLog==='function') oldSwLog(panel);
+  };
+  window.syncSeuilForm=function(){
+    const id=G('seuil-intrant')?.value; const it=(APP_INTRANTS||[]).find(x=>x.id===id);
+    if(!it)return; G('seuil-valeur').value=it.seuil||0; G('seuil-unite').value=it.unit||'';
+  };
+  window.renderSeuilsPanel=function(){
+    const sel=G('seuil-intrant'), table=G('seuils-table'); if(!sel||!table)return;
+    const items=APP_INTRANTS||[];
+    sel.innerHTML=items.map(i=>'<option value="'+i.id+'">'+i.name+' ('+(i.unit||'')+')</option>').join('');
+    if(!sel.value&&items[0])sel.value=items[0].id; syncSeuilForm();
+    const can=canValidatePrices();
+    table.innerHTML='<div class="tw"><table><thead><tr><th>Intrant</th><th>Catégorie</th><th>Stock actuel</th><th>Seuil validé</th><th>Statut</th><th>Dernière validation</th></tr></thead><tbody>'+items.map(i=>{
+      const stock=(typeof getItemCurrentStock==='function'?getItemCurrentStock(i.id):0); const seuil=Number(i.seuil||0); const low=seuil>0&&stock<seuil;
+      return '<tr><td style="text-align:left;font-weight:700">'+i.name+'</td><td>'+i.category+'</td><td>'+stock.toFixed(2)+' '+(i.unit||'')+'</td><td>'+(seuil?seuil+' '+(i.unit||''):'<span style="color:var(--warn)">Non défini</span>')+'</td><td>'+(low?'<span class="badge b-dng">⚠ Sous seuil</span>':'<span class="badge b-ok">OK</span>')+'</td><td style="font-size:9px;color:var(--t3)">'+(i.seuilValidatedBy||'—')+'</td></tr>';
+    }).join('')+'</tbody></table></div>'+(can?'':'<div style="font-size:10px;color:var(--warn);margin-top:.5rem">Validation réservée au Responsable ferme / SuperAdmin.</div>');
+  };
+  window.saveIntrantSeuil=async function(){
+    if(!canValidatePrices()){showToast('❌ Validation réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const id=G('seuil-intrant')?.value; const val=Number(G('seuil-valeur')?.value||0); if(!id||val<0){showToast('⚠️ Seuil invalide','warn');return;}
+    const ix=APP_INTRANTS.findIndex(i=>i.id===id); if(ix<0)return;
+    const intrant={...APP_INTRANTS[ix],seuil:val,monitoringType:val>0?(APP_INTRANTS[ix].monitoringType||'special'):APP_INTRANTS[ix].monitoringType,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};
+    try{await withTimeout(farmCol('intrants').doc(id).set(intrant,{merge:true}),6000);APP_INTRANTS[ix]=intrant;renderSeuilsPanel();renderIntrants();if(typeof updateLactoStatus==='function')updateLactoStatus();showToast('✅ Seuil synchronisé','acc');}
+    catch(e){showToast('❌ '+e.message,'dng');}
+  };
+  // Intrants dashboard now reads central seuil for every item, not only special items.
+  window.renderIntrants=function(filter='all'){
+    const container=G('intrants-list');if(!container)return; const role=APP.user?.role||'Opérateur'; const isAdmin=role==='Administrateur'||role==='Responsable';
+    if(G('intrant-admin-btns'))G('intrant-admin-btns').style.display=isAdmin?'flex':'none';
+    const items=filter==='all'?APP_INTRANTS:APP_INTRANTS.filter(i=>i.category===filter);
+    const monIcons={strategic:'🎯',optional:'📋',special:'🚨'}; const catColors={aliment:'#f59e0b',basifiant:'#3b82f6',carbohydrate:'#a78bfa',probiotique:'#34d399',additif:'#06b6d4',materiel:'#6b7280',reactif:'#ec4899',autre:'#94a3b8'};
+    container.innerHTML=items.map(item=>{const stock=getItemCurrentStock(item.id);const seuil=Number(item.seuil||0);const isLow=seuil>0&&stock<seuil;const color=catColors[item.category]||'#94a3b8';
+      return '<div style="background:var(--card);border:1px solid '+(isLow?'var(--dng)':'var(--b2)')+';border-radius:10px;padding:.7rem;position:relative">'
+      +(item.isDefault?'<span style="position:absolute;top:6px;right:6px;font-size:8px;background:rgba(255,215,70,.15);color:var(--gold);border:1px solid rgba(255,215,70,.3);border-radius:4px;padding:1px 5px">Défaut synchronisé</span>':'')
+      +'<div style="display:flex;gap:5px;margin-bottom:.3rem"><span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+color+'20;color:'+color+';font-weight:700">'+item.category+'</span><span style="font-size:10px">'+(monIcons[item.monitoringType]||'📋')+' '+(item.monitoringType==='strategic'?'Stratégique':item.monitoringType==='special'?'Spécial':'Facultatif')+'</span></div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:.2rem">'+item.name+'</div><div style="font-size:10px;color:var(--t3)">'+(item.conditionnement||'—')+' · '+(item.unit||'')+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+(isLow?'var(--dng)':'var(--acc)')+';margin-top:.3rem">Stock: '+stock.toFixed(2)+' '+(item.unit||'')+(isLow?' ⚠️ SEUIL':'')+'</div>'
+      +'<div style="font-size:9px;color:var(--t3)">Seuil centralisé: '+(seuil?seuil+' '+(item.unit||''):'non défini')+'</div>'
+      +'<div style="display:flex;gap:.3rem;margin-top:.5rem;flex-wrap:wrap"><button onclick="openAddStock(\''+item.id+'\')" style="font-size:9px;background:var(--acc);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">📥 Entrée</button>'
+      +(isAdmin?'<button onclick="openEditIntrant(\''+item.id+'\')" class="ebtn">✏️ Modifier</button><button onclick="deleteIntrant(\''+item.id+'\')" class="dbtn">🗑 Supprimer</button>':'')+'</div></div>';}).join('')||'<div style="color:var(--t3);font-size:11px;padding:1rem">Aucun intrant.</div>';
+  };
+  const oldUpdateLacto=window.updateLactoStatus;
+  window.updateLactoStatus=function(){
+    const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc'); if(it&&G('lacto-seuil'))G('lacto-seuil').value=it.seuil||0;
+    if(typeof oldUpdateLacto==='function')oldUpdateLacto();
+  };
+  const oldSaveLacto=window.saveLactoData;
+  window.saveLactoData=function(){
+    const val=Number(G('lacto-seuil')?.value||0); const it=(APP_INTRANTS||[]).find(i=>i.id==='lacto_conc');
+    if(it){const ix=APP_INTRANTS.findIndex(i=>i.id===it.id);APP_INTRANTS[ix]={...it,seuil:val,seuilValidatedBy:APP.user?.name||'?',seuilValidatedAt:new Date().toISOString()};farmCol('intrants').doc(it.id).set(APP_INTRANTS[ix],{merge:true}).catch(console.error);}
+    if(typeof oldSaveLacto==='function')oldSaveLacto(); if(typeof renderIntrants==='function')renderIntrants();
+  };
+  // PWA modalities
+  window.PWA_RATES={primo:{label:'Primo-inoculation',dose:4.7},entretien:{label:'Entretien',dose:0.2},rotation:{label:'Système mature_post introduction alevins',dose:0.2,vol380Fixed:0.38},postintro:{label:'Système immature_post introduction alevins',dose:0.1}};
+  // Charges réelles
+  async function loadProductionCharges(){try{const d=await withTimeout(farmCol('config').doc('charges_reelles').get(),6000); if(d.exists) window.PRODUCTION_CHARGES=d.data().items||[];}catch(e){console.warn(e)}}
+  function saveProductionCharges(){return farmCol('config').doc('charges_reelles').set({items:window.PRODUCTION_CHARGES,updatedAt:new Date().toISOString()},{merge:true}).catch(console.error)}
+  window.initChargeTypes=function(){const sel=G('charge-type'); if(!sel)return; sel.innerHTML=DEFAULT_CHARGE_TYPES.map(c=>'<option value="'+c.name+'" data-unit="'+c.unit+'">'+c.name+'</option>').join(''); sel.onchange=()=>{const opt=sel.options[sel.selectedIndex]; if(G('charge-unite'))G('charge-unite').value=opt?.dataset.unit||'forfait';}; if(G('charge-date'))G('charge-date').value=today(); sel.onchange();};
+  window.saveProductionCharge=function(){
+    if(!canManageCharges()){showToast('❌ Création/modification réservée au Responsable ferme / SuperAdmin','dng');return;}
+    const ch={id:'ch_'+Date.now(),date:G('charge-date')?.value||today(),type:G('charge-type')?.value||'Divers production',montant:Number(G('charge-montant')?.value||0),monnaie:G('charge-monnaie')?.value||'XOF',quantite:Number(G('charge-quantite')?.value||0),unite:G('charge-unite')?.value||'forfait',note:G('charge-note')?.value||'',createdBy:APP.user?.name||'?',createdAt:new Date().toISOString()};
+    if(ch.montant<=0){showToast('⚠️ Montant obligatoire','warn');return;} window.PRODUCTION_CHARGES.push(ch); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese(); showToast('✅ Charge enregistrée','acc');
+  };
+  window.deleteProductionCharge=function(id){if(!isSuperAdmin()){showToast('❌ Suppression réservée au SuperAdmin','dng');return;} window.PRODUCTION_CHARGES=window.PRODUCTION_CHARGES.filter(c=>c.id!==id); saveProductionCharges(); renderProductionCharges(); renderStockValueSynthese();};
+  window.renderProductionCharges=function(){const el=G('charge-entry-list'); if(!el)return; const data=[...window.PRODUCTION_CHARGES].sort((a,b)=>(b.date||'').localeCompare(a.date||'')); const total=data.reduce((s,c)=>s+(Number(c.montant)||0),0); el.innerHTML='<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:.4rem">Total charges réelles saisies : '+total.toLocaleString()+' (monnaies mélangées à vérifier)</div><div class="tw"><table><thead><tr><th>Date</th><th>Charge</th><th>Montant</th><th>Qté</th><th>Unité</th><th>Créateur</th><th>Action</th></tr></thead><tbody>'+data.map(c=>'<tr><td>'+c.date+'</td><td style="text-align:left">'+c.type+'<div style="font-size:9px;color:var(--t3)">'+(c.note||'')+'</div></td><td>'+Number(c.montant).toLocaleString()+' '+c.monnaie+'</td><td>'+((c.quantite||'')||'—')+'</td><td>'+c.unite+'</td><td>'+c.createdBy+'</td><td>'+(isSuperAdmin()?'<button class="dbtn" onclick="deleteProductionCharge(\''+c.id+'\')">Supprimer</button>':'—')+'</td></tr>').join('')+'</tbody></table></div>';};
+  const oldSwCompta=window.swCompta;
+  window.swCompta=function(tab){if(typeof oldSwCompta==='function')oldSwCompta(tab); if(tab==='charges'){loadProductionCharges().then(()=>{initChargeTypes();renderProductionCharges();});} if(tab==='synthese'){renderStockValueSynthese();}};
+  window.stockValueAtDate=function(dateStr){
+    const until=dateStr||today(); let available=0, consumed=0; const rows=[];
+    (APP_INTRANTS||[]).forEach(item=>{const entries=(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===item.id&&(!e.date||e.date<=until)); const qtyIn=entries.reduce((s,e)=>s+Number(e.quantity||0),0); const current=getItemCurrentStock(item.id); const qtyConsumed=Math.max(0,qtyIn-current); const unitCost=getCumpForItem(item.id); const valAvail=current*unitCost, valCons=qtyConsumed*unitCost; available+=valAvail; consumed+=valCons; rows.push({item,qtyIn,current,qtyConsumed,unitCost,valAvail,valCons});}); return {available,consumed,rows};
+  };
+  window.getCumpForItem=function(id){let q=0,p=0;(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===id&&COMPTA_PRIX_VALIDATIONS[e.id]?.validated).forEach(e=>{q+=Number(e.quantity||0);p+=Number(COMPTA_PRIX[e.id]||0)});return q>0?p/q:0;};
+  window.renderStockValueSynthese=function(){const el=G('stock-value-synthese'); if(!el)return; if(G('stock-value-date')&&!G('stock-value-date').value)G('stock-value-date').value=today(); const d=G('stock-value-date')?.value||today(); const r=stockValueAtDate(d); const charges=(window.PRODUCTION_CHARGES||[]).filter(c=>(c.date||'')<=d).reduce((s,c)=>s+Number(c.montant||0),0); el.innerHTML='<div class="mgrid"><div class="met ok"><div class="mlbl">Stock disponible valorisé</div><div class="mval">'+Math.round(r.available).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met warn"><div class="mlbl">Stock consommé valorisé</div><div class="mval">'+Math.round(r.consumed).toLocaleString()+'</div><span class="munit">XOF</span></div><div class="met"><div class="mlbl">Charges cumulées</div><div class="mval">'+Math.round(charges).toLocaleString()+'</div><span class="munit">unités monétaires</span></div></div><div class="tw"><table><thead><tr><th>Intrant</th><th>Stock actuel</th><th>CUMP validé</th><th>Valeur stock</th><th>Qté consommée estimée</th><th>Valeur consommée</th></tr></thead><tbody>'+r.rows.map(x=>'<tr><td style="text-align:left">'+x.item.name+'</td><td>'+x.current.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.unitCost).toLocaleString()+'</td><td>'+Math.round(x.valAvail).toLocaleString()+'</td><td>'+x.qtyConsumed.toFixed(2)+' '+(x.item.unit||'')+'</td><td>'+Math.round(x.valCons).toLocaleString()+'</td></tr>').join('')+'</tbody></table></div>';};
+  setTimeout(()=>{initChargeTypes(); if(G('stock-value-date'))G('stock-value-date').value=today();},1000);
+})();
+</script>
+
 </body>
 </html>
