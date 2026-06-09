@@ -3801,299 +3801,14 @@ function openAnalyse(){
 function exportAnalysePDF(){
   const farmName=APP.farmName||APP.farmCode||'Ferme';
   const date=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const content=G('analyse-results')?.innerHTML||'';
+  const content=(G('analyse-results')&&G('analyse-results').innerHTML)||'';
   const printWin=window.open('','_blank','width=800,height=600');
-  printWin.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Analyse Paramètres — ${farmName}</title>
-    <style>
-      body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a;font-size:12px}
-      h1{font-size:18px;color:#004466;border-bottom:2px solid #004466;padding-bottom:8px}
-      .header{background:#f0f8ff;padding:12px;border-radius:8px;margin-bottom:16px}
-      .header p{margin:2px 0;font-size:11px}
-      .bassin{margin-bottom:12px;border:2px solid #ccc;border-radius:8px;overflow:hidden}
-      .bassin-head{padding:8px 12px;font-weight:700;font-size:13px}
-      .bassin-body{padding:8px 12px}
-      .alert-item{margin-bottom:8px;padding:6px 10px;border-left:3px solid #cc0000;background:#fff8f8;border-radius:0 4px 4px 0}
-      .ok{color:#006644;font-size:11px;padding:8px 12px}
-      @media print{body{margin:0}}
-    </style></head><body>
-    <div class="header">
-      <h1>🔬 Rapport d'Analyse des Paramètres</h1>
-      <p><strong>Ferme :</strong> ${farmName}</p>
-      <p><strong>Date :</strong> ${date}</p>
-      <p><strong>Généré par :</strong> Bio Aqua Tech — Système de Gestion Aquacole</p>
-    </div>
-    <div id="pdf-content">${content}</div>
-    <script>
-      // Nettoyer les styles inline pour l'impression
-      document.querySelectorAll('[style]').forEach(el=>{
-        const bg=el.style.background||el.style.backgroundColor;
-        if(bg&&bg.includes('rgba'))el.style.background='';
-      });
-      window.onload=()=>{window.print();window.close();}
-    <\/script>
-<script>
-// Correctif d'accès landing page : garantit que les boutons restent cliquables même si un module secondaire échoue.
-(function(){
-  function byId(id){return document.getElementById(id);}
-  window.forceHideLoader=function(){ var l=byId('loader'); if(l){ l.classList.remove('show'); l.style.display='none'; l.style.pointerEvents='none'; } };
-  window.forceAdminOpen=function(){
-    forceHideLoader();
-    var m=byId('admin-modal');
-    if(m){ m.classList.remove('hidden'); m.style.display='flex'; }
-    var p=byId('adm-pass'); if(p){ setTimeout(function(){try{p.focus();}catch(e){}},50); }
-  };
-  window.forceFarmAccess=function(){
-    forceHideLoader();
-    if(typeof window.doLogin==='function'){ try{return window.doLogin();}catch(e){ alert('Accès ferme indisponible : '+(e.message||e)); } }
-    else { alert('Le module ferme n’est pas encore chargé. Rechargez la page.'); }
-  };
-  document.addEventListener('DOMContentLoaded',function(){
-    forceHideLoader();
-    var ba=byId('btn-admin-access');
-    if(ba){ ba.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); if(typeof window.showAdminModal==='function'){ try{ window.showAdminModal(); }catch(e){ forceAdminOpen(); } } else { forceAdminOpen(); } },true); }
-    var bf=byId('btn-farm-access');
-    if(bf){ bf.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); forceFarmAccess(); },true); }
-  });
-})();
-</script>
-
-
-<script>
-/* ICHTUS ERP v11 — Synchronisation Réceptions / Inventaire / PWA
-   Règles intégrées :
-   1) Une réception non validée peut être supprimée par Opérateur, Responsable ferme ou Super Admin.
-   2) Une réception validée est verrouillée : correction uniquement par inventaire.
-   3) La PWA se planifie par bassin sélectionné + volume réel à couvrir en m³.
-   4) Suppression du champ manuel "Mise à jour stock PWA" : le stock vient des réceptions et inventaires. */
-(function(){
-  function $(id){return document.getElementById(id);}
-  function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur';}
-  function isAdminOrResp(){var r=role();return r==='Administrateur'||r==='Responsable'||r==='Responsable ferme'||r==='SuperAdmin'||r==='Super Admin';}
-  function canDeleteUnvalidated(){var r=role();return ['Opérateur','Operateur','Responsable','Responsable ferme','Administrateur','SuperAdmin','Super Admin'].indexOf(r)>=0;}
-  function toast(msg,type){ if(typeof window.showToast==='function') showToast(msg,type||'acc'); else alert(msg.replace(/^[✅⚠️❌📋🔒]+\s*/,'')); }
-  function todaySafe(){return typeof window.today==='function'?today():(new Date()).toISOString().slice(0,10);}
-  function fmtNum(v,d){v=Number(v)||0;return v.toFixed(d==null?2:d).replace('.',',');}
-  function bassinOptions(){
-    var bs=(window.APP&&APP.state&&Array.isArray(APP.state.bassins))?APP.state.bassins:[];
-    if(!bs.length){bs=Array.from({length:16},function(_,i){return {name:'Bassin '+String(i+1).padStart(2,'0'),vol:3.8,statut:'Actif'};});}
-    return bs.map(function(b,i){var name=b.name||('Bassin '+String(i+1).padStart(2,'0'));var vol=Number(b.vol)||3.8;return '<option value="'+name.replace(/"/g,'&quot;')+'" data-vol="'+vol+'">'+name+' · '+fmtNum(vol,2)+' m³</option>';}).join('');
-  }
-  function currentBassinVolume(){
-    var sel=$('pwa-add-bassin'); if(!sel)return 3.8;
-    var opt=sel.options[sel.selectedIndex]; return Number(opt&&opt.getAttribute('data-vol'))||3.8;
-  }
-  function syncPwaVolumeFromBassin(){
-    var vol=currentBassinVolume();
-    if($('pwa-bassin-volume')) $('pwa-bassin-volume').textContent=fmtNum(vol,2)+' m³';
-    var v=$('pwa-add-volume-cover');
-    if(v && (!v.value || Number(v.value)<=0)) v.value=vol;
-  }
-  window.syncPwaVolumeFromBassin=syncPwaVolumeFromBassin;
-
-  function installPwaUi(){
-    var panel=$('lp-probio'); if(!panel)return;
-    var oldBassins=$('pwa-add-bassins');
-    var oldVol=$('pwa-add-volume');
-    if(oldBassins){
-      var box=oldBassins.closest('div');
-      if(box){box.innerHTML='<div class="form-lbl">Bassin ciblé</div><select id="pwa-add-bassin" class="si" style="width:100%;font-size:11px" onchange="syncPwaVolumeFromBassin()">'+bassinOptions()+'</select><div style="font-size:9px;color:var(--t3);margin-top:2px">Volume bassin : <span id="pwa-bassin-volume">—</span></div>';}
-    }
-    if(oldVol){
-      var box2=oldVol.closest('div');
-      if(box2){box2.innerHTML='<div class="form-lbl">Volume à traiter (m³)</div><input type="number" id="pwa-add-volume-cover" class="form-inp" value="3.8" step="0.1" min="0" style="width:100%"><div style="font-size:9px;color:var(--t3);margin-top:2px">Peut être inférieur au volume total du bassin.</div>';}
-    }
-    var stockInput=$('pwa-stock-update');
-    if(stockInput){
-      var card=stockInput.closest('.card');
-      if(card){card.outerHTML='<div class="card" style="border-color:rgba(0,212,180,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc)"></span>Stock PWA synchronisé</div><div style="font-size:11px;color:var(--t2);line-height:1.7">Le champ manuel de mise à jour du stock PWA a été supprimé. Désormais : <strong style="color:var(--acc)">réception PWA = entrée automatique</strong>, <strong style="color:var(--warn)">utilisation PWA = sortie/consommation</strong>, et <strong style="color:var(--purp)">correction = inventaire uniquement</strong>.</div></div>';}
-    }
-    syncPwaVolumeFromBassin();
-  }
-  window.installPwaUi=installPwaUi;
-
-  // PWA : planification par bassin + volume réel à couvrir.
-  window.addPWAActivity=function(){
-    var a=($('pwa-add-activity')&&$('pwa-add-activity').value)||'entretien';
-    var bassin=($('pwa-add-bassin')&&$('pwa-add-bassin').value)||'Bassin 01';
-    var bassinVol=currentBassinVolume();
-    var cover=Number(($('pwa-add-volume-cover')&&$('pwa-add-volume-cover').value)||bassinVol)||bassinVol;
-    if(cover<=0){toast('⚠️ Volume à traiter invalide','warn');return;}
-    if(cover>bassinVol){toast('⚠️ Le volume à traiter dépasse le volume du bassin sélectionné','warn');}
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    window.PWA_PLAN.push({id:Date.now()+Math.random(),activity:a,bassin:bassin,bassinVol:bassinVol,coverVol:cover,nb:1,vol:cover});
-    if(typeof window.calcPWA==='function') window.calcPWA();
-  };
-  window.pwaDoseLitres=function(row){
-    var rates=window.PWA_RATES||{};
-    var r=rates[row.activity]||rates.entretien||{dose:0.2};
-    var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
-    return (Number(r.dose)||0)*cover;
-  };
-  window.calcPWA=function(){
-    var list=$('pwa-plan-list'),res=$('pwa-result'); if(!res)return;
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    if(!window.PWA_PLAN.length){ window.PWA_PLAN=[{id:'def1',activity:'rotation',bassin:'Bassin 01',bassinVol:3.8,coverVol:3.8,nb:1,vol:3.8}]; }
-    if(list) list.innerHTML=window.PWA_PLAN.map(function(row){
-      var rates=window.PWA_RATES||{}; var r=rates[row.activity]||rates.entretien||{label:row.activity,moment:'',dose:0.2};
-      var q=window.pwaDoseLitres(row);
-      return '<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">'
-        +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+(r.label||row.activity)+'</strong><div style="font-size:9px;color:var(--t3)">'+(r.moment||'')+' · '+(row.bassin||'Bassin')+' · volume bassin '+fmtNum(row.bassinVol,2)+' m³ · volume traité '+fmtNum(row.coverVol,2)+' m³ · dose '+fmtNum(r.dose,2)+' L/m³</div></div>'
-        +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+fmtNum(q,2)+' L</div>'
-        +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
-    }).join('');
-    var base=window.PWA_PLAN.reduce(function(s,row){return s+window.pwaDoseLitres(row);},0);
-    var pfa=base*0.04,total=base+pfa;
-    res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
-      +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+fmtNum(base,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+fmtNum(pfa,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+fmtNum(total,2)+' L</div></div></div>'
-      +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Calcul flexible : bassin sélectionné → volume réel du bassin → volume réellement à couvrir en m³ → dose PWA par m³. Le stock PWA n’est pas modifié ici : il est synchronisé par les réceptions, consommations et inventaires.</div>'
-      +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Toute correction de stock se fait par inventaire.</div>';
-  };
-  window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
-
-  // Réceptions : verrouillage après validation, suppression libre avant validation selon les rôles définis.
-  window.renderStockEntries=function(){
-    var container=$('stock-entries-list'); if(!container)return;
-    var r=role(); var canValidate=isAdminOrResp();
-    if(!window.APP_STOCK_ENTRIES||!APP_STOCK_ENTRIES.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucune entrée. Cliquez ➕ pour ajouter.</div>';return;}
-    var byDate={};
-    APP_STOCK_ENTRIES.forEach(function(e){var d=e.date||todaySafe(); if(!byDate[d])byDate[d]=[]; byDate[d].push(e);});
-    container.innerHTML='<div class="card" style="border-color:rgba(255,179,71,.25);margin-bottom:.7rem"><div style="font-size:11px;color:var(--t2);line-height:1.7"><strong style="color:var(--warn)">Règle de cohérence :</strong> avant validation, une réception peut être supprimée par Opérateur, Responsable ferme ou Super Admin. Après validation, elle est verrouillée ; toute correction passe par l’onglet Inventaire.</div></div>'+
-      Object.entries(byDate).sort(function(a,b){return b[0].localeCompare(a[0]);}).slice(0,30).map(function(pair){
-        var date=pair[0], entries=pair[1];
-        return '<div style="margin-bottom:.6rem"><div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:.3rem">'+date+'</div>'+entries.map(function(e){
-          var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===e.intrantId;});
-          var isExpired=e.expiryDate&&e.expiryDate<todaySafe();
-          var expireSoon=e.expiryDate&&!isExpired&&(new Date(e.expiryDate)-new Date()<90*86400000);
-          var pending=!e.validated;
-          var borderCol=isExpired?'var(--dng)':pending?'rgba(245,166,35,.45)':expireSoon?'var(--warn)':'rgba(0,212,180,.25)';
-          var expCol=isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)';
-          var validBtns=pending
-            ?(canValidate?'<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#04101e;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">✅ Valider</button><span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
-            :'<span style="font-size:9px;color:var(--acc);font-weight:700">🔒 Validée · '+(e.validatedBy||'OK')+'</span><span style="font-size:9px;color:var(--t3)">Correction par inventaire</span>';
-          var editBtn=(pending&&(canValidate||e.createdBy===(APP.user&&APP.user.name)))?'<button data-edit="'+e.id+'" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✏️ Modifier</button>':'';
-          var deletBtn=(pending&&canDeleteUnvalidated())?'<button data-delete="'+e.id+'" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑 Supprimer</button>':'';
-          return '<div style="background:var(--card);border:1px solid '+borderCol+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem"><div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><div style="flex:1;min-width:170px"><span style="font-weight:700;color:var(--t1)">'+((item&&item.name)||e.intrantId)+'</span><span style="color:var(--acc);font-weight:700;margin-left:.5rem">+'+(e.quantity||0)+' '+((item&&item.unit)||'')+'</span>'
-            +(e.lot?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Lot:'+e.lot+'</span>':'')
-            +(e.facture?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Fact:'+e.facture+'</span>':'')
-            +(e.conditionnement?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">'+e.conditionnement+'</span>':'')
-            +'<div style="font-size:9px;color:var(--t3);margin-top:2px">'+(e.supplier?'Fourn: '+e.supplier+' · ':'')+(e.expiryDate?'<span style="color:'+expCol+'">⏱ '+(isExpired?'⚠️PÉRIMÉ ':'')+e.expiryDate+'</span> · ':'')+'Par: '+(e.createdBy||'?')+'</div></div><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+editBtn+deletBtn+'</div></div></div>';
-        }).join('')+'</div>';
-      }).join('');
-    container.onclick=function(ev){
-      var vb=ev.target.closest('[data-validate]'); if(vb){ev.preventDefault();validateStockEntry(vb.dataset.validate);return;}
-      var eb=ev.target.closest('[data-edit]'); if(eb){ev.preventDefault();editStockEntry(eb.dataset.edit);return;}
-      var db=ev.target.closest('[data-delete]'); if(db){ev.preventDefault();deleteStockEntry(db.dataset.delete);return;}
-    };
-  };
-  window.editStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Réception validée : correction uniquement par inventaire.','warn');return;}
-    if(!(isAdminOrResp()||entry.createdBy===(APP.user&&APP.user.name))){toast('❌ Vous ne pouvez modifier que vos entrées non validées.','dng');return;}
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===entry.intrantId;});
-    var q=prompt('Quantité '+((item&&item.unit)||'')+' :', entry.quantity); if(q===null)return;
-    var d=prompt('Date (AAAA-MM-JJ) :', entry.date||todaySafe()); if(d===null)return;
-    var supplier=prompt('Fournisseur :', entry.supplier||''); if(supplier===null)return;
-    var lot=prompt('Lot :', entry.lot||''); if(lot===null)return;
-    var upd={quantity:Number(q)||0,date:d,supplier:supplier,lot:lot,validated:false,modifiedAt:new Date().toISOString(),modifiedBy:(APP.user&&APP.user.name)||'?'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries(); if(typeof renderComptaPrix==='function')renderComptaPrix(); toast('✅ Entrée non validée modifiée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.validateStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(!isAdminOrResp()){toast('❌ Validation réservée au Responsable administratif / ferme ou Super Admin','dng');return;}
-    var upd={validated:true,validatedBy:(APP.user&&APP.user.name)||'?',validatedAt:new Date().toISOString(),locked:true,lockedReason:'Réception validée — correction par inventaire uniquement'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries();toast('✅ Entrée validée et verrouillée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.deleteStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Suppression impossible : cette réception est validée. Corriger par inventaire.','warn');return;}
-    if(!canDeleteUnvalidated()){toast('❌ Suppression non autorisée','dng');return;}
-    if(!confirm('Supprimer cette entrée non validée ?'))return;
-    try{await withTimeout(farmCol('stock_entries').doc(id).delete(),6000);window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(function(e){return String(e.id)!==String(id);});renderStockEntries();toast('✅ Entrée non validée supprimée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-
-  // Stock : par prudence, seules les réceptions validées alimentent la valeur officielle.
-  window.getItemCurrentStock=function(intrantId){
-    var entries=(window.APP_STOCK_ENTRIES||[]).filter(function(e){return e.intrantId===intrantId && e.validated;});
-    var totalIn=entries.reduce(function(s,e){return s+(Number(e.quantity)||0);},0);
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===intrantId;});
-    if(item&&item.category==='aliment'&&window.APP&&APP.state&&APP.state.bassins){
-      var totalUsed=APP.state.bassins.filter(function(b){return b.statut==='Actif';}).reduce(function(s,b){return s+(Number(b.alimReel)||0);},0);
-      return Math.max(0,totalIn-totalUsed);
-    }
-    return totalIn;
-  };
-
-  var oldSwLog=window.swLog;
-  if(typeof oldSwLog==='function'){
-    window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},30); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
-  }
-  document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},300); });
-})();
-</script>
-
-
-<!-- ICHTUS ERP V12 — Synchronisation économique complète -->
-<style>
-.erp-subtabs{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.75rem}.erp-subtabs button{background:none;border:1px solid var(--b2);border-radius:7px;color:var(--t2);font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer}.erp-subtabs button.active{background:var(--acc2);color:#fff;border-color:var(--acc2)}.erp-grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem}.erp-mini{background:var(--panel);border:1px solid var(--b1);border-radius:8px;padding:.75rem}.erp-mini h4{font-size:11px;color:var(--t1);margin-bottom:.4rem}.erp-mini p{font-size:10px;color:var(--t2);line-height:1.7}.erp-lock{font-size:9px;color:var(--gold);border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:2px 7px;background:rgba(251,191,36,.08)}
-</style>
-<script>
-(function(){
-'use strict';
-const $=id=>document.getElementById(id);
-const money=n=>(Number(n)||0).toLocaleString('fr-FR')+' XOF';
-const num=v=>Number(String(v??'').replace(',','.'))||0;
-const today=()=>new Date().toISOString().slice(0,10);
-function load(k,d){try{return JSON.parse(localStorage.getItem('ichtus_'+k)||JSON.stringify(d));}catch(e){return d;}}
-function save(k,v){localStorage.setItem('ichtus_'+k,JSON.stringify(v));}
-function farmBassins(){try{return (window.APP&&APP.bassins)||window.BASSINS||load('bassins',[{id:'B1',nom:'Bassin 1',volume:12},{id:'B2',nom:'Bassin 2',volume:12},{id:'B3',nom:'Bassin 3',volume:12},{id:'B4',nom:'Bassin 4',volume:12}]);}catch(e){return [{id:'B1',nom:'Bassin 1',volume:12},{id:'B2',nom:'Bassin 2',volume:12},{id:'B3',nom:'Bassin 3',volume:12},{id:'B4',nom:'Bassin 4',volume:12}];}}
-function getCycles(){let c=load('cycles',[]); if(!c.length){c=[{id:'CYCLE-2026-01',nom:'Cycle GIFT 2026-01',debut:today(),fin:'',statut:'Actif'}];save('cycles',c);} return c;}
-function getHarvests(){return load('harvests',[]);} function getSales(){return load('sales',[]);} function getClients(){return load('clients',[]);} function getInvest(){return load('investments',[]);} function getLots(){return load('lots',[]);}
-function initV12(){
-  injectMainTabs(); injectPanes(); enhanceCompta(); enhanceAnalyse(); renderAllV12();
-}
-function injectMainTabs(){const nav=document.querySelector('#screen-farm .tabnav'); if(!nav||$('tab-t14'))return; const ref=document.querySelector("#screen-farm .tabnav button[onclick=\"sw('t8')\"]"); const b=document.createElement('button'); b.className='tb'; b.id='tab-t14'; b.setAttribute('onclick',"sw('t14')"); b.textContent='🏢 Direction'; if(ref)nav.insertBefore(b,ref); else nav.appendChild(b); const p=document.createElement('button'); p.className='tb'; p.id='tab-t15'; p.setAttribute('onclick',"sw('t15')"); p.textContent='⚙️ Paramètres ERP'; const admin=$('tab-t10'); if(admin)nav.insertBefore(p,admin); else nav.appendChild(p);}
-function injectPanes(){const main=document.querySelector('#screen-farm .main'); if(!main)return; if(!$('t14'))main.insertAdjacentHTML('beforeend',directionHTML()); if(!$('t15'))main.insertAdjacentHTML('beforeend',paramsHTML()); const t7=$('t7'); if(t7&&!$('rec-v12-root'))t7.innerHTML=recoltesHTML();}
-function directionHTML(){return `<div id="t14" class="pane"><div class="card" style="border-color:rgba(0,212,180,.3)"><div class="ctitle"><span class="dot"></span>Direction générale — tableau exécutif</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Vue consolidée : production, logistique, comptabilité, commerce, amortissements et rentabilité. Cette page est en lecture seule et se synchronise avec les autres onglets.</div></div><div class="mgrid"><div class="met ok"><div class="mlbl">Biomasse vendue</div><div class="mval" id="dir-kg">—</div></div><div class="met"><div class="mlbl">Chiffre d'affaires</div><div class="mval" id="dir-ca">—</div></div><div class="met warn"><div class="mlbl">Coût total estimé</div><div class="mval" id="dir-cost">—</div></div><div class="met"><div class="mlbl">Marge estimée</div><div class="mval" id="dir-margin">—</div></div></div><div class="two"><div class="card"><div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Alertes direction</div><div id="dir-alerts" style="font-size:11px;color:var(--t2);line-height:1.9"></div></div><div class="card"><div class="ctitle"><span class="dot" style="background:var(--purp)"></span>Synchronisation</div><div class="erp-grid3"><div class="erp-mini"><h4>Production → Analyse</h4><p>Biomasse, mortalité, FCR, récoltes.</p></div><div class="erp-mini"><h4>Logistique → Analyse</h4><p>Stock, lots, consommations, inventaires.</p></div><div class="erp-mini"><h4>Comptabilité → Analyse</h4><p>Prix validés, charges, investissements, ventes.</p></div></div></div></div><div class="card"><div class="ctitle"><span class="dot"></span>Actions rapides</div><div style="display:flex;gap:.4rem;flex-wrap:wrap"><button class="sbtn" onclick="sw('t15')">⚙️ Cycles / lots</button><button class="sbtn" onclick="sw('t7')">🏆 Récoltes / ventes</button><button class="sbtn" onclick="sw('t5');swCompta('invest')">🏗️ Investissements</button><button class="sbtn" onclick="sw('t13')">📈 Analyse financière</button></div></div></div>`;}
-function paramsHTML(){return `<div id="t15" class="pane"><div class="card"><div class="ctitle"><span class="dot"></span>Paramètres ERP — données maîtres</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Les cycles, bassins, clients et lots servent de références communes. Le volume des bassins est lu ici et réutilisé dans PWA/PFA/LAB, récoltes et analyses.</div></div><div class="erp-subtabs"><button id="p-cycle" class="active" onclick="swParamV12('cycle')">🔁 Cycles</button><button id="p-bassins" onclick="swParamV12('bassins')">🏊 Bassins</button><button id="p-lots" onclick="swParamV12('lots')">🏷️ Lots</button><button id="p-clients" onclick="swParamV12('clients')">👥 Clients</button></div><div id="param-content"></div></div>`;}
-function recoltesHTML(){return `<div id="rec-v12-root"><div class="card" style="border-color:rgba(167,139,250,.35)"><div class="ctitle"><span class="dot" style="background:var(--purp)"></span>Récoltes, ventes et synchronisation commerciale</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Récolte ≠ vente. La récolte confirme la biomasse produite ; la vente confirme le chiffre d'affaires réel. L'analyse utilise les deux.</div></div><div class="erp-subtabs"><button id="r-new" class="active" onclick="swRecV12('new')">➕ Nouvelle récolte</button><button id="r-hist" onclick="swRecV12('hist')">📜 Historique</button><button id="r-sale" onclick="swRecV12('sale')">💵 Ventes</button><button id="r-loss" onclick="swRecV12('loss')">📦 Invendus / pertes</button><button id="r-synth" onclick="swRecV12('synth')">📊 Synthèse</button></div><div id="rec-content"></div></div>`;}
-function enhanceCompta(){const bar=$('ct-tab-synthese')?.parentElement; if(bar&&!$('ct-tab-invest')){bar.insertAdjacentHTML('beforeend',`<button class="tb" id="ct-tab-invest" onclick="swCompta('invest')" style="font-size:11px">🏗️ Investissements</button><button class="tb" id="ct-tab-vente" onclick="swCompta('vente')" style="font-size:11px">💵 Ventes</button>`);} const base=$('ct-synthese')?.parentElement; if(base&&!$('ct-invest'))base.insertAdjacentHTML('beforeend',`<div id="ct-invest" style="display:none"></div><div id="ct-vente" style="display:none"></div>`); if(!window._swComptaV12){window._swComptaV12=window.swCompta; window.swCompta=function(tab){if(['saisie','charges','synthese'].includes(tab))window._swComptaV12(tab); ['invest','vente'].forEach(t=>{const el=$('ct-'+t); if(el)el.style.display=t===tab?'block':'none'; const btn=$('ct-tab-'+t); if(btn)btn.classList.toggle('active',t===tab);}); if(tab==='invest')renderInvest(); if(tab==='vente')renderSalesCompta();};}}
-function enhanceAnalyse(){const t13=$('t13'); if(t13&&!$('ana-v12-economie'))t13.insertAdjacentHTML('beforeend',`<div id="ana-v12-economie" class="card" style="border-color:rgba(0,170,255,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Analyse économique complète</div><div class="mgrid"><div class="met"><div class="mlbl">Coût revient/kg</div><div class="mval" id="ana-revientkg">—</div></div><div class="met"><div class="mlbl">Prix conseillé 30%</div><div class="mval" id="ana-prix30">—</div></div><div class="met"><div class="mlbl">Rentabilité</div><div class="mval" id="ana-rentab">—</div></div><div class="met"><div class="mlbl">Amort. mensuel</div><div class="mval" id="ana-amortm">—</div></div></div><div id="ana-eco-detail" style="font-size:11px;color:var(--t2);line-height:1.8"></div></div>`); if(!window._refreshAnalyseV12){window._refreshAnalyseV12=window.refreshAnalyseERP; window.refreshAnalyseERP=function(){try{if(window._refreshAnalyseV12)window._refreshAnalyseV12();}catch(e){} renderAnalyseEconomique();};}}
-function metrics(){const sales=getSales(), h=getHarvests(), inv=getInvest(); const kg=sales.reduce((s,x)=>s+num(x.kg),0); const ca=sales.reduce((s,x)=>s+num(x.kg)*num(x.price),0); const charges=load('charges_v9',[]).reduce((s,x)=>s+num(x.amountXOF||x.amount),0); const stockCons=(window.stockValueAt?stockValueAt(today()).reduce((s,r)=>s+(r.consumedValue||0),0):0); const amortM=inv.reduce((s,x)=>s+((num(x.amount)-num(x.residual))/(num(x.years)||1)/12),0); const cost=charges+stockCons+amortM; return {kg,ca,charges,stockCons,amortM,cost,margin:ca-cost,harvestKg:h.reduce((s,x)=>s+num(x.biomass),0)};}
-function renderAllV12(){renderDirection(); swParamV12('cycle'); swRecV12('new'); renderAnalyseEconomique();}
-window.swParamV12=function(tab){['cycle','bassins','lots','clients'].forEach(t=>$('p-'+t)?.classList.toggle('active',t===tab)); const c=$('param-content'); if(!c)return; if(tab==='cycle')renderCycles(c); if(tab==='bassins')renderBassins(c); if(tab==='lots')renderLots(c); if(tab==='clients')renderClients(c);};
-function renderCycles(c){const rows=getCycles(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Cycles de production</div><div class="admin-form"><input id="cy-nom" class="form-inp" placeholder="Nom du cycle"><input id="cy-debut" type="date" class="form-inp" value="${today()}"><input id="cy-fin" type="date" class="form-inp"><select id="cy-statut" class="form-inp"><option>Actif</option><option>Clôturé</option><option>Prévu</option></select></div><button class="sbtn" onclick="addCycleV12()">Ajouter cycle</button></div><div class="tw"><table><thead><tr><th>Cycle</th><th>Début</th><th>Fin</th><th>Statut</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="cn">${r.nom}</td><td>${r.debut||''}</td><td>${r.fin||''}</td><td><span class="badge b-ok">${r.statut}</span></td></tr>`).join('')}</tbody></table></div>`;}
-window.addCycleV12=function(){const a=getCycles(); const nom=$('cy-nom').value.trim(); if(!nom)return alert('Nom du cycle obligatoire'); a.push({id:'CYCLE-'+Date.now(),nom,debut:$('cy-debut').value,fin:$('cy-fin').value,statut:$('cy-statut').value}); save('cycles',a); swParamV12('cycle');};
-function renderBassins(c){const bs=farmBassins(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Bassins — volume de référence</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Le volume renseigné ici doit être réutilisé automatiquement par PWA/PFA/LAB, qualité d'eau, récoltes et analyse.</div></div><div class="tw"><table><thead><tr><th>Bassin</th><th>Volume m³</th><th>Rôle synchronisation</th></tr></thead><tbody>${bs.map((b,i)=>`<tr><td class="cn">${b.nom||b.name||b.id||('Bassin '+(i+1))}</td><td class="cf">${b.volume||b.volumeM3||12}</td><td><span class="erp-lock">Source unique volume</span></td></tr>`).join('')}</tbody></table></div>`;}
-function renderLots(c){const lots=getLots(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Lots et traçabilité</div><div class="admin-form"><input id="lot-name" class="form-inp" placeholder="Intrant / produit"><input id="lot-num" class="form-inp" placeholder="N° lot"><input id="lot-sup" class="form-inp" placeholder="Fournisseur"><input id="lot-exp" type="date" class="form-inp"></div><button class="sbtn" onclick="addLotV12()">Ajouter lot</button></div><div class="tw"><table><thead><tr><th>Intrant</th><th>N° lot</th><th>Fournisseur</th><th>Péremption</th></tr></thead><tbody>${lots.map(l=>`<tr><td class="cn">${l.name}</td><td>${l.num}</td><td>${l.sup}</td><td>${l.exp||''}</td></tr>`).join('')}</tbody></table></div>`;}
-window.addLotV12=function(){const a=getLots(); a.push({id:Date.now(),name:$('lot-name').value,num:$('lot-num').value,sup:$('lot-sup').value,exp:$('lot-exp').value}); save('lots',a); swParamV12('lots');};
-function renderClients(c){const clients=getClients(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Clients</div><div class="admin-form"><input id="cl-name" class="form-inp" placeholder="Client"><input id="cl-phone" class="form-inp" placeholder="Téléphone"><input id="cl-ville" class="form-inp" placeholder="Ville"><select id="cl-type" class="form-inp"><option>Restaurant</option><option>Grossiste</option><option>Hôtel</option><option>Particulier</option><option>Autre</option></select></div><button class="sbtn" onclick="addClientV12()">Ajouter client</button></div><div class="tw"><table><thead><tr><th>Client</th><th>Type</th><th>Téléphone</th><th>Ville</th></tr></thead><tbody>${clients.map(cl=>`<tr><td class="cn">${cl.name}</td><td>${cl.type}</td><td>${cl.phone}</td><td>${cl.ville}</td></tr>`).join('')}</tbody></table></div>`;}
-window.addClientV12=function(){const a=getClients(); a.push({id:Date.now(),name:$('cl-name').value,type:$('cl-type').value,phone:$('cl-phone').value,ville:$('cl-ville').value}); save('clients',a); swParamV12('clients');};
-window.swRecV12=function(tab){['new','hist','sale','loss','synth'].forEach(t=>$('r-'+t)?.classList.toggle('active',t===tab)); const c=$('rec-content'); if(!c)return; if(tab==='new')renderHarvestForm(c); if(tab==='hist')renderHarvestHist(c); if(tab==='sale')renderSaleForm(c); if(tab==='loss')renderLosses(c); if(tab==='synth')renderHarvestSynth(c);};
-function cycleOptions(){return getCycles().map(x=>`<option value="${x.id}">${x.nom}</option>`).join('');} function bassinOptions(){return farmBassins().map((b,i)=>`<option value="${b.id||i}" data-vol="${b.volume||b.volumeM3||12}">${b.nom||b.name||b.id||('Bassin '+(i+1))}</option>`).join('');}
-function renderHarvestForm(c){c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Nouvelle récolte</div><div class="admin-form"><input id="h-date" type="date" class="form-inp" value="${today()}"><select id="h-cycle" class="form-inp">${cycleOptions()}</select><select id="h-bassin" class="form-inp">${bassinOptions()}</select><select id="h-type" class="form-inp"><option>Partielle</option><option>Totale</option><option>Corrective</option></select><input id="h-count" type="number" class="form-inp" placeholder="Nombre poissons"><input id="h-biomass" type="number" class="form-inp" placeholder="Biomasse kg"><input id="h-souche" class="form-inp" placeholder="Souche"><input id="h-resp" class="form-inp" placeholder="Responsable"></div><button class="sbtn" onclick="saveHarvestV12()">Enregistrer récolte brouillon</button><div style="font-size:10px;color:var(--t3);margin-top:.5rem">Après validation, la récolte doit réduire ou vider la biomasse du bassin selon partielle/totale. Correction : récolte corrective.</div></div>`;}
-window.saveHarvestV12=function(){const a=getHarvests(); a.push({id:Date.now(),date:$('h-date').value,cycle:$('h-cycle').value,bassin:$('h-bassin').selectedOptions[0].text,type:$('h-type').value,count:num($('h-count').value),biomass:num($('h-biomass').value),souche:$('h-souche').value,resp:$('h-resp').value,status:'Brouillon'}); save('harvests',a); swRecV12('hist'); renderDirection();};
-function renderHarvestHist(c){const rows=getHarvests(); c.innerHTML=`<div class="tw"><table><thead><tr><th>Date</th><th>Cycle</th><th>Bassin</th><th>Type</th><th>Nb</th><th>Biomasse kg</th><th>Poids moyen g</th><th>Statut</th></tr></thead><tbody>${rows.map(h=>`<tr><td>${h.date}</td><td>${h.cycle}</td><td class="cn">${h.bassin}</td><td>${h.type}</td><td>${h.count}</td><td>${h.biomass}</td><td>${h.count?Math.round(h.biomass*1000/h.count):0}</td><td><span class="badge b-warn">${h.status}</span></td></tr>`).join('')}</tbody></table></div>`;}
-function renderSaleForm(c){const clients=getClients(), har=getHarvests(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Nouvelle vente</div><div class="admin-form"><input id="s-date" type="date" class="form-inp" value="${today()}"><select id="s-harv" class="form-inp">${har.map(h=>`<option value="${h.id}">${h.date} — ${h.bassin} — ${h.biomass} kg</option>`).join('')}</select><select id="s-client" class="form-inp"><option>Client comptoir</option>${clients.map(x=>`<option>${x.name}</option>`).join('')}</select><input id="s-kg" type="number" class="form-inp" placeholder="Quantité vendue kg"><input id="s-price" type="number" class="form-inp" placeholder="Prix/kg XOF"><input id="s-note" class="form-inp" placeholder="Commentaire"></div><button class="sbtn" onclick="saveSaleV12()">Enregistrer vente</button></div><div id="sales-list"></div>`; renderSalesList();}
-window.saveSaleV12=function(){const a=getSales(); a.push({id:Date.now(),date:$('s-date').value,harvest:$('s-harv').value,client:$('s-client').value,kg:num($('s-kg').value),price:num($('s-price').value),note:$('s-note').value}); save('sales',a); swRecV12('sale'); renderDirection(); renderAnalyseEconomique();};
-function renderSalesList(){const el=$('sales-list'); if(!el)return; const rows=getSales(); el.innerHTML=`<div class="tw"><table><thead><tr><th>Date</th><th>Client</th><th>Kg</th><th>Prix/kg</th><th>CA</th></tr></thead><tbody>${rows.map(s=>`<tr><td>${s.date}</td><td class="cn">${s.client}</td><td>${s.kg}</td><td>${money(s.price)}</td><td>${money(s.kg*s.price)}</td></tr>`).join('')}</tbody></table></div>`;}
-function renderLosses(c){const h=getHarvests(), s=getSales(); const harvested=h.reduce((a,x)=>a+num(x.biomass),0), sold=s.reduce((a,x)=>a+num(x.kg),0); c.innerHTML=`<div class="mgrid"><div class="met"><div class="mlbl">Récolté</div><div class="mval">${harvested.toFixed(1)}</div><div class="munit">kg</div></div><div class="met ok"><div class="mlbl">Vendu</div><div class="mval">${sold.toFixed(1)}</div><div class="munit">kg</div></div><div class="met warn"><div class="mlbl">Invendu théorique</div><div class="mval">${Math.max(0,harvested-sold).toFixed(1)}</div><div class="munit">kg</div></div></div><div class="card"><div class="ctitle"><span class="dot"></span>Principe</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Les invendus, dons, autoconsommations et pertes post-récolte doivent être enregistrés pour que la rentabilité réelle ne soit pas surestimée.</div></div>`;}
-function renderHarvestSynth(c){const m=metrics(); c.innerHTML=`<div class="mgrid"><div class="met ok"><div class="mlbl">Récolté</div><div class="mval">${m.harvestKg.toFixed(1)}</div><div class="munit">kg</div></div><div class="met"><div class="mlbl">Vendu</div><div class="mval">${m.kg.toFixed(1)}</div><div class="munit">kg</div></div><div class="met"><div class="mlbl">CA</div><div class="mval">${money(m.ca)}</div></div><div class="met warn"><div class="mlbl">Prix moyen</div><div class="mval">${m.kg?money(m.ca/m.kg):'—'}</div></div></div>`;}
-function renderInvest(){const c=$('ct-invest'); if(!c)return; const rows=getInvest(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Investissements / immobilisations</div><div class="admin-form"><input id="iv-name" class="form-inp" placeholder="Souffleur, bassin, hangar..."><input id="iv-date" type="date" class="form-inp" value="${today()}"><input id="iv-amount" type="number" class="form-inp" placeholder="Montant XOF"><input id="iv-years" type="number" class="form-inp" placeholder="Durée amortissement années"><input id="iv-res" type="number" class="form-inp" placeholder="Valeur résiduelle"><select id="iv-cat" class="form-inp"><option>Bassins</option><option>Souffleurs</option><option>Hangar</option><option>Groupe électrogène</option><option>Batteries</option><option>LED</option><option>Pompes</option><option>Travaux</option><option>Autre</option></select></div><button class="sbtn" onclick="saveInvestV12()">Enregistrer investissement</button></div><div class="tw"><table><thead><tr><th>Désignation</th><th>Catégorie</th><th>Montant</th><th>Durée</th><th>Amort. mensuel</th></tr></thead><tbody>${rows.map(i=>`<tr><td class="cn">${i.name}</td><td>${i.cat}</td><td>${money(i.amount)}</td><td>${i.years} ans</td><td>${money((num(i.amount)-num(i.residual))/(num(i.years)||1)/12)}</td></tr>`).join('')}</tbody></table></div>`;}
-window.saveInvestV12=function(){const a=getInvest(); a.push({id:Date.now(),name:$('iv-name').value,date:$('iv-date').value,amount:num($('iv-amount').value),years:num($('iv-years').value)||1,residual:num($('iv-res').value),cat:$('iv-cat').value}); save('investments',a); renderInvest(); renderAnalyseEconomique(); renderDirection();};
-function renderSalesCompta(){const c=$('ct-vente'); if(!c)return; const sales=getSales(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Ventes validées issues de Récoltes</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Les ventes doivent être saisies depuis l'onglet Récoltes → Ventes. Comptabilité les lit pour chiffre d'affaires et rentabilité.</div></div><div class="tw"><table><thead><tr><th>Date</th><th>Client</th><th>Kg</th><th>Prix/kg</th><th>CA</th></tr></thead><tbody>${sales.map(s=>`<tr><td>${s.date}</td><td>${s.client}</td><td>${s.kg}</td><td>${money(s.price)}</td><td>${money(s.kg*s.price)}</td></tr>`).join('')}</tbody></table></div>`;}
-function renderAnalyseEconomique(){const m=metrics(); const revient=m.kg?m.cost/m.kg:0; if($('ana-revientkg'))$('ana-revientkg').textContent=revient?money(revient):'—'; if($('ana-prix30'))$('ana-prix30').textContent=revient?money(revient/(1-.30)):'—'; if($('ana-rentab'))$('ana-rentab').textContent=m.ca?((m.margin/m.ca)*100).toFixed(1)+' %':'—'; if($('ana-amortm'))$('ana-amortm').textContent=money(m.amortM); if($('ana-eco-detail'))$('ana-eco-detail').innerHTML=`Coût estimé = stock consommé (${money(m.stockCons)}) + charges (${money(m.charges)}) + amortissement mensuel (${money(m.amortM)}). Prix conseillé = coût de revient / (1 - marge souhaitée).`; renderDirection();}
-window.renderDirection=function renderDirection(){const m=metrics(); if($('dir-kg'))$('dir-kg').textContent=m.kg.toFixed(1)+' kg'; if($('dir-ca'))$('dir-ca').textContent=money(m.ca); if($('dir-cost'))$('dir-cost').textContent=money(m.cost); if($('dir-margin'))$('dir-margin').textContent=money(m.margin); const alerts=[]; if(!getCycles().length)alerts.push('Aucun cycle créé : impossible de rattacher précisément les coûts.'); if(!getHarvests().length)alerts.push('Aucune récolte : coût/kg non calculable.'); if(!getSales().length)alerts.push('Aucune vente : rentabilité réelle non calculable.'); if(!getInvest().length)alerts.push('Aucun investissement : amortissement non intégré au coût complet.'); if(m.ca&&m.margin<0)alerts.push('Le prix de vente réel est inférieur au coût estimé.'); if($('dir-alerts'))$('dir-alerts').innerHTML=alerts.length?alerts.map(a=>'⚠️ '+a).join('<br>'):'✅ Les données principales sont synchronisées.';}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initV12); else initV12();
-})();
-</script>
-
-</body></html>`);
+  const scriptTag='<scr'+'ipt>window.onload=function(){try{document.querySelectorAll("[style]").forEach(function(el){var bg=el.style.background||el.style.backgroundColor;if(bg&&bg.indexOf("rgba")>=0)el.style.background="";});}catch(e){} window.print(); window.close();}<\/scr'+'ipt>';
+  printWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Analyse Paramètres — '+farmName+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a;font-size:12px}h1{font-size:18px;color:#004466;border-bottom:2px solid #004466;padding-bottom:8px}.header{background:#f0f8ff;padding:12px;border-radius:8px;margin-bottom:16px}.header p{margin:2px 0;font-size:11px}.bassin{margin-bottom:12px;border:2px solid #ccc;border-radius:8px;overflow:hidden}.bassin-head{padding:8px 12px;font-weight:700;font-size:13px}.bassin-body{padding:8px 12px}.alert-item{margin-bottom:8px;padding:6px 10px;border-left:3px solid #cc0000;background:#fff8f8;border-radius:0 4px 4px 0}.ok{color:#006644;font-size:11px;padding:8px 12px}@media print{body{margin:0}}</style></head><body>'
+    +'<div class="header"><h1>🔬 Rapport d\'Analyse des Paramètres</h1><p><strong>Ferme :</strong> '+farmName+'</p><p><strong>Date :</strong> '+date+'</p><p><strong>Généré par :</strong> Bio Aqua Tech — Système de Gestion Aquacole</p></div>'
+    +'<div id="pdf-content">'+content+'</div>'+scriptTag+'</body></html>');
   printWin.document.close();
 }
 
@@ -4679,269 +4394,7 @@ function printInventairePDF(){
     +'<p><strong>Date :</strong> '+APP_INVENTAIRE_CURRENT.date+' &nbsp;|&nbsp; <strong>Validé par :</strong> '+(APP_INVENTAIRE_CURRENT.validatedBy||'Non validé')+' &nbsp;|&nbsp; <strong>Généré :</strong> '+new Date().toLocaleString('fr-FR')+'</p>'
     +'<table><thead><tr><th>Intrant</th><th>Unité</th><th>Stock théorique</th><th>Stock réel</th><th>Écart</th></tr></thead><tbody>'+rows+'</tbody></table>'
     +'<p style="margin-top:20px;font-size:10px;color:#666">Bio Aqua Tech — Système de gestion aquacole</p>'
-    +'<script>window.onload=function(){window.print();window.close();}<\/script>
-<script>
-// Correctif d'accès landing page : garantit que les boutons restent cliquables même si un module secondaire échoue.
-(function(){
-  function byId(id){return document.getElementById(id);}
-  window.forceHideLoader=function(){ var l=byId('loader'); if(l){ l.classList.remove('show'); l.style.display='none'; l.style.pointerEvents='none'; } };
-  window.forceAdminOpen=function(){
-    forceHideLoader();
-    var m=byId('admin-modal');
-    if(m){ m.classList.remove('hidden'); m.style.display='flex'; }
-    var p=byId('adm-pass'); if(p){ setTimeout(function(){try{p.focus();}catch(e){}},50); }
-  };
-  window.forceFarmAccess=function(){
-    forceHideLoader();
-    if(typeof window.doLogin==='function'){ try{return window.doLogin();}catch(e){ alert('Accès ferme indisponible : '+(e.message||e)); } }
-    else { alert('Le module ferme n’est pas encore chargé. Rechargez la page.'); }
-  };
-  document.addEventListener('DOMContentLoaded',function(){
-    forceHideLoader();
-    var ba=byId('btn-admin-access');
-    if(ba){ ba.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); if(typeof window.showAdminModal==='function'){ try{ window.showAdminModal(); }catch(e){ forceAdminOpen(); } } else { forceAdminOpen(); } },true); }
-    var bf=byId('btn-farm-access');
-    if(bf){ bf.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); forceFarmAccess(); },true); }
-  });
-})();
-</script>
-
-
-<script>
-/* ICHTUS ERP v11 — Synchronisation Réceptions / Inventaire / PWA
-   Règles intégrées :
-   1) Une réception non validée peut être supprimée par Opérateur, Responsable ferme ou Super Admin.
-   2) Une réception validée est verrouillée : correction uniquement par inventaire.
-   3) La PWA se planifie par bassin sélectionné + volume réel à couvrir en m³.
-   4) Suppression du champ manuel "Mise à jour stock PWA" : le stock vient des réceptions et inventaires. */
-(function(){
-  function $(id){return document.getElementById(id);}
-  function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur';}
-  function isAdminOrResp(){var r=role();return r==='Administrateur'||r==='Responsable'||r==='Responsable ferme'||r==='SuperAdmin'||r==='Super Admin';}
-  function canDeleteUnvalidated(){var r=role();return ['Opérateur','Operateur','Responsable','Responsable ferme','Administrateur','SuperAdmin','Super Admin'].indexOf(r)>=0;}
-  function toast(msg,type){ if(typeof window.showToast==='function') showToast(msg,type||'acc'); else alert(msg.replace(/^[✅⚠️❌📋🔒]+\s*/,'')); }
-  function todaySafe(){return typeof window.today==='function'?today():(new Date()).toISOString().slice(0,10);}
-  function fmtNum(v,d){v=Number(v)||0;return v.toFixed(d==null?2:d).replace('.',',');}
-  function bassinOptions(){
-    var bs=(window.APP&&APP.state&&Array.isArray(APP.state.bassins))?APP.state.bassins:[];
-    if(!bs.length){bs=Array.from({length:16},function(_,i){return {name:'Bassin '+String(i+1).padStart(2,'0'),vol:3.8,statut:'Actif'};});}
-    return bs.map(function(b,i){var name=b.name||('Bassin '+String(i+1).padStart(2,'0'));var vol=Number(b.vol)||3.8;return '<option value="'+name.replace(/"/g,'&quot;')+'" data-vol="'+vol+'">'+name+' · '+fmtNum(vol,2)+' m³</option>';}).join('');
-  }
-  function currentBassinVolume(){
-    var sel=$('pwa-add-bassin'); if(!sel)return 3.8;
-    var opt=sel.options[sel.selectedIndex]; return Number(opt&&opt.getAttribute('data-vol'))||3.8;
-  }
-  function syncPwaVolumeFromBassin(){
-    var vol=currentBassinVolume();
-    if($('pwa-bassin-volume')) $('pwa-bassin-volume').textContent=fmtNum(vol,2)+' m³';
-    var v=$('pwa-add-volume-cover');
-    if(v && (!v.value || Number(v.value)<=0)) v.value=vol;
-  }
-  window.syncPwaVolumeFromBassin=syncPwaVolumeFromBassin;
-
-  function installPwaUi(){
-    var panel=$('lp-probio'); if(!panel)return;
-    var oldBassins=$('pwa-add-bassins');
-    var oldVol=$('pwa-add-volume');
-    if(oldBassins){
-      var box=oldBassins.closest('div');
-      if(box){box.innerHTML='<div class="form-lbl">Bassin ciblé</div><select id="pwa-add-bassin" class="si" style="width:100%;font-size:11px" onchange="syncPwaVolumeFromBassin()">'+bassinOptions()+'</select><div style="font-size:9px;color:var(--t3);margin-top:2px">Volume bassin : <span id="pwa-bassin-volume">—</span></div>';}
-    }
-    if(oldVol){
-      var box2=oldVol.closest('div');
-      if(box2){box2.innerHTML='<div class="form-lbl">Volume à traiter (m³)</div><input type="number" id="pwa-add-volume-cover" class="form-inp" value="3.8" step="0.1" min="0" style="width:100%"><div style="font-size:9px;color:var(--t3);margin-top:2px">Peut être inférieur au volume total du bassin.</div>';}
-    }
-    var stockInput=$('pwa-stock-update');
-    if(stockInput){
-      var card=stockInput.closest('.card');
-      if(card){card.outerHTML='<div class="card" style="border-color:rgba(0,212,180,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc)"></span>Stock PWA synchronisé</div><div style="font-size:11px;color:var(--t2);line-height:1.7">Le champ manuel de mise à jour du stock PWA a été supprimé. Désormais : <strong style="color:var(--acc)">réception PWA = entrée automatique</strong>, <strong style="color:var(--warn)">utilisation PWA = sortie/consommation</strong>, et <strong style="color:var(--purp)">correction = inventaire uniquement</strong>.</div></div>';}
-    }
-    syncPwaVolumeFromBassin();
-  }
-  window.installPwaUi=installPwaUi;
-
-  // PWA : planification par bassin + volume réel à couvrir.
-  window.addPWAActivity=function(){
-    var a=($('pwa-add-activity')&&$('pwa-add-activity').value)||'entretien';
-    var bassin=($('pwa-add-bassin')&&$('pwa-add-bassin').value)||'Bassin 01';
-    var bassinVol=currentBassinVolume();
-    var cover=Number(($('pwa-add-volume-cover')&&$('pwa-add-volume-cover').value)||bassinVol)||bassinVol;
-    if(cover<=0){toast('⚠️ Volume à traiter invalide','warn');return;}
-    if(cover>bassinVol){toast('⚠️ Le volume à traiter dépasse le volume du bassin sélectionné','warn');}
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    window.PWA_PLAN.push({id:Date.now()+Math.random(),activity:a,bassin:bassin,bassinVol:bassinVol,coverVol:cover,nb:1,vol:cover});
-    if(typeof window.calcPWA==='function') window.calcPWA();
-  };
-  window.pwaDoseLitres=function(row){
-    var rates=window.PWA_RATES||{};
-    var r=rates[row.activity]||rates.entretien||{dose:0.2};
-    var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
-    return (Number(r.dose)||0)*cover;
-  };
-  window.calcPWA=function(){
-    var list=$('pwa-plan-list'),res=$('pwa-result'); if(!res)return;
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    if(!window.PWA_PLAN.length){ window.PWA_PLAN=[{id:'def1',activity:'rotation',bassin:'Bassin 01',bassinVol:3.8,coverVol:3.8,nb:1,vol:3.8}]; }
-    if(list) list.innerHTML=window.PWA_PLAN.map(function(row){
-      var rates=window.PWA_RATES||{}; var r=rates[row.activity]||rates.entretien||{label:row.activity,moment:'',dose:0.2};
-      var q=window.pwaDoseLitres(row);
-      return '<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">'
-        +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+(r.label||row.activity)+'</strong><div style="font-size:9px;color:var(--t3)">'+(r.moment||'')+' · '+(row.bassin||'Bassin')+' · volume bassin '+fmtNum(row.bassinVol,2)+' m³ · volume traité '+fmtNum(row.coverVol,2)+' m³ · dose '+fmtNum(r.dose,2)+' L/m³</div></div>'
-        +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+fmtNum(q,2)+' L</div>'
-        +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
-    }).join('');
-    var base=window.PWA_PLAN.reduce(function(s,row){return s+window.pwaDoseLitres(row);},0);
-    var pfa=base*0.04,total=base+pfa;
-    res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
-      +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+fmtNum(base,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+fmtNum(pfa,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+fmtNum(total,2)+' L</div></div></div>'
-      +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Calcul flexible : bassin sélectionné → volume réel du bassin → volume réellement à couvrir en m³ → dose PWA par m³. Le stock PWA n’est pas modifié ici : il est synchronisé par les réceptions, consommations et inventaires.</div>'
-      +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Toute correction de stock se fait par inventaire.</div>';
-  };
-  window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
-
-  // Réceptions : verrouillage après validation, suppression libre avant validation selon les rôles définis.
-  window.renderStockEntries=function(){
-    var container=$('stock-entries-list'); if(!container)return;
-    var r=role(); var canValidate=isAdminOrResp();
-    if(!window.APP_STOCK_ENTRIES||!APP_STOCK_ENTRIES.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucune entrée. Cliquez ➕ pour ajouter.</div>';return;}
-    var byDate={};
-    APP_STOCK_ENTRIES.forEach(function(e){var d=e.date||todaySafe(); if(!byDate[d])byDate[d]=[]; byDate[d].push(e);});
-    container.innerHTML='<div class="card" style="border-color:rgba(255,179,71,.25);margin-bottom:.7rem"><div style="font-size:11px;color:var(--t2);line-height:1.7"><strong style="color:var(--warn)">Règle de cohérence :</strong> avant validation, une réception peut être supprimée par Opérateur, Responsable ferme ou Super Admin. Après validation, elle est verrouillée ; toute correction passe par l’onglet Inventaire.</div></div>'+
-      Object.entries(byDate).sort(function(a,b){return b[0].localeCompare(a[0]);}).slice(0,30).map(function(pair){
-        var date=pair[0], entries=pair[1];
-        return '<div style="margin-bottom:.6rem"><div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:.3rem">'+date+'</div>'+entries.map(function(e){
-          var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===e.intrantId;});
-          var isExpired=e.expiryDate&&e.expiryDate<todaySafe();
-          var expireSoon=e.expiryDate&&!isExpired&&(new Date(e.expiryDate)-new Date()<90*86400000);
-          var pending=!e.validated;
-          var borderCol=isExpired?'var(--dng)':pending?'rgba(245,166,35,.45)':expireSoon?'var(--warn)':'rgba(0,212,180,.25)';
-          var expCol=isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)';
-          var validBtns=pending
-            ?(canValidate?'<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#04101e;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">✅ Valider</button><span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
-            :'<span style="font-size:9px;color:var(--acc);font-weight:700">🔒 Validée · '+(e.validatedBy||'OK')+'</span><span style="font-size:9px;color:var(--t3)">Correction par inventaire</span>';
-          var editBtn=(pending&&(canValidate||e.createdBy===(APP.user&&APP.user.name)))?'<button data-edit="'+e.id+'" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✏️ Modifier</button>':'';
-          var deletBtn=(pending&&canDeleteUnvalidated())?'<button data-delete="'+e.id+'" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑 Supprimer</button>':'';
-          return '<div style="background:var(--card);border:1px solid '+borderCol+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem"><div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><div style="flex:1;min-width:170px"><span style="font-weight:700;color:var(--t1)">'+((item&&item.name)||e.intrantId)+'</span><span style="color:var(--acc);font-weight:700;margin-left:.5rem">+'+(e.quantity||0)+' '+((item&&item.unit)||'')+'</span>'
-            +(e.lot?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Lot:'+e.lot+'</span>':'')
-            +(e.facture?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Fact:'+e.facture+'</span>':'')
-            +(e.conditionnement?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">'+e.conditionnement+'</span>':'')
-            +'<div style="font-size:9px;color:var(--t3);margin-top:2px">'+(e.supplier?'Fourn: '+e.supplier+' · ':'')+(e.expiryDate?'<span style="color:'+expCol+'">⏱ '+(isExpired?'⚠️PÉRIMÉ ':'')+e.expiryDate+'</span> · ':'')+'Par: '+(e.createdBy||'?')+'</div></div><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+editBtn+deletBtn+'</div></div></div>';
-        }).join('')+'</div>';
-      }).join('');
-    container.onclick=function(ev){
-      var vb=ev.target.closest('[data-validate]'); if(vb){ev.preventDefault();validateStockEntry(vb.dataset.validate);return;}
-      var eb=ev.target.closest('[data-edit]'); if(eb){ev.preventDefault();editStockEntry(eb.dataset.edit);return;}
-      var db=ev.target.closest('[data-delete]'); if(db){ev.preventDefault();deleteStockEntry(db.dataset.delete);return;}
-    };
-  };
-  window.editStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Réception validée : correction uniquement par inventaire.','warn');return;}
-    if(!(isAdminOrResp()||entry.createdBy===(APP.user&&APP.user.name))){toast('❌ Vous ne pouvez modifier que vos entrées non validées.','dng');return;}
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===entry.intrantId;});
-    var q=prompt('Quantité '+((item&&item.unit)||'')+' :', entry.quantity); if(q===null)return;
-    var d=prompt('Date (AAAA-MM-JJ) :', entry.date||todaySafe()); if(d===null)return;
-    var supplier=prompt('Fournisseur :', entry.supplier||''); if(supplier===null)return;
-    var lot=prompt('Lot :', entry.lot||''); if(lot===null)return;
-    var upd={quantity:Number(q)||0,date:d,supplier:supplier,lot:lot,validated:false,modifiedAt:new Date().toISOString(),modifiedBy:(APP.user&&APP.user.name)||'?'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries(); if(typeof renderComptaPrix==='function')renderComptaPrix(); toast('✅ Entrée non validée modifiée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.validateStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(!isAdminOrResp()){toast('❌ Validation réservée au Responsable administratif / ferme ou Super Admin','dng');return;}
-    var upd={validated:true,validatedBy:(APP.user&&APP.user.name)||'?',validatedAt:new Date().toISOString(),locked:true,lockedReason:'Réception validée — correction par inventaire uniquement'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries();toast('✅ Entrée validée et verrouillée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.deleteStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Suppression impossible : cette réception est validée. Corriger par inventaire.','warn');return;}
-    if(!canDeleteUnvalidated()){toast('❌ Suppression non autorisée','dng');return;}
-    if(!confirm('Supprimer cette entrée non validée ?'))return;
-    try{await withTimeout(farmCol('stock_entries').doc(id).delete(),6000);window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(function(e){return String(e.id)!==String(id);});renderStockEntries();toast('✅ Entrée non validée supprimée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-
-  // Stock : par prudence, seules les réceptions validées alimentent la valeur officielle.
-  window.getItemCurrentStock=function(intrantId){
-    var entries=(window.APP_STOCK_ENTRIES||[]).filter(function(e){return e.intrantId===intrantId && e.validated;});
-    var totalIn=entries.reduce(function(s,e){return s+(Number(e.quantity)||0);},0);
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===intrantId;});
-    if(item&&item.category==='aliment'&&window.APP&&APP.state&&APP.state.bassins){
-      var totalUsed=APP.state.bassins.filter(function(b){return b.statut==='Actif';}).reduce(function(s,b){return s+(Number(b.alimReel)||0);},0);
-      return Math.max(0,totalIn-totalUsed);
-    }
-    return totalIn;
-  };
-
-  var oldSwLog=window.swLog;
-  if(typeof oldSwLog==='function'){
-    window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},30); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
-  }
-  document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},300); });
-})();
-</script>
-
-
-<!-- ICHTUS ERP V12 — Synchronisation économique complète -->
-<style>
-.erp-subtabs{display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.75rem}.erp-subtabs button{background:none;border:1px solid var(--b2);border-radius:7px;color:var(--t2);font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer}.erp-subtabs button.active{background:var(--acc2);color:#fff;border-color:var(--acc2)}.erp-grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem}.erp-mini{background:var(--panel);border:1px solid var(--b1);border-radius:8px;padding:.75rem}.erp-mini h4{font-size:11px;color:var(--t1);margin-bottom:.4rem}.erp-mini p{font-size:10px;color:var(--t2);line-height:1.7}.erp-lock{font-size:9px;color:var(--gold);border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:2px 7px;background:rgba(251,191,36,.08)}
-</style>
-<script>
-(function(){
-'use strict';
-const $=id=>document.getElementById(id);
-const money=n=>(Number(n)||0).toLocaleString('fr-FR')+' XOF';
-const num=v=>Number(String(v??'').replace(',','.'))||0;
-const today=()=>new Date().toISOString().slice(0,10);
-function load(k,d){try{return JSON.parse(localStorage.getItem('ichtus_'+k)||JSON.stringify(d));}catch(e){return d;}}
-function save(k,v){localStorage.setItem('ichtus_'+k,JSON.stringify(v));}
-function farmBassins(){try{return (window.APP&&APP.bassins)||window.BASSINS||load('bassins',[{id:'B1',nom:'Bassin 1',volume:12},{id:'B2',nom:'Bassin 2',volume:12},{id:'B3',nom:'Bassin 3',volume:12},{id:'B4',nom:'Bassin 4',volume:12}]);}catch(e){return [{id:'B1',nom:'Bassin 1',volume:12},{id:'B2',nom:'Bassin 2',volume:12},{id:'B3',nom:'Bassin 3',volume:12},{id:'B4',nom:'Bassin 4',volume:12}];}}
-function getCycles(){let c=load('cycles',[]); if(!c.length){c=[{id:'CYCLE-2026-01',nom:'Cycle GIFT 2026-01',debut:today(),fin:'',statut:'Actif'}];save('cycles',c);} return c;}
-function getHarvests(){return load('harvests',[]);} function getSales(){return load('sales',[]);} function getClients(){return load('clients',[]);} function getInvest(){return load('investments',[]);} function getLots(){return load('lots',[]);}
-function initV12(){
-  injectMainTabs(); injectPanes(); enhanceCompta(); enhanceAnalyse(); renderAllV12();
-}
-function injectMainTabs(){const nav=document.querySelector('#screen-farm .tabnav'); if(!nav||$('tab-t14'))return; const ref=document.querySelector("#screen-farm .tabnav button[onclick=\"sw('t8')\"]"); const b=document.createElement('button'); b.className='tb'; b.id='tab-t14'; b.setAttribute('onclick',"sw('t14')"); b.textContent='🏢 Direction'; if(ref)nav.insertBefore(b,ref); else nav.appendChild(b); const p=document.createElement('button'); p.className='tb'; p.id='tab-t15'; p.setAttribute('onclick',"sw('t15')"); p.textContent='⚙️ Paramètres ERP'; const admin=$('tab-t10'); if(admin)nav.insertBefore(p,admin); else nav.appendChild(p);}
-function injectPanes(){const main=document.querySelector('#screen-farm .main'); if(!main)return; if(!$('t14'))main.insertAdjacentHTML('beforeend',directionHTML()); if(!$('t15'))main.insertAdjacentHTML('beforeend',paramsHTML()); const t7=$('t7'); if(t7&&!$('rec-v12-root'))t7.innerHTML=recoltesHTML();}
-function directionHTML(){return `<div id="t14" class="pane"><div class="card" style="border-color:rgba(0,212,180,.3)"><div class="ctitle"><span class="dot"></span>Direction générale — tableau exécutif</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Vue consolidée : production, logistique, comptabilité, commerce, amortissements et rentabilité. Cette page est en lecture seule et se synchronise avec les autres onglets.</div></div><div class="mgrid"><div class="met ok"><div class="mlbl">Biomasse vendue</div><div class="mval" id="dir-kg">—</div></div><div class="met"><div class="mlbl">Chiffre d'affaires</div><div class="mval" id="dir-ca">—</div></div><div class="met warn"><div class="mlbl">Coût total estimé</div><div class="mval" id="dir-cost">—</div></div><div class="met"><div class="mlbl">Marge estimée</div><div class="mval" id="dir-margin">—</div></div></div><div class="two"><div class="card"><div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Alertes direction</div><div id="dir-alerts" style="font-size:11px;color:var(--t2);line-height:1.9"></div></div><div class="card"><div class="ctitle"><span class="dot" style="background:var(--purp)"></span>Synchronisation</div><div class="erp-grid3"><div class="erp-mini"><h4>Production → Analyse</h4><p>Biomasse, mortalité, FCR, récoltes.</p></div><div class="erp-mini"><h4>Logistique → Analyse</h4><p>Stock, lots, consommations, inventaires.</p></div><div class="erp-mini"><h4>Comptabilité → Analyse</h4><p>Prix validés, charges, investissements, ventes.</p></div></div></div></div><div class="card"><div class="ctitle"><span class="dot"></span>Actions rapides</div><div style="display:flex;gap:.4rem;flex-wrap:wrap"><button class="sbtn" onclick="sw('t15')">⚙️ Cycles / lots</button><button class="sbtn" onclick="sw('t7')">🏆 Récoltes / ventes</button><button class="sbtn" onclick="sw('t5');swCompta('invest')">🏗️ Investissements</button><button class="sbtn" onclick="sw('t13')">📈 Analyse financière</button></div></div></div>`;}
-function paramsHTML(){return `<div id="t15" class="pane"><div class="card"><div class="ctitle"><span class="dot"></span>Paramètres ERP — données maîtres</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Les cycles, bassins, clients et lots servent de références communes. Le volume des bassins est lu ici et réutilisé dans PWA/PFA/LAB, récoltes et analyses.</div></div><div class="erp-subtabs"><button id="p-cycle" class="active" onclick="swParamV12('cycle')">🔁 Cycles</button><button id="p-bassins" onclick="swParamV12('bassins')">🏊 Bassins</button><button id="p-lots" onclick="swParamV12('lots')">🏷️ Lots</button><button id="p-clients" onclick="swParamV12('clients')">👥 Clients</button></div><div id="param-content"></div></div>`;}
-function recoltesHTML(){return `<div id="rec-v12-root"><div class="card" style="border-color:rgba(167,139,250,.35)"><div class="ctitle"><span class="dot" style="background:var(--purp)"></span>Récoltes, ventes et synchronisation commerciale</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Récolte ≠ vente. La récolte confirme la biomasse produite ; la vente confirme le chiffre d'affaires réel. L'analyse utilise les deux.</div></div><div class="erp-subtabs"><button id="r-new" class="active" onclick="swRecV12('new')">➕ Nouvelle récolte</button><button id="r-hist" onclick="swRecV12('hist')">📜 Historique</button><button id="r-sale" onclick="swRecV12('sale')">💵 Ventes</button><button id="r-loss" onclick="swRecV12('loss')">📦 Invendus / pertes</button><button id="r-synth" onclick="swRecV12('synth')">📊 Synthèse</button></div><div id="rec-content"></div></div>`;}
-function enhanceCompta(){const bar=$('ct-tab-synthese')?.parentElement; if(bar&&!$('ct-tab-invest')){bar.insertAdjacentHTML('beforeend',`<button class="tb" id="ct-tab-invest" onclick="swCompta('invest')" style="font-size:11px">🏗️ Investissements</button><button class="tb" id="ct-tab-vente" onclick="swCompta('vente')" style="font-size:11px">💵 Ventes</button>`);} const base=$('ct-synthese')?.parentElement; if(base&&!$('ct-invest'))base.insertAdjacentHTML('beforeend',`<div id="ct-invest" style="display:none"></div><div id="ct-vente" style="display:none"></div>`); if(!window._swComptaV12){window._swComptaV12=window.swCompta; window.swCompta=function(tab){if(['saisie','charges','synthese'].includes(tab))window._swComptaV12(tab); ['invest','vente'].forEach(t=>{const el=$('ct-'+t); if(el)el.style.display=t===tab?'block':'none'; const btn=$('ct-tab-'+t); if(btn)btn.classList.toggle('active',t===tab);}); if(tab==='invest')renderInvest(); if(tab==='vente')renderSalesCompta();};}}
-function enhanceAnalyse(){const t13=$('t13'); if(t13&&!$('ana-v12-economie'))t13.insertAdjacentHTML('beforeend',`<div id="ana-v12-economie" class="card" style="border-color:rgba(0,170,255,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Analyse économique complète</div><div class="mgrid"><div class="met"><div class="mlbl">Coût revient/kg</div><div class="mval" id="ana-revientkg">—</div></div><div class="met"><div class="mlbl">Prix conseillé 30%</div><div class="mval" id="ana-prix30">—</div></div><div class="met"><div class="mlbl">Rentabilité</div><div class="mval" id="ana-rentab">—</div></div><div class="met"><div class="mlbl">Amort. mensuel</div><div class="mval" id="ana-amortm">—</div></div></div><div id="ana-eco-detail" style="font-size:11px;color:var(--t2);line-height:1.8"></div></div>`); if(!window._refreshAnalyseV12){window._refreshAnalyseV12=window.refreshAnalyseERP; window.refreshAnalyseERP=function(){try{if(window._refreshAnalyseV12)window._refreshAnalyseV12();}catch(e){} renderAnalyseEconomique();};}}
-function metrics(){const sales=getSales(), h=getHarvests(), inv=getInvest(); const kg=sales.reduce((s,x)=>s+num(x.kg),0); const ca=sales.reduce((s,x)=>s+num(x.kg)*num(x.price),0); const charges=load('charges_v9',[]).reduce((s,x)=>s+num(x.amountXOF||x.amount),0); const stockCons=(window.stockValueAt?stockValueAt(today()).reduce((s,r)=>s+(r.consumedValue||0),0):0); const amortM=inv.reduce((s,x)=>s+((num(x.amount)-num(x.residual))/(num(x.years)||1)/12),0); const cost=charges+stockCons+amortM; return {kg,ca,charges,stockCons,amortM,cost,margin:ca-cost,harvestKg:h.reduce((s,x)=>s+num(x.biomass),0)};}
-function renderAllV12(){renderDirection(); swParamV12('cycle'); swRecV12('new'); renderAnalyseEconomique();}
-window.swParamV12=function(tab){['cycle','bassins','lots','clients'].forEach(t=>$('p-'+t)?.classList.toggle('active',t===tab)); const c=$('param-content'); if(!c)return; if(tab==='cycle')renderCycles(c); if(tab==='bassins')renderBassins(c); if(tab==='lots')renderLots(c); if(tab==='clients')renderClients(c);};
-function renderCycles(c){const rows=getCycles(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Cycles de production</div><div class="admin-form"><input id="cy-nom" class="form-inp" placeholder="Nom du cycle"><input id="cy-debut" type="date" class="form-inp" value="${today()}"><input id="cy-fin" type="date" class="form-inp"><select id="cy-statut" class="form-inp"><option>Actif</option><option>Clôturé</option><option>Prévu</option></select></div><button class="sbtn" onclick="addCycleV12()">Ajouter cycle</button></div><div class="tw"><table><thead><tr><th>Cycle</th><th>Début</th><th>Fin</th><th>Statut</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="cn">${r.nom}</td><td>${r.debut||''}</td><td>${r.fin||''}</td><td><span class="badge b-ok">${r.statut}</span></td></tr>`).join('')}</tbody></table></div>`;}
-window.addCycleV12=function(){const a=getCycles(); const nom=$('cy-nom').value.trim(); if(!nom)return alert('Nom du cycle obligatoire'); a.push({id:'CYCLE-'+Date.now(),nom,debut:$('cy-debut').value,fin:$('cy-fin').value,statut:$('cy-statut').value}); save('cycles',a); swParamV12('cycle');};
-function renderBassins(c){const bs=farmBassins(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Bassins — volume de référence</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Le volume renseigné ici doit être réutilisé automatiquement par PWA/PFA/LAB, qualité d'eau, récoltes et analyse.</div></div><div class="tw"><table><thead><tr><th>Bassin</th><th>Volume m³</th><th>Rôle synchronisation</th></tr></thead><tbody>${bs.map((b,i)=>`<tr><td class="cn">${b.nom||b.name||b.id||('Bassin '+(i+1))}</td><td class="cf">${b.volume||b.volumeM3||12}</td><td><span class="erp-lock">Source unique volume</span></td></tr>`).join('')}</tbody></table></div>`;}
-function renderLots(c){const lots=getLots(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Lots et traçabilité</div><div class="admin-form"><input id="lot-name" class="form-inp" placeholder="Intrant / produit"><input id="lot-num" class="form-inp" placeholder="N° lot"><input id="lot-sup" class="form-inp" placeholder="Fournisseur"><input id="lot-exp" type="date" class="form-inp"></div><button class="sbtn" onclick="addLotV12()">Ajouter lot</button></div><div class="tw"><table><thead><tr><th>Intrant</th><th>N° lot</th><th>Fournisseur</th><th>Péremption</th></tr></thead><tbody>${lots.map(l=>`<tr><td class="cn">${l.name}</td><td>${l.num}</td><td>${l.sup}</td><td>${l.exp||''}</td></tr>`).join('')}</tbody></table></div>`;}
-window.addLotV12=function(){const a=getLots(); a.push({id:Date.now(),name:$('lot-name').value,num:$('lot-num').value,sup:$('lot-sup').value,exp:$('lot-exp').value}); save('lots',a); swParamV12('lots');};
-function renderClients(c){const clients=getClients(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Clients</div><div class="admin-form"><input id="cl-name" class="form-inp" placeholder="Client"><input id="cl-phone" class="form-inp" placeholder="Téléphone"><input id="cl-ville" class="form-inp" placeholder="Ville"><select id="cl-type" class="form-inp"><option>Restaurant</option><option>Grossiste</option><option>Hôtel</option><option>Particulier</option><option>Autre</option></select></div><button class="sbtn" onclick="addClientV12()">Ajouter client</button></div><div class="tw"><table><thead><tr><th>Client</th><th>Type</th><th>Téléphone</th><th>Ville</th></tr></thead><tbody>${clients.map(cl=>`<tr><td class="cn">${cl.name}</td><td>${cl.type}</td><td>${cl.phone}</td><td>${cl.ville}</td></tr>`).join('')}</tbody></table></div>`;}
-window.addClientV12=function(){const a=getClients(); a.push({id:Date.now(),name:$('cl-name').value,type:$('cl-type').value,phone:$('cl-phone').value,ville:$('cl-ville').value}); save('clients',a); swParamV12('clients');};
-window.swRecV12=function(tab){['new','hist','sale','loss','synth'].forEach(t=>$('r-'+t)?.classList.toggle('active',t===tab)); const c=$('rec-content'); if(!c)return; if(tab==='new')renderHarvestForm(c); if(tab==='hist')renderHarvestHist(c); if(tab==='sale')renderSaleForm(c); if(tab==='loss')renderLosses(c); if(tab==='synth')renderHarvestSynth(c);};
-function cycleOptions(){return getCycles().map(x=>`<option value="${x.id}">${x.nom}</option>`).join('');} function bassinOptions(){return farmBassins().map((b,i)=>`<option value="${b.id||i}" data-vol="${b.volume||b.volumeM3||12}">${b.nom||b.name||b.id||('Bassin '+(i+1))}</option>`).join('');}
-function renderHarvestForm(c){c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Nouvelle récolte</div><div class="admin-form"><input id="h-date" type="date" class="form-inp" value="${today()}"><select id="h-cycle" class="form-inp">${cycleOptions()}</select><select id="h-bassin" class="form-inp">${bassinOptions()}</select><select id="h-type" class="form-inp"><option>Partielle</option><option>Totale</option><option>Corrective</option></select><input id="h-count" type="number" class="form-inp" placeholder="Nombre poissons"><input id="h-biomass" type="number" class="form-inp" placeholder="Biomasse kg"><input id="h-souche" class="form-inp" placeholder="Souche"><input id="h-resp" class="form-inp" placeholder="Responsable"></div><button class="sbtn" onclick="saveHarvestV12()">Enregistrer récolte brouillon</button><div style="font-size:10px;color:var(--t3);margin-top:.5rem">Après validation, la récolte doit réduire ou vider la biomasse du bassin selon partielle/totale. Correction : récolte corrective.</div></div>`;}
-window.saveHarvestV12=function(){const a=getHarvests(); a.push({id:Date.now(),date:$('h-date').value,cycle:$('h-cycle').value,bassin:$('h-bassin').selectedOptions[0].text,type:$('h-type').value,count:num($('h-count').value),biomass:num($('h-biomass').value),souche:$('h-souche').value,resp:$('h-resp').value,status:'Brouillon'}); save('harvests',a); swRecV12('hist'); renderDirection();};
-function renderHarvestHist(c){const rows=getHarvests(); c.innerHTML=`<div class="tw"><table><thead><tr><th>Date</th><th>Cycle</th><th>Bassin</th><th>Type</th><th>Nb</th><th>Biomasse kg</th><th>Poids moyen g</th><th>Statut</th></tr></thead><tbody>${rows.map(h=>`<tr><td>${h.date}</td><td>${h.cycle}</td><td class="cn">${h.bassin}</td><td>${h.type}</td><td>${h.count}</td><td>${h.biomass}</td><td>${h.count?Math.round(h.biomass*1000/h.count):0}</td><td><span class="badge b-warn">${h.status}</span></td></tr>`).join('')}</tbody></table></div>`;}
-function renderSaleForm(c){const clients=getClients(), har=getHarvests(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Nouvelle vente</div><div class="admin-form"><input id="s-date" type="date" class="form-inp" value="${today()}"><select id="s-harv" class="form-inp">${har.map(h=>`<option value="${h.id}">${h.date} — ${h.bassin} — ${h.biomass} kg</option>`).join('')}</select><select id="s-client" class="form-inp"><option>Client comptoir</option>${clients.map(x=>`<option>${x.name}</option>`).join('')}</select><input id="s-kg" type="number" class="form-inp" placeholder="Quantité vendue kg"><input id="s-price" type="number" class="form-inp" placeholder="Prix/kg XOF"><input id="s-note" class="form-inp" placeholder="Commentaire"></div><button class="sbtn" onclick="saveSaleV12()">Enregistrer vente</button></div><div id="sales-list"></div>`; renderSalesList();}
-window.saveSaleV12=function(){const a=getSales(); a.push({id:Date.now(),date:$('s-date').value,harvest:$('s-harv').value,client:$('s-client').value,kg:num($('s-kg').value),price:num($('s-price').value),note:$('s-note').value}); save('sales',a); swRecV12('sale'); renderDirection(); renderAnalyseEconomique();};
-function renderSalesList(){const el=$('sales-list'); if(!el)return; const rows=getSales(); el.innerHTML=`<div class="tw"><table><thead><tr><th>Date</th><th>Client</th><th>Kg</th><th>Prix/kg</th><th>CA</th></tr></thead><tbody>${rows.map(s=>`<tr><td>${s.date}</td><td class="cn">${s.client}</td><td>${s.kg}</td><td>${money(s.price)}</td><td>${money(s.kg*s.price)}</td></tr>`).join('')}</tbody></table></div>`;}
-function renderLosses(c){const h=getHarvests(), s=getSales(); const harvested=h.reduce((a,x)=>a+num(x.biomass),0), sold=s.reduce((a,x)=>a+num(x.kg),0); c.innerHTML=`<div class="mgrid"><div class="met"><div class="mlbl">Récolté</div><div class="mval">${harvested.toFixed(1)}</div><div class="munit">kg</div></div><div class="met ok"><div class="mlbl">Vendu</div><div class="mval">${sold.toFixed(1)}</div><div class="munit">kg</div></div><div class="met warn"><div class="mlbl">Invendu théorique</div><div class="mval">${Math.max(0,harvested-sold).toFixed(1)}</div><div class="munit">kg</div></div></div><div class="card"><div class="ctitle"><span class="dot"></span>Principe</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Les invendus, dons, autoconsommations et pertes post-récolte doivent être enregistrés pour que la rentabilité réelle ne soit pas surestimée.</div></div>`;}
-function renderHarvestSynth(c){const m=metrics(); c.innerHTML=`<div class="mgrid"><div class="met ok"><div class="mlbl">Récolté</div><div class="mval">${m.harvestKg.toFixed(1)}</div><div class="munit">kg</div></div><div class="met"><div class="mlbl">Vendu</div><div class="mval">${m.kg.toFixed(1)}</div><div class="munit">kg</div></div><div class="met"><div class="mlbl">CA</div><div class="mval">${money(m.ca)}</div></div><div class="met warn"><div class="mlbl">Prix moyen</div><div class="mval">${m.kg?money(m.ca/m.kg):'—'}</div></div></div>`;}
-function renderInvest(){const c=$('ct-invest'); if(!c)return; const rows=getInvest(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Investissements / immobilisations</div><div class="admin-form"><input id="iv-name" class="form-inp" placeholder="Souffleur, bassin, hangar..."><input id="iv-date" type="date" class="form-inp" value="${today()}"><input id="iv-amount" type="number" class="form-inp" placeholder="Montant XOF"><input id="iv-years" type="number" class="form-inp" placeholder="Durée amortissement années"><input id="iv-res" type="number" class="form-inp" placeholder="Valeur résiduelle"><select id="iv-cat" class="form-inp"><option>Bassins</option><option>Souffleurs</option><option>Hangar</option><option>Groupe électrogène</option><option>Batteries</option><option>LED</option><option>Pompes</option><option>Travaux</option><option>Autre</option></select></div><button class="sbtn" onclick="saveInvestV12()">Enregistrer investissement</button></div><div class="tw"><table><thead><tr><th>Désignation</th><th>Catégorie</th><th>Montant</th><th>Durée</th><th>Amort. mensuel</th></tr></thead><tbody>${rows.map(i=>`<tr><td class="cn">${i.name}</td><td>${i.cat}</td><td>${money(i.amount)}</td><td>${i.years} ans</td><td>${money((num(i.amount)-num(i.residual))/(num(i.years)||1)/12)}</td></tr>`).join('')}</tbody></table></div>`;}
-window.saveInvestV12=function(){const a=getInvest(); a.push({id:Date.now(),name:$('iv-name').value,date:$('iv-date').value,amount:num($('iv-amount').value),years:num($('iv-years').value)||1,residual:num($('iv-res').value),cat:$('iv-cat').value}); save('investments',a); renderInvest(); renderAnalyseEconomique(); renderDirection();};
-function renderSalesCompta(){const c=$('ct-vente'); if(!c)return; const sales=getSales(); c.innerHTML=`<div class="card"><div class="ctitle"><span class="dot"></span>Ventes validées issues de Récoltes</div><div style="font-size:11px;color:var(--t2);line-height:1.8">Les ventes doivent être saisies depuis l'onglet Récoltes → Ventes. Comptabilité les lit pour chiffre d'affaires et rentabilité.</div></div><div class="tw"><table><thead><tr><th>Date</th><th>Client</th><th>Kg</th><th>Prix/kg</th><th>CA</th></tr></thead><tbody>${sales.map(s=>`<tr><td>${s.date}</td><td>${s.client}</td><td>${s.kg}</td><td>${money(s.price)}</td><td>${money(s.kg*s.price)}</td></tr>`).join('')}</tbody></table></div>`;}
-function renderAnalyseEconomique(){const m=metrics(); const revient=m.kg?m.cost/m.kg:0; if($('ana-revientkg'))$('ana-revientkg').textContent=revient?money(revient):'—'; if($('ana-prix30'))$('ana-prix30').textContent=revient?money(revient/(1-.30)):'—'; if($('ana-rentab'))$('ana-rentab').textContent=m.ca?((m.margin/m.ca)*100).toFixed(1)+' %':'—'; if($('ana-amortm'))$('ana-amortm').textContent=money(m.amortM); if($('ana-eco-detail'))$('ana-eco-detail').innerHTML=`Coût estimé = stock consommé (${money(m.stockCons)}) + charges (${money(m.charges)}) + amortissement mensuel (${money(m.amortM)}). Prix conseillé = coût de revient / (1 - marge souhaitée).`; renderDirection();}
-window.renderDirection=function renderDirection(){const m=metrics(); if($('dir-kg'))$('dir-kg').textContent=m.kg.toFixed(1)+' kg'; if($('dir-ca'))$('dir-ca').textContent=money(m.ca); if($('dir-cost'))$('dir-cost').textContent=money(m.cost); if($('dir-margin'))$('dir-margin').textContent=money(m.margin); const alerts=[]; if(!getCycles().length)alerts.push('Aucun cycle créé : impossible de rattacher précisément les coûts.'); if(!getHarvests().length)alerts.push('Aucune récolte : coût/kg non calculable.'); if(!getSales().length)alerts.push('Aucune vente : rentabilité réelle non calculable.'); if(!getInvest().length)alerts.push('Aucun investissement : amortissement non intégré au coût complet.'); if(m.ca&&m.margin<0)alerts.push('Le prix de vente réel est inférieur au coût estimé.'); if($('dir-alerts'))$('dir-alerts').innerHTML=alerts.length?alerts.map(a=>'⚠️ '+a).join('<br>'):'✅ Les données principales sont synchronisées.';}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initV12); else initV12();
-})();
-</script>
-
-</body></html>');
+    +'<scr'+'ipt>window.onload=function(){window.print();window.close();}<\/scr'+'ipt></body></html>');
   w.document.close();
 }
 
@@ -9384,5 +8837,49 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+
+<script id="ichtus-v12-login-global-fix">
+(function(){
+  function byId(id){return document.getElementById(id);}
+  window.forceHideLoader=function(){var l=byId('loader'); if(l){l.classList.remove('show'); l.style.display='none'; l.style.pointerEvents='none';}};
+  if(typeof window.G!=='function'){window.G=function(id){return document.getElementById(id);};}
+  if(typeof window.showAdminModal!=='function'){
+    window.showAdminModal=function(){window.forceHideLoader(); var m=byId('admin-modal'); if(m){m.classList.remove('hidden'); m.style.display='flex';} var p=byId('adm-pass'); if(p)setTimeout(function(){try{p.focus();}catch(e){}},50);};
+  }
+  if(typeof window.hideAdminModal!=='function'){
+    window.hideAdminModal=function(){var m=byId('admin-modal'); if(m){m.classList.add('hidden'); m.style.display='none';}};
+  }
+  if(typeof window.doAdminLogin!=='function'){
+    window.doAdminLogin=async function(){
+      var email=((byId('adm-email')||{}).value||'').trim();
+      var password=((byId('adm-pass')||{}).value||'').trim();
+      var errEl=byId('adm-err');
+      if(!email||!password){if(errEl){errEl.textContent='⚠️ Saisir email et mot de passe';errEl.classList.add('show');errEl.style.display='block';} return;}
+      if(typeof window.showLoader==='function')showLoader('Connexion…');
+      try{
+        if(window.auth&&auth.signInWithEmailAndPassword){await auth.signInWithEmailAndPassword(email,password);} 
+        window.APP=window.APP||{};
+        APP.user={uid:(window.auth&&auth.currentUser&&auth.currentUser.uid)||'admin-local',email:email,name:'Administrateur',role:'Administrateur',farmCode:null};
+        if(typeof window.loadAdminDashboard==='function'){try{await loadAdminDashboard();}catch(e){console.warn('Dashboard:',e);}}
+        if(typeof window.hideLoader==='function')hideLoader(); else window.forceHideLoader();
+        if(typeof window.hideAdminModal==='function')hideAdminModal();
+        if(typeof window.showScreen==='function')showScreen('screen-admin'); else {var b=byId('screen-boot'),a=byId('screen-admin'); if(b)b.classList.add('hidden'); if(a)a.classList.remove('hidden');}
+        if(typeof window.startSession==='function')startSession();
+      }catch(e){
+        if(typeof window.hideLoader==='function')hideLoader(); else window.forceHideLoader();
+        if(errEl){errEl.textContent='❌ '+(e&&e.message?e.message:'Email ou mot de passe incorrect');errEl.classList.add('show');errEl.style.display='block';}
+        var p=byId('adm-pass'); if(p)p.value='';
+      }
+    };
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    window.forceHideLoader();
+    var btn=byId('btn-admin-access'); if(btn){btn.onclick=function(e){if(e)e.preventDefault(); window.showAdminModal(); return false;};}
+    var farmBtn=byId('btn-farm-access'); if(farmBtn){farmBtn.onclick=function(e){if(e)e.preventDefault(); if(typeof window.doLogin==='function')return window.doLogin(); alert('Module ferme indisponible. Rechargez la page.'); return false;};}
+    var adminBtn=document.querySelector('button[onclick*="doAdminLogin"]'); if(adminBtn){adminBtn.onclick=function(e){if(e)e.preventDefault(); window.doAdminLogin(); return false;};}
+    var pass=byId('adm-pass'); if(pass){pass.onkeydown=function(e){if(e&&e.key==='Enter'){window.doAdminLogin(); return false;}};}
+  });
+})();
+</script>
 </body>
 </html>
