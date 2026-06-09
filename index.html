@@ -3829,211 +3829,6 @@ function exportAnalysePDF(){
       });
       window.onload=()=>{window.print();window.close();}
     <\/script>
-<script>
-// Correctif d'accès landing page : garantit que les boutons restent cliquables même si un module secondaire échoue.
-(function(){
-  function byId(id){return document.getElementById(id);}
-  window.forceHideLoader=function(){ var l=byId('loader'); if(l){ l.classList.remove('show'); l.style.display='none'; l.style.pointerEvents='none'; } };
-  window.forceAdminOpen=function(){
-    forceHideLoader();
-    var m=byId('admin-modal');
-    if(m){ m.classList.remove('hidden'); m.style.display='flex'; }
-    var p=byId('adm-pass'); if(p){ setTimeout(function(){try{p.focus();}catch(e){}},50); }
-  };
-  window.forceFarmAccess=function(){
-    forceHideLoader();
-    if(typeof window.doLogin==='function'){ try{return window.doLogin();}catch(e){ alert('Accès ferme indisponible : '+(e.message||e)); } }
-    else { alert('Le module ferme n’est pas encore chargé. Rechargez la page.'); }
-  };
-  document.addEventListener('DOMContentLoaded',function(){
-    forceHideLoader();
-    var ba=byId('btn-admin-access');
-    if(ba){ ba.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); if(typeof window.showAdminModal==='function'){ try{ window.showAdminModal(); }catch(e){ forceAdminOpen(); } } else { forceAdminOpen(); } },true); }
-    var bf=byId('btn-farm-access');
-    if(bf){ bf.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); forceFarmAccess(); },true); }
-  });
-})();
-</script>
-
-
-<script>
-/* ICHTUS ERP v11 — Synchronisation Réceptions / Inventaire / PWA
-   Règles intégrées :
-   1) Une réception non validée peut être supprimée par Opérateur, Responsable ferme ou Super Admin.
-   2) Une réception validée est verrouillée : correction uniquement par inventaire.
-   3) La PWA se planifie par bassin sélectionné + volume réel à couvrir en m³.
-   4) Suppression du champ manuel "Mise à jour stock PWA" : le stock vient des réceptions et inventaires. */
-(function(){
-  function $(id){return document.getElementById(id);}
-  function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur';}
-  function isAdminOrResp(){var r=role();return r==='Administrateur'||r==='Responsable'||r==='Responsable ferme'||r==='SuperAdmin'||r==='Super Admin';}
-  function canDeleteUnvalidated(){var r=role();return ['Opérateur','Operateur','Responsable','Responsable ferme','Administrateur','SuperAdmin','Super Admin'].indexOf(r)>=0;}
-  function toast(msg,type){ if(typeof window.showToast==='function') showToast(msg,type||'acc'); else alert(msg.replace(/^[✅⚠️❌📋🔒]+\s*/,'')); }
-  function todaySafe(){return typeof window.today==='function'?today():(new Date()).toISOString().slice(0,10);}
-  function fmtNum(v,d){v=Number(v)||0;return v.toFixed(d==null?2:d).replace('.',',');}
-  function bassinOptions(){
-    var bs=(window.APP&&APP.state&&Array.isArray(APP.state.bassins))?APP.state.bassins:[];
-    if(!bs.length){bs=Array.from({length:16},function(_,i){return {name:'Bassin '+String(i+1).padStart(2,'0'),vol:3.8,statut:'Actif'};});}
-    return bs.map(function(b,i){var name=b.name||('Bassin '+String(i+1).padStart(2,'0'));var vol=Number(b.vol)||3.8;return '<option value="'+name.replace(/"/g,'&quot;')+'" data-vol="'+vol+'">'+name+' · '+fmtNum(vol,2)+' m³</option>';}).join('');
-  }
-  function currentBassinVolume(){
-    var sel=$('pwa-add-bassin'); if(!sel)return 3.8;
-    var opt=sel.options[sel.selectedIndex]; return Number(opt&&opt.getAttribute('data-vol'))||3.8;
-  }
-  function syncPwaVolumeFromBassin(){
-    var vol=currentBassinVolume();
-    if($('pwa-bassin-volume')) $('pwa-bassin-volume').textContent=fmtNum(vol,2)+' m³';
-    var v=$('pwa-add-volume-cover');
-    if(v && (!v.value || Number(v.value)<=0)) v.value=vol;
-  }
-  window.syncPwaVolumeFromBassin=syncPwaVolumeFromBassin;
-
-  function installPwaUi(){
-    var panel=$('lp-probio'); if(!panel)return;
-    var oldBassins=$('pwa-add-bassins');
-    var oldVol=$('pwa-add-volume');
-    if(oldBassins){
-      var box=oldBassins.closest('div');
-      if(box){box.innerHTML='<div class="form-lbl">Bassin ciblé</div><select id="pwa-add-bassin" class="si" style="width:100%;font-size:11px" onchange="syncPwaVolumeFromBassin()">'+bassinOptions()+'</select><div style="font-size:9px;color:var(--t3);margin-top:2px">Volume bassin : <span id="pwa-bassin-volume">—</span></div>';}
-    }
-    if(oldVol){
-      var box2=oldVol.closest('div');
-      if(box2){box2.innerHTML='<div class="form-lbl">Volume à traiter (m³)</div><input type="number" id="pwa-add-volume-cover" class="form-inp" value="3.8" step="0.1" min="0" style="width:100%"><div style="font-size:9px;color:var(--t3);margin-top:2px">Peut être inférieur au volume total du bassin.</div>';}
-    }
-    var stockInput=$('pwa-stock-update');
-    if(stockInput){
-      var card=stockInput.closest('.card');
-      if(card){card.outerHTML='<div class="card" style="border-color:rgba(0,212,180,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc)"></span>Stock PWA synchronisé</div><div style="font-size:11px;color:var(--t2);line-height:1.7">Le champ manuel de mise à jour du stock PWA a été supprimé. Désormais : <strong style="color:var(--acc)">réception PWA = entrée automatique</strong>, <strong style="color:var(--warn)">utilisation PWA = sortie/consommation</strong>, et <strong style="color:var(--purp)">correction = inventaire uniquement</strong>.</div></div>';}
-    }
-    syncPwaVolumeFromBassin();
-  }
-  window.installPwaUi=installPwaUi;
-
-  // PWA : planification par bassin + volume réel à couvrir.
-  window.addPWAActivity=function(){
-    var a=($('pwa-add-activity')&&$('pwa-add-activity').value)||'entretien';
-    var bassin=($('pwa-add-bassin')&&$('pwa-add-bassin').value)||'Bassin 01';
-    var bassinVol=currentBassinVolume();
-    var cover=Number(($('pwa-add-volume-cover')&&$('pwa-add-volume-cover').value)||bassinVol)||bassinVol;
-    if(cover<=0){toast('⚠️ Volume à traiter invalide','warn');return;}
-    if(cover>bassinVol){toast('⚠️ Le volume à traiter dépasse le volume du bassin sélectionné','warn');}
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    window.PWA_PLAN.push({id:Date.now()+Math.random(),activity:a,bassin:bassin,bassinVol:bassinVol,coverVol:cover,nb:1,vol:cover});
-    if(typeof window.calcPWA==='function') window.calcPWA();
-  };
-  window.pwaDoseLitres=function(row){
-    var rates=window.PWA_RATES||{};
-    var r=rates[row.activity]||rates.entretien||{dose:0.2};
-    var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
-    return (Number(r.dose)||0)*cover;
-  };
-  window.calcPWA=function(){
-    var list=$('pwa-plan-list'),res=$('pwa-result'); if(!res)return;
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    if(!window.PWA_PLAN.length){ window.PWA_PLAN=[{id:'def1',activity:'rotation',bassin:'Bassin 01',bassinVol:3.8,coverVol:3.8,nb:1,vol:3.8}]; }
-    if(list) list.innerHTML=window.PWA_PLAN.map(function(row){
-      var rates=window.PWA_RATES||{}; var r=rates[row.activity]||rates.entretien||{label:row.activity,moment:'',dose:0.2};
-      var q=window.pwaDoseLitres(row);
-      return '<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">'
-        +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+(r.label||row.activity)+'</strong><div style="font-size:9px;color:var(--t3)">'+(r.moment||'')+' · '+(row.bassin||'Bassin')+' · volume bassin '+fmtNum(row.bassinVol,2)+' m³ · volume traité '+fmtNum(row.coverVol,2)+' m³ · dose '+fmtNum(r.dose,2)+' L/m³</div></div>'
-        +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+fmtNum(q,2)+' L</div>'
-        +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
-    }).join('');
-    var base=window.PWA_PLAN.reduce(function(s,row){return s+window.pwaDoseLitres(row);},0);
-    var pfa=base*0.04,total=base+pfa;
-    res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
-      +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+fmtNum(base,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+fmtNum(pfa,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+fmtNum(total,2)+' L</div></div></div>'
-      +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Calcul flexible : bassin sélectionné → volume réel du bassin → volume réellement à couvrir en m³ → dose PWA par m³. Le stock PWA n’est pas modifié ici : il est synchronisé par les réceptions, consommations et inventaires.</div>'
-      +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Toute correction de stock se fait par inventaire.</div>';
-  };
-  window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
-
-  // Réceptions : verrouillage après validation, suppression libre avant validation selon les rôles définis.
-  window.renderStockEntries=function(){
-    var container=$('stock-entries-list'); if(!container)return;
-    var r=role(); var canValidate=isAdminOrResp();
-    if(!window.APP_STOCK_ENTRIES||!APP_STOCK_ENTRIES.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucune entrée. Cliquez ➕ pour ajouter.</div>';return;}
-    var byDate={};
-    APP_STOCK_ENTRIES.forEach(function(e){var d=e.date||todaySafe(); if(!byDate[d])byDate[d]=[]; byDate[d].push(e);});
-    container.innerHTML='<div class="card" style="border-color:rgba(255,179,71,.25);margin-bottom:.7rem"><div style="font-size:11px;color:var(--t2);line-height:1.7"><strong style="color:var(--warn)">Règle de cohérence :</strong> avant validation, une réception peut être supprimée par Opérateur, Responsable ferme ou Super Admin. Après validation, elle est verrouillée ; toute correction passe par l’onglet Inventaire.</div></div>'+
-      Object.entries(byDate).sort(function(a,b){return b[0].localeCompare(a[0]);}).slice(0,30).map(function(pair){
-        var date=pair[0], entries=pair[1];
-        return '<div style="margin-bottom:.6rem"><div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:.3rem">'+date+'</div>'+entries.map(function(e){
-          var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===e.intrantId;});
-          var isExpired=e.expiryDate&&e.expiryDate<todaySafe();
-          var expireSoon=e.expiryDate&&!isExpired&&(new Date(e.expiryDate)-new Date()<90*86400000);
-          var pending=!e.validated;
-          var borderCol=isExpired?'var(--dng)':pending?'rgba(245,166,35,.45)':expireSoon?'var(--warn)':'rgba(0,212,180,.25)';
-          var expCol=isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)';
-          var validBtns=pending
-            ?(canValidate?'<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#04101e;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">✅ Valider</button><span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
-            :'<span style="font-size:9px;color:var(--acc);font-weight:700">🔒 Validée · '+(e.validatedBy||'OK')+'</span><span style="font-size:9px;color:var(--t3)">Correction par inventaire</span>';
-          var editBtn=(pending&&(canValidate||e.createdBy===(APP.user&&APP.user.name)))?'<button data-edit="'+e.id+'" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✏️ Modifier</button>':'';
-          var deletBtn=(pending&&canDeleteUnvalidated())?'<button data-delete="'+e.id+'" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑 Supprimer</button>':'';
-          return '<div style="background:var(--card);border:1px solid '+borderCol+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem"><div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><div style="flex:1;min-width:170px"><span style="font-weight:700;color:var(--t1)">'+((item&&item.name)||e.intrantId)+'</span><span style="color:var(--acc);font-weight:700;margin-left:.5rem">+'+(e.quantity||0)+' '+((item&&item.unit)||'')+'</span>'
-            +(e.lot?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Lot:'+e.lot+'</span>':'')
-            +(e.facture?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Fact:'+e.facture+'</span>':'')
-            +(e.conditionnement?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">'+e.conditionnement+'</span>':'')
-            +'<div style="font-size:9px;color:var(--t3);margin-top:2px">'+(e.supplier?'Fourn: '+e.supplier+' · ':'')+(e.expiryDate?'<span style="color:'+expCol+'">⏱ '+(isExpired?'⚠️PÉRIMÉ ':'')+e.expiryDate+'</span> · ':'')+'Par: '+(e.createdBy||'?')+'</div></div><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+editBtn+deletBtn+'</div></div></div>';
-        }).join('')+'</div>';
-      }).join('');
-    container.onclick=function(ev){
-      var vb=ev.target.closest('[data-validate]'); if(vb){ev.preventDefault();validateStockEntry(vb.dataset.validate);return;}
-      var eb=ev.target.closest('[data-edit]'); if(eb){ev.preventDefault();editStockEntry(eb.dataset.edit);return;}
-      var db=ev.target.closest('[data-delete]'); if(db){ev.preventDefault();deleteStockEntry(db.dataset.delete);return;}
-    };
-  };
-  window.editStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Réception validée : correction uniquement par inventaire.','warn');return;}
-    if(!(isAdminOrResp()||entry.createdBy===(APP.user&&APP.user.name))){toast('❌ Vous ne pouvez modifier que vos entrées non validées.','dng');return;}
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===entry.intrantId;});
-    var q=prompt('Quantité '+((item&&item.unit)||'')+' :', entry.quantity); if(q===null)return;
-    var d=prompt('Date (AAAA-MM-JJ) :', entry.date||todaySafe()); if(d===null)return;
-    var supplier=prompt('Fournisseur :', entry.supplier||''); if(supplier===null)return;
-    var lot=prompt('Lot :', entry.lot||''); if(lot===null)return;
-    var upd={quantity:Number(q)||0,date:d,supplier:supplier,lot:lot,validated:false,modifiedAt:new Date().toISOString(),modifiedBy:(APP.user&&APP.user.name)||'?'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries(); if(typeof renderComptaPrix==='function')renderComptaPrix(); toast('✅ Entrée non validée modifiée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.validateStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(!isAdminOrResp()){toast('❌ Validation réservée au Responsable administratif / ferme ou Super Admin','dng');return;}
-    var upd={validated:true,validatedBy:(APP.user&&APP.user.name)||'?',validatedAt:new Date().toISOString(),locked:true,lockedReason:'Réception validée — correction par inventaire uniquement'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries();toast('✅ Entrée validée et verrouillée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.deleteStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Suppression impossible : cette réception est validée. Corriger par inventaire.','warn');return;}
-    if(!canDeleteUnvalidated()){toast('❌ Suppression non autorisée','dng');return;}
-    if(!confirm('Supprimer cette entrée non validée ?'))return;
-    try{await withTimeout(farmCol('stock_entries').doc(id).delete(),6000);window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(function(e){return String(e.id)!==String(id);});renderStockEntries();toast('✅ Entrée non validée supprimée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-
-  // Stock : par prudence, seules les réceptions validées alimentent la valeur officielle.
-  window.getItemCurrentStock=function(intrantId){
-    var entries=(window.APP_STOCK_ENTRIES||[]).filter(function(e){return e.intrantId===intrantId && e.validated;});
-    var totalIn=entries.reduce(function(s,e){return s+(Number(e.quantity)||0);},0);
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===intrantId;});
-    if(item&&item.category==='aliment'&&window.APP&&APP.state&&APP.state.bassins){
-      var totalUsed=APP.state.bassins.filter(function(b){return b.statut==='Actif';}).reduce(function(s,b){return s+(Number(b.alimReel)||0);},0);
-      return Math.max(0,totalIn-totalUsed);
-    }
-    return totalIn;
-  };
-
-  var oldSwLog=window.swLog;
-  if(typeof oldSwLog==='function'){
-    window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},30); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
-  }
-  document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},300); });
-})();
-</script>
-
 </body></html>`);
   printWin.document.close();
 }
@@ -4620,213 +4415,7 @@ function printInventairePDF(){
     +'<p><strong>Date :</strong> '+APP_INVENTAIRE_CURRENT.date+' &nbsp;|&nbsp; <strong>Validé par :</strong> '+(APP_INVENTAIRE_CURRENT.validatedBy||'Non validé')+' &nbsp;|&nbsp; <strong>Généré :</strong> '+new Date().toLocaleString('fr-FR')+'</p>'
     +'<table><thead><tr><th>Intrant</th><th>Unité</th><th>Stock théorique</th><th>Stock réel</th><th>Écart</th></tr></thead><tbody>'+rows+'</tbody></table>'
     +'<p style="margin-top:20px;font-size:10px;color:#666">Bio Aqua Tech — Système de gestion aquacole</p>'
-    +'<script>window.onload=function(){window.print();window.close();}<\/script>
-<script>
-// Correctif d'accès landing page : garantit que les boutons restent cliquables même si un module secondaire échoue.
-(function(){
-  function byId(id){return document.getElementById(id);}
-  window.forceHideLoader=function(){ var l=byId('loader'); if(l){ l.classList.remove('show'); l.style.display='none'; l.style.pointerEvents='none'; } };
-  window.forceAdminOpen=function(){
-    forceHideLoader();
-    var m=byId('admin-modal');
-    if(m){ m.classList.remove('hidden'); m.style.display='flex'; }
-    var p=byId('adm-pass'); if(p){ setTimeout(function(){try{p.focus();}catch(e){}},50); }
-  };
-  window.forceFarmAccess=function(){
-    forceHideLoader();
-    if(typeof window.doLogin==='function'){ try{return window.doLogin();}catch(e){ alert('Accès ferme indisponible : '+(e.message||e)); } }
-    else { alert('Le module ferme n’est pas encore chargé. Rechargez la page.'); }
-  };
-  document.addEventListener('DOMContentLoaded',function(){
-    forceHideLoader();
-    var ba=byId('btn-admin-access');
-    if(ba){ ba.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); if(typeof window.showAdminModal==='function'){ try{ window.showAdminModal(); }catch(e){ forceAdminOpen(); } } else { forceAdminOpen(); } },true); }
-    var bf=byId('btn-farm-access');
-    if(bf){ bf.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); forceFarmAccess(); },true); }
-  });
-})();
-</script>
-
-
-<script>
-/* ICHTUS ERP v11 — Synchronisation Réceptions / Inventaire / PWA
-   Règles intégrées :
-   1) Une réception non validée peut être supprimée par Opérateur, Responsable ferme ou Super Admin.
-   2) Une réception validée est verrouillée : correction uniquement par inventaire.
-   3) La PWA se planifie par bassin sélectionné + volume réel à couvrir en m³.
-   4) Suppression du champ manuel "Mise à jour stock PWA" : le stock vient des réceptions et inventaires. */
-(function(){
-  function $(id){return document.getElementById(id);}
-  function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur';}
-  function isAdminOrResp(){var r=role();return r==='Administrateur'||r==='Responsable'||r==='Responsable ferme'||r==='SuperAdmin'||r==='Super Admin';}
-  function canDeleteUnvalidated(){var r=role();return ['Opérateur','Operateur','Responsable','Responsable ferme','Administrateur','SuperAdmin','Super Admin'].indexOf(r)>=0;}
-  function toast(msg,type){ if(typeof window.showToast==='function') showToast(msg,type||'acc'); else alert(msg.replace(/^[✅⚠️❌📋🔒]+\s*/,'')); }
-  function todaySafe(){return typeof window.today==='function'?today():(new Date()).toISOString().slice(0,10);}
-  function fmtNum(v,d){v=Number(v)||0;return v.toFixed(d==null?2:d).replace('.',',');}
-  function bassinOptions(){
-    var bs=(window.APP&&APP.state&&Array.isArray(APP.state.bassins))?APP.state.bassins:[];
-    if(!bs.length){bs=Array.from({length:16},function(_,i){return {name:'Bassin '+String(i+1).padStart(2,'0'),vol:3.8,statut:'Actif'};});}
-    return bs.map(function(b,i){var name=b.name||('Bassin '+String(i+1).padStart(2,'0'));var vol=Number(b.vol)||3.8;return '<option value="'+name.replace(/"/g,'&quot;')+'" data-vol="'+vol+'">'+name+' · '+fmtNum(vol,2)+' m³</option>';}).join('');
-  }
-  function currentBassinVolume(){
-    var sel=$('pwa-add-bassin'); if(!sel)return 3.8;
-    var opt=sel.options[sel.selectedIndex]; return Number(opt&&opt.getAttribute('data-vol'))||3.8;
-  }
-  function syncPwaVolumeFromBassin(){
-    var vol=currentBassinVolume();
-    if($('pwa-bassin-volume')) $('pwa-bassin-volume').textContent=fmtNum(vol,2)+' m³';
-    var v=$('pwa-add-volume-cover');
-    if(v && (!v.value || Number(v.value)<=0)) v.value=vol;
-  }
-  window.syncPwaVolumeFromBassin=syncPwaVolumeFromBassin;
-
-  function installPwaUi(){
-    var panel=$('lp-probio'); if(!panel)return;
-    var oldBassins=$('pwa-add-bassins');
-    var oldVol=$('pwa-add-volume');
-    if(oldBassins){
-      var box=oldBassins.closest('div');
-      if(box){box.innerHTML='<div class="form-lbl">Bassin ciblé</div><select id="pwa-add-bassin" class="si" style="width:100%;font-size:11px" onchange="syncPwaVolumeFromBassin()">'+bassinOptions()+'</select><div style="font-size:9px;color:var(--t3);margin-top:2px">Volume bassin : <span id="pwa-bassin-volume">—</span></div>';}
-    }
-    if(oldVol){
-      var box2=oldVol.closest('div');
-      if(box2){box2.innerHTML='<div class="form-lbl">Volume à traiter (m³)</div><input type="number" id="pwa-add-volume-cover" class="form-inp" value="3.8" step="0.1" min="0" style="width:100%"><div style="font-size:9px;color:var(--t3);margin-top:2px">Peut être inférieur au volume total du bassin.</div>';}
-    }
-    var stockInput=$('pwa-stock-update');
-    if(stockInput){
-      var card=stockInput.closest('.card');
-      if(card){card.outerHTML='<div class="card" style="border-color:rgba(0,212,180,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc)"></span>Stock PWA synchronisé</div><div style="font-size:11px;color:var(--t2);line-height:1.7">Le champ manuel de mise à jour du stock PWA a été supprimé. Désormais : <strong style="color:var(--acc)">réception PWA = entrée automatique</strong>, <strong style="color:var(--warn)">utilisation PWA = sortie/consommation</strong>, et <strong style="color:var(--purp)">correction = inventaire uniquement</strong>.</div></div>';}
-    }
-    syncPwaVolumeFromBassin();
-  }
-  window.installPwaUi=installPwaUi;
-
-  // PWA : planification par bassin + volume réel à couvrir.
-  window.addPWAActivity=function(){
-    var a=($('pwa-add-activity')&&$('pwa-add-activity').value)||'entretien';
-    var bassin=($('pwa-add-bassin')&&$('pwa-add-bassin').value)||'Bassin 01';
-    var bassinVol=currentBassinVolume();
-    var cover=Number(($('pwa-add-volume-cover')&&$('pwa-add-volume-cover').value)||bassinVol)||bassinVol;
-    if(cover<=0){toast('⚠️ Volume à traiter invalide','warn');return;}
-    if(cover>bassinVol){toast('⚠️ Le volume à traiter dépasse le volume du bassin sélectionné','warn');}
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    window.PWA_PLAN.push({id:Date.now()+Math.random(),activity:a,bassin:bassin,bassinVol:bassinVol,coverVol:cover,nb:1,vol:cover});
-    if(typeof window.calcPWA==='function') window.calcPWA();
-  };
-  window.pwaDoseLitres=function(row){
-    var rates=window.PWA_RATES||{};
-    var r=rates[row.activity]||rates.entretien||{dose:0.2};
-    var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
-    return (Number(r.dose)||0)*cover;
-  };
-  window.calcPWA=function(){
-    var list=$('pwa-plan-list'),res=$('pwa-result'); if(!res)return;
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    if(!window.PWA_PLAN.length){ window.PWA_PLAN=[{id:'def1',activity:'rotation',bassin:'Bassin 01',bassinVol:3.8,coverVol:3.8,nb:1,vol:3.8}]; }
-    if(list) list.innerHTML=window.PWA_PLAN.map(function(row){
-      var rates=window.PWA_RATES||{}; var r=rates[row.activity]||rates.entretien||{label:row.activity,moment:'',dose:0.2};
-      var q=window.pwaDoseLitres(row);
-      return '<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">'
-        +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+(r.label||row.activity)+'</strong><div style="font-size:9px;color:var(--t3)">'+(r.moment||'')+' · '+(row.bassin||'Bassin')+' · volume bassin '+fmtNum(row.bassinVol,2)+' m³ · volume traité '+fmtNum(row.coverVol,2)+' m³ · dose '+fmtNum(r.dose,2)+' L/m³</div></div>'
-        +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+fmtNum(q,2)+' L</div>'
-        +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
-    }).join('');
-    var base=window.PWA_PLAN.reduce(function(s,row){return s+window.pwaDoseLitres(row);},0);
-    var pfa=base*0.04,total=base+pfa;
-    res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
-      +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+fmtNum(base,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+fmtNum(pfa,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+fmtNum(total,2)+' L</div></div></div>'
-      +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Calcul flexible : bassin sélectionné → volume réel du bassin → volume réellement à couvrir en m³ → dose PWA par m³. Le stock PWA n’est pas modifié ici : il est synchronisé par les réceptions, consommations et inventaires.</div>'
-      +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Toute correction de stock se fait par inventaire.</div>';
-  };
-  window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
-
-  // Réceptions : verrouillage après validation, suppression libre avant validation selon les rôles définis.
-  window.renderStockEntries=function(){
-    var container=$('stock-entries-list'); if(!container)return;
-    var r=role(); var canValidate=isAdminOrResp();
-    if(!window.APP_STOCK_ENTRIES||!APP_STOCK_ENTRIES.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucune entrée. Cliquez ➕ pour ajouter.</div>';return;}
-    var byDate={};
-    APP_STOCK_ENTRIES.forEach(function(e){var d=e.date||todaySafe(); if(!byDate[d])byDate[d]=[]; byDate[d].push(e);});
-    container.innerHTML='<div class="card" style="border-color:rgba(255,179,71,.25);margin-bottom:.7rem"><div style="font-size:11px;color:var(--t2);line-height:1.7"><strong style="color:var(--warn)">Règle de cohérence :</strong> avant validation, une réception peut être supprimée par Opérateur, Responsable ferme ou Super Admin. Après validation, elle est verrouillée ; toute correction passe par l’onglet Inventaire.</div></div>'+
-      Object.entries(byDate).sort(function(a,b){return b[0].localeCompare(a[0]);}).slice(0,30).map(function(pair){
-        var date=pair[0], entries=pair[1];
-        return '<div style="margin-bottom:.6rem"><div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:.3rem">'+date+'</div>'+entries.map(function(e){
-          var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===e.intrantId;});
-          var isExpired=e.expiryDate&&e.expiryDate<todaySafe();
-          var expireSoon=e.expiryDate&&!isExpired&&(new Date(e.expiryDate)-new Date()<90*86400000);
-          var pending=!e.validated;
-          var borderCol=isExpired?'var(--dng)':pending?'rgba(245,166,35,.45)':expireSoon?'var(--warn)':'rgba(0,212,180,.25)';
-          var expCol=isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)';
-          var validBtns=pending
-            ?(canValidate?'<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#04101e;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">✅ Valider</button><span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
-            :'<span style="font-size:9px;color:var(--acc);font-weight:700">🔒 Validée · '+(e.validatedBy||'OK')+'</span><span style="font-size:9px;color:var(--t3)">Correction par inventaire</span>';
-          var editBtn=(pending&&(canValidate||e.createdBy===(APP.user&&APP.user.name)))?'<button data-edit="'+e.id+'" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✏️ Modifier</button>':'';
-          var deletBtn=(pending&&canDeleteUnvalidated())?'<button data-delete="'+e.id+'" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑 Supprimer</button>':'';
-          return '<div style="background:var(--card);border:1px solid '+borderCol+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem"><div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><div style="flex:1;min-width:170px"><span style="font-weight:700;color:var(--t1)">'+((item&&item.name)||e.intrantId)+'</span><span style="color:var(--acc);font-weight:700;margin-left:.5rem">+'+(e.quantity||0)+' '+((item&&item.unit)||'')+'</span>'
-            +(e.lot?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Lot:'+e.lot+'</span>':'')
-            +(e.facture?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Fact:'+e.facture+'</span>':'')
-            +(e.conditionnement?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">'+e.conditionnement+'</span>':'')
-            +'<div style="font-size:9px;color:var(--t3);margin-top:2px">'+(e.supplier?'Fourn: '+e.supplier+' · ':'')+(e.expiryDate?'<span style="color:'+expCol+'">⏱ '+(isExpired?'⚠️PÉRIMÉ ':'')+e.expiryDate+'</span> · ':'')+'Par: '+(e.createdBy||'?')+'</div></div><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+editBtn+deletBtn+'</div></div></div>';
-        }).join('')+'</div>';
-      }).join('');
-    container.onclick=function(ev){
-      var vb=ev.target.closest('[data-validate]'); if(vb){ev.preventDefault();validateStockEntry(vb.dataset.validate);return;}
-      var eb=ev.target.closest('[data-edit]'); if(eb){ev.preventDefault();editStockEntry(eb.dataset.edit);return;}
-      var db=ev.target.closest('[data-delete]'); if(db){ev.preventDefault();deleteStockEntry(db.dataset.delete);return;}
-    };
-  };
-  window.editStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Réception validée : correction uniquement par inventaire.','warn');return;}
-    if(!(isAdminOrResp()||entry.createdBy===(APP.user&&APP.user.name))){toast('❌ Vous ne pouvez modifier que vos entrées non validées.','dng');return;}
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===entry.intrantId;});
-    var q=prompt('Quantité '+((item&&item.unit)||'')+' :', entry.quantity); if(q===null)return;
-    var d=prompt('Date (AAAA-MM-JJ) :', entry.date||todaySafe()); if(d===null)return;
-    var supplier=prompt('Fournisseur :', entry.supplier||''); if(supplier===null)return;
-    var lot=prompt('Lot :', entry.lot||''); if(lot===null)return;
-    var upd={quantity:Number(q)||0,date:d,supplier:supplier,lot:lot,validated:false,modifiedAt:new Date().toISOString(),modifiedBy:(APP.user&&APP.user.name)||'?'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries(); if(typeof renderComptaPrix==='function')renderComptaPrix(); toast('✅ Entrée non validée modifiée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.validateStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(!isAdminOrResp()){toast('❌ Validation réservée au Responsable administratif / ferme ou Super Admin','dng');return;}
-    var upd={validated:true,validatedBy:(APP.user&&APP.user.name)||'?',validatedAt:new Date().toISOString(),locked:true,lockedReason:'Réception validée — correction par inventaire uniquement'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries();toast('✅ Entrée validée et verrouillée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.deleteStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Suppression impossible : cette réception est validée. Corriger par inventaire.','warn');return;}
-    if(!canDeleteUnvalidated()){toast('❌ Suppression non autorisée','dng');return;}
-    if(!confirm('Supprimer cette entrée non validée ?'))return;
-    try{await withTimeout(farmCol('stock_entries').doc(id).delete(),6000);window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(function(e){return String(e.id)!==String(id);});renderStockEntries();toast('✅ Entrée non validée supprimée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-
-  // Stock : par prudence, seules les réceptions validées alimentent la valeur officielle.
-  window.getItemCurrentStock=function(intrantId){
-    var entries=(window.APP_STOCK_ENTRIES||[]).filter(function(e){return e.intrantId===intrantId && e.validated;});
-    var totalIn=entries.reduce(function(s,e){return s+(Number(e.quantity)||0);},0);
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===intrantId;});
-    if(item&&item.category==='aliment'&&window.APP&&APP.state&&APP.state.bassins){
-      var totalUsed=APP.state.bassins.filter(function(b){return b.statut==='Actif';}).reduce(function(s,b){return s+(Number(b.alimReel)||0);},0);
-      return Math.max(0,totalIn-totalUsed);
-    }
-    return totalIn;
-  };
-
-  var oldSwLog=window.swLog;
-  if(typeof oldSwLog==='function'){
-    window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},30); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
-  }
-  document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},300); });
-})();
-</script>
-
-</body></html>');
+    +'<script>window.onload=function(){window.print();window.close();}<\/script></body></html>');
   w.document.close();
 }
 
@@ -7091,211 +6680,6 @@ function exportJournalPDF(){
       <td>${e.action||'—'}</td><td>${e.detail||'—'}</td><td>${e.device||'—'}</td></tr>`;
   }).join('')}</tbody></table>
   
-<script>
-// Correctif d'accès landing page : garantit que les boutons restent cliquables même si un module secondaire échoue.
-(function(){
-  function byId(id){return document.getElementById(id);}
-  window.forceHideLoader=function(){ var l=byId('loader'); if(l){ l.classList.remove('show'); l.style.display='none'; l.style.pointerEvents='none'; } };
-  window.forceAdminOpen=function(){
-    forceHideLoader();
-    var m=byId('admin-modal');
-    if(m){ m.classList.remove('hidden'); m.style.display='flex'; }
-    var p=byId('adm-pass'); if(p){ setTimeout(function(){try{p.focus();}catch(e){}},50); }
-  };
-  window.forceFarmAccess=function(){
-    forceHideLoader();
-    if(typeof window.doLogin==='function'){ try{return window.doLogin();}catch(e){ alert('Accès ferme indisponible : '+(e.message||e)); } }
-    else { alert('Le module ferme n’est pas encore chargé. Rechargez la page.'); }
-  };
-  document.addEventListener('DOMContentLoaded',function(){
-    forceHideLoader();
-    var ba=byId('btn-admin-access');
-    if(ba){ ba.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); if(typeof window.showAdminModal==='function'){ try{ window.showAdminModal(); }catch(e){ forceAdminOpen(); } } else { forceAdminOpen(); } },true); }
-    var bf=byId('btn-farm-access');
-    if(bf){ bf.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); forceFarmAccess(); },true); }
-  });
-})();
-</script>
-
-
-<script>
-/* ICHTUS ERP v11 — Synchronisation Réceptions / Inventaire / PWA
-   Règles intégrées :
-   1) Une réception non validée peut être supprimée par Opérateur, Responsable ferme ou Super Admin.
-   2) Une réception validée est verrouillée : correction uniquement par inventaire.
-   3) La PWA se planifie par bassin sélectionné + volume réel à couvrir en m³.
-   4) Suppression du champ manuel "Mise à jour stock PWA" : le stock vient des réceptions et inventaires. */
-(function(){
-  function $(id){return document.getElementById(id);}
-  function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur';}
-  function isAdminOrResp(){var r=role();return r==='Administrateur'||r==='Responsable'||r==='Responsable ferme'||r==='SuperAdmin'||r==='Super Admin';}
-  function canDeleteUnvalidated(){var r=role();return ['Opérateur','Operateur','Responsable','Responsable ferme','Administrateur','SuperAdmin','Super Admin'].indexOf(r)>=0;}
-  function toast(msg,type){ if(typeof window.showToast==='function') showToast(msg,type||'acc'); else alert(msg.replace(/^[✅⚠️❌📋🔒]+\s*/,'')); }
-  function todaySafe(){return typeof window.today==='function'?today():(new Date()).toISOString().slice(0,10);}
-  function fmtNum(v,d){v=Number(v)||0;return v.toFixed(d==null?2:d).replace('.',',');}
-  function bassinOptions(){
-    var bs=(window.APP&&APP.state&&Array.isArray(APP.state.bassins))?APP.state.bassins:[];
-    if(!bs.length){bs=Array.from({length:16},function(_,i){return {name:'Bassin '+String(i+1).padStart(2,'0'),vol:3.8,statut:'Actif'};});}
-    return bs.map(function(b,i){var name=b.name||('Bassin '+String(i+1).padStart(2,'0'));var vol=Number(b.vol)||3.8;return '<option value="'+name.replace(/"/g,'&quot;')+'" data-vol="'+vol+'">'+name+' · '+fmtNum(vol,2)+' m³</option>';}).join('');
-  }
-  function currentBassinVolume(){
-    var sel=$('pwa-add-bassin'); if(!sel)return 3.8;
-    var opt=sel.options[sel.selectedIndex]; return Number(opt&&opt.getAttribute('data-vol'))||3.8;
-  }
-  function syncPwaVolumeFromBassin(){
-    var vol=currentBassinVolume();
-    if($('pwa-bassin-volume')) $('pwa-bassin-volume').textContent=fmtNum(vol,2)+' m³';
-    var v=$('pwa-add-volume-cover');
-    if(v && (!v.value || Number(v.value)<=0)) v.value=vol;
-  }
-  window.syncPwaVolumeFromBassin=syncPwaVolumeFromBassin;
-
-  function installPwaUi(){
-    var panel=$('lp-probio'); if(!panel)return;
-    var oldBassins=$('pwa-add-bassins');
-    var oldVol=$('pwa-add-volume');
-    if(oldBassins){
-      var box=oldBassins.closest('div');
-      if(box){box.innerHTML='<div class="form-lbl">Bassin ciblé</div><select id="pwa-add-bassin" class="si" style="width:100%;font-size:11px" onchange="syncPwaVolumeFromBassin()">'+bassinOptions()+'</select><div style="font-size:9px;color:var(--t3);margin-top:2px">Volume bassin : <span id="pwa-bassin-volume">—</span></div>';}
-    }
-    if(oldVol){
-      var box2=oldVol.closest('div');
-      if(box2){box2.innerHTML='<div class="form-lbl">Volume à traiter (m³)</div><input type="number" id="pwa-add-volume-cover" class="form-inp" value="3.8" step="0.1" min="0" style="width:100%"><div style="font-size:9px;color:var(--t3);margin-top:2px">Peut être inférieur au volume total du bassin.</div>';}
-    }
-    var stockInput=$('pwa-stock-update');
-    if(stockInput){
-      var card=stockInput.closest('.card');
-      if(card){card.outerHTML='<div class="card" style="border-color:rgba(0,212,180,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc)"></span>Stock PWA synchronisé</div><div style="font-size:11px;color:var(--t2);line-height:1.7">Le champ manuel de mise à jour du stock PWA a été supprimé. Désormais : <strong style="color:var(--acc)">réception PWA = entrée automatique</strong>, <strong style="color:var(--warn)">utilisation PWA = sortie/consommation</strong>, et <strong style="color:var(--purp)">correction = inventaire uniquement</strong>.</div></div>';}
-    }
-    syncPwaVolumeFromBassin();
-  }
-  window.installPwaUi=installPwaUi;
-
-  // PWA : planification par bassin + volume réel à couvrir.
-  window.addPWAActivity=function(){
-    var a=($('pwa-add-activity')&&$('pwa-add-activity').value)||'entretien';
-    var bassin=($('pwa-add-bassin')&&$('pwa-add-bassin').value)||'Bassin 01';
-    var bassinVol=currentBassinVolume();
-    var cover=Number(($('pwa-add-volume-cover')&&$('pwa-add-volume-cover').value)||bassinVol)||bassinVol;
-    if(cover<=0){toast('⚠️ Volume à traiter invalide','warn');return;}
-    if(cover>bassinVol){toast('⚠️ Le volume à traiter dépasse le volume du bassin sélectionné','warn');}
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    window.PWA_PLAN.push({id:Date.now()+Math.random(),activity:a,bassin:bassin,bassinVol:bassinVol,coverVol:cover,nb:1,vol:cover});
-    if(typeof window.calcPWA==='function') window.calcPWA();
-  };
-  window.pwaDoseLitres=function(row){
-    var rates=window.PWA_RATES||{};
-    var r=rates[row.activity]||rates.entretien||{dose:0.2};
-    var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
-    return (Number(r.dose)||0)*cover;
-  };
-  window.calcPWA=function(){
-    var list=$('pwa-plan-list'),res=$('pwa-result'); if(!res)return;
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    if(!window.PWA_PLAN.length){ window.PWA_PLAN=[{id:'def1',activity:'rotation',bassin:'Bassin 01',bassinVol:3.8,coverVol:3.8,nb:1,vol:3.8}]; }
-    if(list) list.innerHTML=window.PWA_PLAN.map(function(row){
-      var rates=window.PWA_RATES||{}; var r=rates[row.activity]||rates.entretien||{label:row.activity,moment:'',dose:0.2};
-      var q=window.pwaDoseLitres(row);
-      return '<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">'
-        +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+(r.label||row.activity)+'</strong><div style="font-size:9px;color:var(--t3)">'+(r.moment||'')+' · '+(row.bassin||'Bassin')+' · volume bassin '+fmtNum(row.bassinVol,2)+' m³ · volume traité '+fmtNum(row.coverVol,2)+' m³ · dose '+fmtNum(r.dose,2)+' L/m³</div></div>'
-        +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+fmtNum(q,2)+' L</div>'
-        +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
-    }).join('');
-    var base=window.PWA_PLAN.reduce(function(s,row){return s+window.pwaDoseLitres(row);},0);
-    var pfa=base*0.04,total=base+pfa;
-    res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
-      +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+fmtNum(base,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+fmtNum(pfa,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+fmtNum(total,2)+' L</div></div></div>'
-      +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Calcul flexible : bassin sélectionné → volume réel du bassin → volume réellement à couvrir en m³ → dose PWA par m³. Le stock PWA n’est pas modifié ici : il est synchronisé par les réceptions, consommations et inventaires.</div>'
-      +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Toute correction de stock se fait par inventaire.</div>';
-  };
-  window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
-
-  // Réceptions : verrouillage après validation, suppression libre avant validation selon les rôles définis.
-  window.renderStockEntries=function(){
-    var container=$('stock-entries-list'); if(!container)return;
-    var r=role(); var canValidate=isAdminOrResp();
-    if(!window.APP_STOCK_ENTRIES||!APP_STOCK_ENTRIES.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucune entrée. Cliquez ➕ pour ajouter.</div>';return;}
-    var byDate={};
-    APP_STOCK_ENTRIES.forEach(function(e){var d=e.date||todaySafe(); if(!byDate[d])byDate[d]=[]; byDate[d].push(e);});
-    container.innerHTML='<div class="card" style="border-color:rgba(255,179,71,.25);margin-bottom:.7rem"><div style="font-size:11px;color:var(--t2);line-height:1.7"><strong style="color:var(--warn)">Règle de cohérence :</strong> avant validation, une réception peut être supprimée par Opérateur, Responsable ferme ou Super Admin. Après validation, elle est verrouillée ; toute correction passe par l’onglet Inventaire.</div></div>'+
-      Object.entries(byDate).sort(function(a,b){return b[0].localeCompare(a[0]);}).slice(0,30).map(function(pair){
-        var date=pair[0], entries=pair[1];
-        return '<div style="margin-bottom:.6rem"><div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:.3rem">'+date+'</div>'+entries.map(function(e){
-          var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===e.intrantId;});
-          var isExpired=e.expiryDate&&e.expiryDate<todaySafe();
-          var expireSoon=e.expiryDate&&!isExpired&&(new Date(e.expiryDate)-new Date()<90*86400000);
-          var pending=!e.validated;
-          var borderCol=isExpired?'var(--dng)':pending?'rgba(245,166,35,.45)':expireSoon?'var(--warn)':'rgba(0,212,180,.25)';
-          var expCol=isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)';
-          var validBtns=pending
-            ?(canValidate?'<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#04101e;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">✅ Valider</button><span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
-            :'<span style="font-size:9px;color:var(--acc);font-weight:700">🔒 Validée · '+(e.validatedBy||'OK')+'</span><span style="font-size:9px;color:var(--t3)">Correction par inventaire</span>';
-          var editBtn=(pending&&(canValidate||e.createdBy===(APP.user&&APP.user.name)))?'<button data-edit="'+e.id+'" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✏️ Modifier</button>':'';
-          var deletBtn=(pending&&canDeleteUnvalidated())?'<button data-delete="'+e.id+'" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑 Supprimer</button>':'';
-          return '<div style="background:var(--card);border:1px solid '+borderCol+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem"><div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><div style="flex:1;min-width:170px"><span style="font-weight:700;color:var(--t1)">'+((item&&item.name)||e.intrantId)+'</span><span style="color:var(--acc);font-weight:700;margin-left:.5rem">+'+(e.quantity||0)+' '+((item&&item.unit)||'')+'</span>'
-            +(e.lot?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Lot:'+e.lot+'</span>':'')
-            +(e.facture?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Fact:'+e.facture+'</span>':'')
-            +(e.conditionnement?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">'+e.conditionnement+'</span>':'')
-            +'<div style="font-size:9px;color:var(--t3);margin-top:2px">'+(e.supplier?'Fourn: '+e.supplier+' · ':'')+(e.expiryDate?'<span style="color:'+expCol+'">⏱ '+(isExpired?'⚠️PÉRIMÉ ':'')+e.expiryDate+'</span> · ':'')+'Par: '+(e.createdBy||'?')+'</div></div><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+editBtn+deletBtn+'</div></div></div>';
-        }).join('')+'</div>';
-      }).join('');
-    container.onclick=function(ev){
-      var vb=ev.target.closest('[data-validate]'); if(vb){ev.preventDefault();validateStockEntry(vb.dataset.validate);return;}
-      var eb=ev.target.closest('[data-edit]'); if(eb){ev.preventDefault();editStockEntry(eb.dataset.edit);return;}
-      var db=ev.target.closest('[data-delete]'); if(db){ev.preventDefault();deleteStockEntry(db.dataset.delete);return;}
-    };
-  };
-  window.editStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Réception validée : correction uniquement par inventaire.','warn');return;}
-    if(!(isAdminOrResp()||entry.createdBy===(APP.user&&APP.user.name))){toast('❌ Vous ne pouvez modifier que vos entrées non validées.','dng');return;}
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===entry.intrantId;});
-    var q=prompt('Quantité '+((item&&item.unit)||'')+' :', entry.quantity); if(q===null)return;
-    var d=prompt('Date (AAAA-MM-JJ) :', entry.date||todaySafe()); if(d===null)return;
-    var supplier=prompt('Fournisseur :', entry.supplier||''); if(supplier===null)return;
-    var lot=prompt('Lot :', entry.lot||''); if(lot===null)return;
-    var upd={quantity:Number(q)||0,date:d,supplier:supplier,lot:lot,validated:false,modifiedAt:new Date().toISOString(),modifiedBy:(APP.user&&APP.user.name)||'?'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries(); if(typeof renderComptaPrix==='function')renderComptaPrix(); toast('✅ Entrée non validée modifiée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.validateStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(!isAdminOrResp()){toast('❌ Validation réservée au Responsable administratif / ferme ou Super Admin','dng');return;}
-    var upd={validated:true,validatedBy:(APP.user&&APP.user.name)||'?',validatedAt:new Date().toISOString(),locked:true,lockedReason:'Réception validée — correction par inventaire uniquement'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries();toast('✅ Entrée validée et verrouillée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.deleteStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Suppression impossible : cette réception est validée. Corriger par inventaire.','warn');return;}
-    if(!canDeleteUnvalidated()){toast('❌ Suppression non autorisée','dng');return;}
-    if(!confirm('Supprimer cette entrée non validée ?'))return;
-    try{await withTimeout(farmCol('stock_entries').doc(id).delete(),6000);window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(function(e){return String(e.id)!==String(id);});renderStockEntries();toast('✅ Entrée non validée supprimée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-
-  // Stock : par prudence, seules les réceptions validées alimentent la valeur officielle.
-  window.getItemCurrentStock=function(intrantId){
-    var entries=(window.APP_STOCK_ENTRIES||[]).filter(function(e){return e.intrantId===intrantId && e.validated;});
-    var totalIn=entries.reduce(function(s,e){return s+(Number(e.quantity)||0);},0);
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===intrantId;});
-    if(item&&item.category==='aliment'&&window.APP&&APP.state&&APP.state.bassins){
-      var totalUsed=APP.state.bassins.filter(function(b){return b.statut==='Actif';}).reduce(function(s,b){return s+(Number(b.alimReel)||0);},0);
-      return Math.max(0,totalIn-totalUsed);
-    }
-    return totalIn;
-  };
-
-  var oldSwLog=window.swLog;
-  if(typeof oldSwLog==='function'){
-    window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},30); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
-  }
-  document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},300); });
-})();
-</script>
-
 </body></html>`;
   const win=window.open('','_blank');
   if(!win){alert('⚠️ Autorisez les popups pour exporter le PDF.');return;}
@@ -7577,211 +6961,6 @@ function exportAdminJournalPDF(){
       <td>${e.action||'—'}</td><td>${e.detail||'—'}</td><td>${e.device||'—'}</td></tr>`;
   }).join('')}</tbody></table>
   
-<script>
-// Correctif d'accès landing page : garantit que les boutons restent cliquables même si un module secondaire échoue.
-(function(){
-  function byId(id){return document.getElementById(id);}
-  window.forceHideLoader=function(){ var l=byId('loader'); if(l){ l.classList.remove('show'); l.style.display='none'; l.style.pointerEvents='none'; } };
-  window.forceAdminOpen=function(){
-    forceHideLoader();
-    var m=byId('admin-modal');
-    if(m){ m.classList.remove('hidden'); m.style.display='flex'; }
-    var p=byId('adm-pass'); if(p){ setTimeout(function(){try{p.focus();}catch(e){}},50); }
-  };
-  window.forceFarmAccess=function(){
-    forceHideLoader();
-    if(typeof window.doLogin==='function'){ try{return window.doLogin();}catch(e){ alert('Accès ferme indisponible : '+(e.message||e)); } }
-    else { alert('Le module ferme n’est pas encore chargé. Rechargez la page.'); }
-  };
-  document.addEventListener('DOMContentLoaded',function(){
-    forceHideLoader();
-    var ba=byId('btn-admin-access');
-    if(ba){ ba.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); if(typeof window.showAdminModal==='function'){ try{ window.showAdminModal(); }catch(e){ forceAdminOpen(); } } else { forceAdminOpen(); } },true); }
-    var bf=byId('btn-farm-access');
-    if(bf){ bf.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); forceFarmAccess(); },true); }
-  });
-})();
-</script>
-
-
-<script>
-/* ICHTUS ERP v11 — Synchronisation Réceptions / Inventaire / PWA
-   Règles intégrées :
-   1) Une réception non validée peut être supprimée par Opérateur, Responsable ferme ou Super Admin.
-   2) Une réception validée est verrouillée : correction uniquement par inventaire.
-   3) La PWA se planifie par bassin sélectionné + volume réel à couvrir en m³.
-   4) Suppression du champ manuel "Mise à jour stock PWA" : le stock vient des réceptions et inventaires. */
-(function(){
-  function $(id){return document.getElementById(id);}
-  function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur';}
-  function isAdminOrResp(){var r=role();return r==='Administrateur'||r==='Responsable'||r==='Responsable ferme'||r==='SuperAdmin'||r==='Super Admin';}
-  function canDeleteUnvalidated(){var r=role();return ['Opérateur','Operateur','Responsable','Responsable ferme','Administrateur','SuperAdmin','Super Admin'].indexOf(r)>=0;}
-  function toast(msg,type){ if(typeof window.showToast==='function') showToast(msg,type||'acc'); else alert(msg.replace(/^[✅⚠️❌📋🔒]+\s*/,'')); }
-  function todaySafe(){return typeof window.today==='function'?today():(new Date()).toISOString().slice(0,10);}
-  function fmtNum(v,d){v=Number(v)||0;return v.toFixed(d==null?2:d).replace('.',',');}
-  function bassinOptions(){
-    var bs=(window.APP&&APP.state&&Array.isArray(APP.state.bassins))?APP.state.bassins:[];
-    if(!bs.length){bs=Array.from({length:16},function(_,i){return {name:'Bassin '+String(i+1).padStart(2,'0'),vol:3.8,statut:'Actif'};});}
-    return bs.map(function(b,i){var name=b.name||('Bassin '+String(i+1).padStart(2,'0'));var vol=Number(b.vol)||3.8;return '<option value="'+name.replace(/"/g,'&quot;')+'" data-vol="'+vol+'">'+name+' · '+fmtNum(vol,2)+' m³</option>';}).join('');
-  }
-  function currentBassinVolume(){
-    var sel=$('pwa-add-bassin'); if(!sel)return 3.8;
-    var opt=sel.options[sel.selectedIndex]; return Number(opt&&opt.getAttribute('data-vol'))||3.8;
-  }
-  function syncPwaVolumeFromBassin(){
-    var vol=currentBassinVolume();
-    if($('pwa-bassin-volume')) $('pwa-bassin-volume').textContent=fmtNum(vol,2)+' m³';
-    var v=$('pwa-add-volume-cover');
-    if(v && (!v.value || Number(v.value)<=0)) v.value=vol;
-  }
-  window.syncPwaVolumeFromBassin=syncPwaVolumeFromBassin;
-
-  function installPwaUi(){
-    var panel=$('lp-probio'); if(!panel)return;
-    var oldBassins=$('pwa-add-bassins');
-    var oldVol=$('pwa-add-volume');
-    if(oldBassins){
-      var box=oldBassins.closest('div');
-      if(box){box.innerHTML='<div class="form-lbl">Bassin ciblé</div><select id="pwa-add-bassin" class="si" style="width:100%;font-size:11px" onchange="syncPwaVolumeFromBassin()">'+bassinOptions()+'</select><div style="font-size:9px;color:var(--t3);margin-top:2px">Volume bassin : <span id="pwa-bassin-volume">—</span></div>';}
-    }
-    if(oldVol){
-      var box2=oldVol.closest('div');
-      if(box2){box2.innerHTML='<div class="form-lbl">Volume à traiter (m³)</div><input type="number" id="pwa-add-volume-cover" class="form-inp" value="3.8" step="0.1" min="0" style="width:100%"><div style="font-size:9px;color:var(--t3);margin-top:2px">Peut être inférieur au volume total du bassin.</div>';}
-    }
-    var stockInput=$('pwa-stock-update');
-    if(stockInput){
-      var card=stockInput.closest('.card');
-      if(card){card.outerHTML='<div class="card" style="border-color:rgba(0,212,180,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc)"></span>Stock PWA synchronisé</div><div style="font-size:11px;color:var(--t2);line-height:1.7">Le champ manuel de mise à jour du stock PWA a été supprimé. Désormais : <strong style="color:var(--acc)">réception PWA = entrée automatique</strong>, <strong style="color:var(--warn)">utilisation PWA = sortie/consommation</strong>, et <strong style="color:var(--purp)">correction = inventaire uniquement</strong>.</div></div>';}
-    }
-    syncPwaVolumeFromBassin();
-  }
-  window.installPwaUi=installPwaUi;
-
-  // PWA : planification par bassin + volume réel à couvrir.
-  window.addPWAActivity=function(){
-    var a=($('pwa-add-activity')&&$('pwa-add-activity').value)||'entretien';
-    var bassin=($('pwa-add-bassin')&&$('pwa-add-bassin').value)||'Bassin 01';
-    var bassinVol=currentBassinVolume();
-    var cover=Number(($('pwa-add-volume-cover')&&$('pwa-add-volume-cover').value)||bassinVol)||bassinVol;
-    if(cover<=0){toast('⚠️ Volume à traiter invalide','warn');return;}
-    if(cover>bassinVol){toast('⚠️ Le volume à traiter dépasse le volume du bassin sélectionné','warn');}
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    window.PWA_PLAN.push({id:Date.now()+Math.random(),activity:a,bassin:bassin,bassinVol:bassinVol,coverVol:cover,nb:1,vol:cover});
-    if(typeof window.calcPWA==='function') window.calcPWA();
-  };
-  window.pwaDoseLitres=function(row){
-    var rates=window.PWA_RATES||{};
-    var r=rates[row.activity]||rates.entretien||{dose:0.2};
-    var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
-    return (Number(r.dose)||0)*cover;
-  };
-  window.calcPWA=function(){
-    var list=$('pwa-plan-list'),res=$('pwa-result'); if(!res)return;
-    window.PWA_PLAN=window.PWA_PLAN||[];
-    if(!window.PWA_PLAN.length){ window.PWA_PLAN=[{id:'def1',activity:'rotation',bassin:'Bassin 01',bassinVol:3.8,coverVol:3.8,nb:1,vol:3.8}]; }
-    if(list) list.innerHTML=window.PWA_PLAN.map(function(row){
-      var rates=window.PWA_RATES||{}; var r=rates[row.activity]||rates.entretien||{label:row.activity,moment:'',dose:0.2};
-      var q=window.pwaDoseLitres(row);
-      return '<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">'
-        +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+(r.label||row.activity)+'</strong><div style="font-size:9px;color:var(--t3)">'+(r.moment||'')+' · '+(row.bassin||'Bassin')+' · volume bassin '+fmtNum(row.bassinVol,2)+' m³ · volume traité '+fmtNum(row.coverVol,2)+' m³ · dose '+fmtNum(r.dose,2)+' L/m³</div></div>'
-        +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+fmtNum(q,2)+' L</div>'
-        +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
-    }).join('');
-    var base=window.PWA_PLAN.reduce(function(s,row){return s+window.pwaDoseLitres(row);},0);
-    var pfa=base*0.04,total=base+pfa;
-    res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
-      +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+fmtNum(base,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+fmtNum(pfa,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+fmtNum(total,2)+' L</div></div></div>'
-      +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Calcul flexible : bassin sélectionné → volume réel du bassin → volume réellement à couvrir en m³ → dose PWA par m³. Le stock PWA n’est pas modifié ici : il est synchronisé par les réceptions, consommations et inventaires.</div>'
-      +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Toute correction de stock se fait par inventaire.</div>';
-  };
-  window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
-
-  // Réceptions : verrouillage après validation, suppression libre avant validation selon les rôles définis.
-  window.renderStockEntries=function(){
-    var container=$('stock-entries-list'); if(!container)return;
-    var r=role(); var canValidate=isAdminOrResp();
-    if(!window.APP_STOCK_ENTRIES||!APP_STOCK_ENTRIES.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucune entrée. Cliquez ➕ pour ajouter.</div>';return;}
-    var byDate={};
-    APP_STOCK_ENTRIES.forEach(function(e){var d=e.date||todaySafe(); if(!byDate[d])byDate[d]=[]; byDate[d].push(e);});
-    container.innerHTML='<div class="card" style="border-color:rgba(255,179,71,.25);margin-bottom:.7rem"><div style="font-size:11px;color:var(--t2);line-height:1.7"><strong style="color:var(--warn)">Règle de cohérence :</strong> avant validation, une réception peut être supprimée par Opérateur, Responsable ferme ou Super Admin. Après validation, elle est verrouillée ; toute correction passe par l’onglet Inventaire.</div></div>'+
-      Object.entries(byDate).sort(function(a,b){return b[0].localeCompare(a[0]);}).slice(0,30).map(function(pair){
-        var date=pair[0], entries=pair[1];
-        return '<div style="margin-bottom:.6rem"><div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:.3rem">'+date+'</div>'+entries.map(function(e){
-          var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===e.intrantId;});
-          var isExpired=e.expiryDate&&e.expiryDate<todaySafe();
-          var expireSoon=e.expiryDate&&!isExpired&&(new Date(e.expiryDate)-new Date()<90*86400000);
-          var pending=!e.validated;
-          var borderCol=isExpired?'var(--dng)':pending?'rgba(245,166,35,.45)':expireSoon?'var(--warn)':'rgba(0,212,180,.25)';
-          var expCol=isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)';
-          var validBtns=pending
-            ?(canValidate?'<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#04101e;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">✅ Valider</button><span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
-            :'<span style="font-size:9px;color:var(--acc);font-weight:700">🔒 Validée · '+(e.validatedBy||'OK')+'</span><span style="font-size:9px;color:var(--t3)">Correction par inventaire</span>';
-          var editBtn=(pending&&(canValidate||e.createdBy===(APP.user&&APP.user.name)))?'<button data-edit="'+e.id+'" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✏️ Modifier</button>':'';
-          var deletBtn=(pending&&canDeleteUnvalidated())?'<button data-delete="'+e.id+'" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑 Supprimer</button>':'';
-          return '<div style="background:var(--card);border:1px solid '+borderCol+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem"><div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><div style="flex:1;min-width:170px"><span style="font-weight:700;color:var(--t1)">'+((item&&item.name)||e.intrantId)+'</span><span style="color:var(--acc);font-weight:700;margin-left:.5rem">+'+(e.quantity||0)+' '+((item&&item.unit)||'')+'</span>'
-            +(e.lot?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Lot:'+e.lot+'</span>':'')
-            +(e.facture?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Fact:'+e.facture+'</span>':'')
-            +(e.conditionnement?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">'+e.conditionnement+'</span>':'')
-            +'<div style="font-size:9px;color:var(--t3);margin-top:2px">'+(e.supplier?'Fourn: '+e.supplier+' · ':'')+(e.expiryDate?'<span style="color:'+expCol+'">⏱ '+(isExpired?'⚠️PÉRIMÉ ':'')+e.expiryDate+'</span> · ':'')+'Par: '+(e.createdBy||'?')+'</div></div><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+editBtn+deletBtn+'</div></div></div>';
-        }).join('')+'</div>';
-      }).join('');
-    container.onclick=function(ev){
-      var vb=ev.target.closest('[data-validate]'); if(vb){ev.preventDefault();validateStockEntry(vb.dataset.validate);return;}
-      var eb=ev.target.closest('[data-edit]'); if(eb){ev.preventDefault();editStockEntry(eb.dataset.edit);return;}
-      var db=ev.target.closest('[data-delete]'); if(db){ev.preventDefault();deleteStockEntry(db.dataset.delete);return;}
-    };
-  };
-  window.editStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Réception validée : correction uniquement par inventaire.','warn');return;}
-    if(!(isAdminOrResp()||entry.createdBy===(APP.user&&APP.user.name))){toast('❌ Vous ne pouvez modifier que vos entrées non validées.','dng');return;}
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===entry.intrantId;});
-    var q=prompt('Quantité '+((item&&item.unit)||'')+' :', entry.quantity); if(q===null)return;
-    var d=prompt('Date (AAAA-MM-JJ) :', entry.date||todaySafe()); if(d===null)return;
-    var supplier=prompt('Fournisseur :', entry.supplier||''); if(supplier===null)return;
-    var lot=prompt('Lot :', entry.lot||''); if(lot===null)return;
-    var upd={quantity:Number(q)||0,date:d,supplier:supplier,lot:lot,validated:false,modifiedAt:new Date().toISOString(),modifiedBy:(APP.user&&APP.user.name)||'?'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries(); if(typeof renderComptaPrix==='function')renderComptaPrix(); toast('✅ Entrée non validée modifiée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.validateStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(!isAdminOrResp()){toast('❌ Validation réservée au Responsable administratif / ferme ou Super Admin','dng');return;}
-    var upd={validated:true,validatedBy:(APP.user&&APP.user.name)||'?',validatedAt:new Date().toISOString(),locked:true,lockedReason:'Réception validée — correction par inventaire uniquement'};
-    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries();toast('✅ Entrée validée et verrouillée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-  window.deleteStockEntry=async function(id){
-    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
-    if(entry.validated){toast('🔒 Suppression impossible : cette réception est validée. Corriger par inventaire.','warn');return;}
-    if(!canDeleteUnvalidated()){toast('❌ Suppression non autorisée','dng');return;}
-    if(!confirm('Supprimer cette entrée non validée ?'))return;
-    try{await withTimeout(farmCol('stock_entries').doc(id).delete(),6000);window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(function(e){return String(e.id)!==String(id);});renderStockEntries();toast('✅ Entrée non validée supprimée','acc');}
-    catch(e){toast('❌ '+(e.message||e),'dng');}
-  };
-
-  // Stock : par prudence, seules les réceptions validées alimentent la valeur officielle.
-  window.getItemCurrentStock=function(intrantId){
-    var entries=(window.APP_STOCK_ENTRIES||[]).filter(function(e){return e.intrantId===intrantId && e.validated;});
-    var totalIn=entries.reduce(function(s,e){return s+(Number(e.quantity)||0);},0);
-    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===intrantId;});
-    if(item&&item.category==='aliment'&&window.APP&&APP.state&&APP.state.bassins){
-      var totalUsed=APP.state.bassins.filter(function(b){return b.statut==='Actif';}).reduce(function(s,b){return s+(Number(b.alimReel)||0);},0);
-      return Math.max(0,totalIn-totalUsed);
-    }
-    return totalIn;
-  };
-
-  var oldSwLog=window.swLog;
-  if(typeof oldSwLog==='function'){
-    window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},30); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
-  }
-  document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},300); });
-})();
-</script>
-
 </body></html>`;
   const win=window.open('','_blank');
   if(!win){alert('⚠️ Autorisez les popups pour exporter le PDF.');return;}
@@ -9187,5 +8366,233 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
+<!-- Correctifs et modules ICHTUS réinjectés proprement hors du template PDF -->
+
+<script>
+// Correctif d'accès landing page : garantit que les boutons restent cliquables même si un module secondaire échoue.
+(function(){
+  function byId(id){return document.getElementById(id);}
+  window.forceHideLoader=function(){ var l=byId('loader'); if(l){ l.classList.remove('show'); l.style.display='none'; l.style.pointerEvents='none'; } };
+  window.forceAdminOpen=function(){
+    forceHideLoader();
+    var m=byId('admin-modal');
+    if(m){ m.classList.remove('hidden'); m.style.display='flex'; }
+    var p=byId('adm-pass'); if(p){ setTimeout(function(){try{p.focus();}catch(e){}},50); }
+  };
+  window.forceFarmAccess=function(){
+    forceHideLoader();
+    if(typeof window.doLogin==='function'){ try{return window.doLogin();}catch(e){ alert('Accès ferme indisponible : '+(e.message||e)); } }
+    else { alert('Le module ferme n’est pas encore chargé. Rechargez la page.'); }
+  };
+  document.addEventListener('DOMContentLoaded',function(){
+    forceHideLoader();
+    var ba=byId('btn-admin-access');
+    if(ba){ ba.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); if(typeof window.showAdminModal==='function'){ try{ window.showAdminModal(); }catch(e){ forceAdminOpen(); } } else { forceAdminOpen(); } },true); }
+    var bf=byId('btn-farm-access');
+    if(bf){ bf.addEventListener('click',function(ev){ ev.preventDefault(); ev.stopPropagation(); forceFarmAccess(); },true); }
+  });
+})();
+</script>
+
+
+<script>
+/* ICHTUS ERP v11 — Synchronisation Réceptions / Inventaire / PWA
+   Règles intégrées :
+   1) Une réception non validée peut être supprimée par Opérateur, Responsable ferme ou Super Admin.
+   2) Une réception validée est verrouillée : correction uniquement par inventaire.
+   3) La PWA se planifie par bassin sélectionné + volume réel à couvrir en m³.
+   4) Suppression du champ manuel "Mise à jour stock PWA" : le stock vient des réceptions et inventaires. */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur';}
+  function isAdminOrResp(){var r=role();return r==='Administrateur'||r==='Responsable'||r==='Responsable ferme'||r==='SuperAdmin'||r==='Super Admin';}
+  function canDeleteUnvalidated(){var r=role();return ['Opérateur','Operateur','Responsable','Responsable ferme','Administrateur','SuperAdmin','Super Admin'].indexOf(r)>=0;}
+  function toast(msg,type){ if(typeof window.showToast==='function') showToast(msg,type||'acc'); else alert(msg.replace(/^[✅⚠️❌📋🔒]+\s*/,'')); }
+  function todaySafe(){return typeof window.today==='function'?today():(new Date()).toISOString().slice(0,10);}
+  function fmtNum(v,d){v=Number(v)||0;return v.toFixed(d==null?2:d).replace('.',',');}
+  function bassinOptions(){
+    var bs=(window.APP&&APP.state&&Array.isArray(APP.state.bassins))?APP.state.bassins:[];
+    if(!bs.length){bs=Array.from({length:16},function(_,i){return {name:'Bassin '+String(i+1).padStart(2,'0'),vol:3.8,statut:'Actif'};});}
+    return bs.map(function(b,i){var name=b.name||('Bassin '+String(i+1).padStart(2,'0'));var vol=Number(b.vol)||3.8;return '<option value="'+name.replace(/"/g,'&quot;')+'" data-vol="'+vol+'">'+name+' · '+fmtNum(vol,2)+' m³</option>';}).join('');
+  }
+  function currentBassinVolume(){
+    var sel=$('pwa-add-bassin'); if(!sel)return 3.8;
+    var opt=sel.options[sel.selectedIndex]; return Number(opt&&opt.getAttribute('data-vol'))||3.8;
+  }
+  function syncPwaVolumeFromBassin(){
+    var vol=currentBassinVolume();
+    if($('pwa-bassin-volume')) $('pwa-bassin-volume').textContent=fmtNum(vol,2)+' m³';
+    var v=$('pwa-add-volume-cover');
+    if(v && (!v.value || Number(v.value)<=0)) v.value=vol;
+  }
+  window.syncPwaVolumeFromBassin=syncPwaVolumeFromBassin;
+
+  function installPwaUi(){
+    var panel=$('lp-probio'); if(!panel)return;
+    var oldBassins=$('pwa-add-bassins');
+    var oldVol=$('pwa-add-volume');
+    if(oldBassins){
+      var box=oldBassins.closest('div');
+      if(box){box.innerHTML='<div class="form-lbl">Bassin ciblé</div><select id="pwa-add-bassin" class="si" style="width:100%;font-size:11px" onchange="syncPwaVolumeFromBassin()">'+bassinOptions()+'</select><div style="font-size:9px;color:var(--t3);margin-top:2px">Volume bassin : <span id="pwa-bassin-volume">—</span></div>';}
+    }
+    if(oldVol){
+      var box2=oldVol.closest('div');
+      if(box2){box2.innerHTML='<div class="form-lbl">Volume à traiter (m³)</div><input type="number" id="pwa-add-volume-cover" class="form-inp" value="3.8" step="0.1" min="0" style="width:100%"><div style="font-size:9px;color:var(--t3);margin-top:2px">Peut être inférieur au volume total du bassin.</div>';}
+    }
+    var stockInput=$('pwa-stock-update');
+    if(stockInput){
+      var card=stockInput.closest('.card');
+      if(card){card.outerHTML='<div class="card" style="border-color:rgba(0,212,180,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc)"></span>Stock PWA synchronisé</div><div style="font-size:11px;color:var(--t2);line-height:1.7">Le champ manuel de mise à jour du stock PWA a été supprimé. Désormais : <strong style="color:var(--acc)">réception PWA = entrée automatique</strong>, <strong style="color:var(--warn)">utilisation PWA = sortie/consommation</strong>, et <strong style="color:var(--purp)">correction = inventaire uniquement</strong>.</div></div>';}
+    }
+    syncPwaVolumeFromBassin();
+  }
+  window.installPwaUi=installPwaUi;
+
+  // PWA : planification par bassin + volume réel à couvrir.
+  window.addPWAActivity=function(){
+    var a=($('pwa-add-activity')&&$('pwa-add-activity').value)||'entretien';
+    var bassin=($('pwa-add-bassin')&&$('pwa-add-bassin').value)||'Bassin 01';
+    var bassinVol=currentBassinVolume();
+    var cover=Number(($('pwa-add-volume-cover')&&$('pwa-add-volume-cover').value)||bassinVol)||bassinVol;
+    if(cover<=0){toast('⚠️ Volume à traiter invalide','warn');return;}
+    if(cover>bassinVol){toast('⚠️ Le volume à traiter dépasse le volume du bassin sélectionné','warn');}
+    window.PWA_PLAN=window.PWA_PLAN||[];
+    window.PWA_PLAN.push({id:Date.now()+Math.random(),activity:a,bassin:bassin,bassinVol:bassinVol,coverVol:cover,nb:1,vol:cover});
+    if(typeof window.calcPWA==='function') window.calcPWA();
+  };
+  window.pwaDoseLitres=function(row){
+    var rates=window.PWA_RATES||{};
+    var r=rates[row.activity]||rates.entretien||{dose:0.2};
+    var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
+    return (Number(r.dose)||0)*cover;
+  };
+  window.calcPWA=function(){
+    var list=$('pwa-plan-list'),res=$('pwa-result'); if(!res)return;
+    window.PWA_PLAN=window.PWA_PLAN||[];
+    if(!window.PWA_PLAN.length){ window.PWA_PLAN=[{id:'def1',activity:'rotation',bassin:'Bassin 01',bassinVol:3.8,coverVol:3.8,nb:1,vol:3.8}]; }
+    if(list) list.innerHTML=window.PWA_PLAN.map(function(row){
+      var rates=window.PWA_RATES||{}; var r=rates[row.activity]||rates.entretien||{label:row.activity,moment:'',dose:0.2};
+      var q=window.pwaDoseLitres(row);
+      return '<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">'
+        +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+(r.label||row.activity)+'</strong><div style="font-size:9px;color:var(--t3)">'+(r.moment||'')+' · '+(row.bassin||'Bassin')+' · volume bassin '+fmtNum(row.bassinVol,2)+' m³ · volume traité '+fmtNum(row.coverVol,2)+' m³ · dose '+fmtNum(r.dose,2)+' L/m³</div></div>'
+        +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+fmtNum(q,2)+' L</div>'
+        +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
+    }).join('');
+    var base=window.PWA_PLAN.reduce(function(s,row){return s+window.pwaDoseLitres(row);},0);
+    var pfa=base*0.04,total=base+pfa;
+    res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
+      +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+fmtNum(base,2)+' L</div></div>'
+      +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+fmtNum(pfa,2)+' L</div></div>'
+      +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+fmtNum(total,2)+' L</div></div></div>'
+      +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Calcul flexible : bassin sélectionné → volume réel du bassin → volume réellement à couvrir en m³ → dose PWA par m³. Le stock PWA n’est pas modifié ici : il est synchronisé par les réceptions, consommations et inventaires.</div>'
+      +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Toute correction de stock se fait par inventaire.</div>';
+  };
+  window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
+
+  // Réceptions : verrouillage après validation, suppression libre avant validation selon les rôles définis.
+  window.renderStockEntries=function(){
+    var container=$('stock-entries-list'); if(!container)return;
+    var r=role(); var canValidate=isAdminOrResp();
+    if(!window.APP_STOCK_ENTRIES||!APP_STOCK_ENTRIES.length){container.innerHTML='<div style="color:var(--t3);padding:1rem;text-align:center">Aucune entrée. Cliquez ➕ pour ajouter.</div>';return;}
+    var byDate={};
+    APP_STOCK_ENTRIES.forEach(function(e){var d=e.date||todaySafe(); if(!byDate[d])byDate[d]=[]; byDate[d].push(e);});
+    container.innerHTML='<div class="card" style="border-color:rgba(255,179,71,.25);margin-bottom:.7rem"><div style="font-size:11px;color:var(--t2);line-height:1.7"><strong style="color:var(--warn)">Règle de cohérence :</strong> avant validation, une réception peut être supprimée par Opérateur, Responsable ferme ou Super Admin. Après validation, elle est verrouillée ; toute correction passe par l’onglet Inventaire.</div></div>'+
+      Object.entries(byDate).sort(function(a,b){return b[0].localeCompare(a[0]);}).slice(0,30).map(function(pair){
+        var date=pair[0], entries=pair[1];
+        return '<div style="margin-bottom:.6rem"><div style="font-size:10px;font-weight:700;color:var(--t3);margin-bottom:.3rem">'+date+'</div>'+entries.map(function(e){
+          var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===e.intrantId;});
+          var isExpired=e.expiryDate&&e.expiryDate<todaySafe();
+          var expireSoon=e.expiryDate&&!isExpired&&(new Date(e.expiryDate)-new Date()<90*86400000);
+          var pending=!e.validated;
+          var borderCol=isExpired?'var(--dng)':pending?'rgba(245,166,35,.45)':expireSoon?'var(--warn)':'rgba(0,212,180,.25)';
+          var expCol=isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)';
+          var validBtns=pending
+            ?(canValidate?'<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#04101e;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">✅ Valider</button><span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
+            :'<span style="font-size:9px;color:var(--acc);font-weight:700">🔒 Validée · '+(e.validatedBy||'OK')+'</span><span style="font-size:9px;color:var(--t3)">Correction par inventaire</span>';
+          var editBtn=(pending&&(canValidate||e.createdBy===(APP.user&&APP.user.name)))?'<button data-edit="'+e.id+'" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✏️ Modifier</button>':'';
+          var deletBtn=(pending&&canDeleteUnvalidated())?'<button data-delete="'+e.id+'" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑 Supprimer</button>':'';
+          return '<div style="background:var(--card);border:1px solid '+borderCol+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem"><div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap"><div style="flex:1;min-width:170px"><span style="font-weight:700;color:var(--t1)">'+((item&&item.name)||e.intrantId)+'</span><span style="color:var(--acc);font-weight:700;margin-left:.5rem">+'+(e.quantity||0)+' '+((item&&item.unit)||'')+'</span>'
+            +(e.lot?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Lot:'+e.lot+'</span>':'')
+            +(e.facture?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">Fact:'+e.facture+'</span>':'')
+            +(e.conditionnement?'<span style="color:var(--t3);font-size:9px;margin-left:.4rem">'+e.conditionnement+'</span>':'')
+            +'<div style="font-size:9px;color:var(--t3);margin-top:2px">'+(e.supplier?'Fourn: '+e.supplier+' · ':'')+(e.expiryDate?'<span style="color:'+expCol+'">⏱ '+(isExpired?'⚠️PÉRIMÉ ':'')+e.expiryDate+'</span> · ':'')+'Par: '+(e.createdBy||'?')+'</div></div><div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+editBtn+deletBtn+'</div></div></div>';
+        }).join('')+'</div>';
+      }).join('');
+    container.onclick=function(ev){
+      var vb=ev.target.closest('[data-validate]'); if(vb){ev.preventDefault();validateStockEntry(vb.dataset.validate);return;}
+      var eb=ev.target.closest('[data-edit]'); if(eb){ev.preventDefault();editStockEntry(eb.dataset.edit);return;}
+      var db=ev.target.closest('[data-delete]'); if(db){ev.preventDefault();deleteStockEntry(db.dataset.delete);return;}
+    };
+  };
+  window.editStockEntry=async function(id){
+    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
+    if(entry.validated){toast('🔒 Réception validée : correction uniquement par inventaire.','warn');return;}
+    if(!(isAdminOrResp()||entry.createdBy===(APP.user&&APP.user.name))){toast('❌ Vous ne pouvez modifier que vos entrées non validées.','dng');return;}
+    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===entry.intrantId;});
+    var q=prompt('Quantité '+((item&&item.unit)||'')+' :', entry.quantity); if(q===null)return;
+    var d=prompt('Date (AAAA-MM-JJ) :', entry.date||todaySafe()); if(d===null)return;
+    var supplier=prompt('Fournisseur :', entry.supplier||''); if(supplier===null)return;
+    var lot=prompt('Lot :', entry.lot||''); if(lot===null)return;
+    var upd={quantity:Number(q)||0,date:d,supplier:supplier,lot:lot,validated:false,modifiedAt:new Date().toISOString(),modifiedBy:(APP.user&&APP.user.name)||'?'};
+    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries(); if(typeof renderComptaPrix==='function')renderComptaPrix(); toast('✅ Entrée non validée modifiée','acc');}
+    catch(e){toast('❌ '+(e.message||e),'dng');}
+  };
+  window.validateStockEntry=async function(id){
+    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
+    if(!isAdminOrResp()){toast('❌ Validation réservée au Responsable administratif / ferme ou Super Admin','dng');return;}
+    var upd={validated:true,validatedBy:(APP.user&&APP.user.name)||'?',validatedAt:new Date().toISOString(),locked:true,lockedReason:'Réception validée — correction par inventaire uniquement'};
+    try{await withTimeout(farmCol('stock_entries').doc(id).update(upd),6000);Object.assign(entry,upd);renderStockEntries();toast('✅ Entrée validée et verrouillée','acc');}
+    catch(e){toast('❌ '+(e.message||e),'dng');}
+  };
+  window.deleteStockEntry=async function(id){
+    var entry=(window.APP_STOCK_ENTRIES||[]).find(function(e){return String(e.id)===String(id);}); if(!entry)return;
+    if(entry.validated){toast('🔒 Suppression impossible : cette réception est validée. Corriger par inventaire.','warn');return;}
+    if(!canDeleteUnvalidated()){toast('❌ Suppression non autorisée','dng');return;}
+    if(!confirm('Supprimer cette entrée non validée ?'))return;
+    try{await withTimeout(farmCol('stock_entries').doc(id).delete(),6000);window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(function(e){return String(e.id)!==String(id);});renderStockEntries();toast('✅ Entrée non validée supprimée','acc');}
+    catch(e){toast('❌ '+(e.message||e),'dng');}
+  };
+
+  // Stock : par prudence, seules les réceptions validées alimentent la valeur officielle.
+  window.getItemCurrentStock=function(intrantId){
+    var entries=(window.APP_STOCK_ENTRIES||[]).filter(function(e){return e.intrantId===intrantId && e.validated;});
+    var totalIn=entries.reduce(function(s,e){return s+(Number(e.quantity)||0);},0);
+    var item=(window.APP_INTRANTS||[]).find(function(i){return i.id===intrantId;});
+    if(item&&item.category==='aliment'&&window.APP&&APP.state&&APP.state.bassins){
+      var totalUsed=APP.state.bassins.filter(function(b){return b.statut==='Actif';}).reduce(function(s,b){return s+(Number(b.alimReel)||0);},0);
+      return Math.max(0,totalIn-totalUsed);
+    }
+    return totalIn;
+  };
+
+  var oldSwLog=window.swLog;
+  if(typeof oldSwLog==='function'){
+    window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},30); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
+  }
+  document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},300); });
+})();
+</script>
+
+
+<script id="ichtus-admin-access-hardening-v15">
+(function(){
+  function G2(id){return document.getElementById(id);}
+  window.hideAdminModal = window.hideAdminModal || function(){var m=G2('admin-modal'); if(m){m.classList.add('hidden'); m.style.display='none';}};
+  window.showAdminModal = window.showAdminModal || function(){var m=G2('admin-modal'); if(m){m.classList.remove('hidden'); m.style.display='flex';} var p=G2('adm-pass'); if(p)setTimeout(function(){try{p.focus();}catch(e){}},50);};
+  window.doAdminLogin = window.doAdminLogin || async function(){
+    var email=(G2('adm-email')&&G2('adm-email').value||'').trim();
+    var password=(G2('adm-pass')&&G2('adm-pass').value||'').trim();
+    var err=G2('adm-err');
+    if(!email||!password){ if(err){err.textContent='⚠️ Saisir email et mot de passe'; err.classList.add('show');} return; }
+    try{ if(window.showLoader)showLoader('Connexion…'); await auth.signInWithEmailAndPassword(email,password); window.APP=window.APP||{}; APP.user={uid:auth.currentUser.uid,email:email,name:'Administrateur',role:'Administrateur',farmCode:null}; if(window.loadAdminDashboard)try{await loadAdminDashboard();}catch(e){console.warn(e)} if(window.hideLoader)hideLoader(); window.hideAdminModal(); if(window.showScreen)showScreen('screen-admin'); else {var b=G2('screen-boot'),a=G2('screen-admin'); if(b)b.classList.add('hidden'); if(a)a.classList.remove('hidden');} if(window.startSession)startSession(); }
+    catch(e){ if(window.hideLoader)hideLoader(); if(err){err.textContent='❌ Email ou mot de passe incorrect'; err.classList.add('show');} var p=G2('adm-pass'); if(p)p.value=''; console.warn(e);}
+  };
+  document.addEventListener('DOMContentLoaded',function(){
+    var cancel=document.querySelector('[onclick*="hideAdminModal"]'); if(cancel)cancel.addEventListener('click',function(ev){ev.preventDefault(); window.hideAdminModal();},true);
+    var admin=G2('btn-admin-access'); if(admin)admin.addEventListener('click',function(ev){ev.preventDefault(); window.showAdminModal();},true);
+  });
+})();
+</script>
+
 </body>
 </html>
