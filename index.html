@@ -1266,7 +1266,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
               <div class="ctitle"><span class="dot" style="background:var(--acc)"></span>💧 Préparation PWA (bihebdomadaire)</div>
               <p style="font-size:10px;color:var(--t3);line-height:1.6;margin-bottom:.75rem">Planification prospective S+1 · Sélection cumulative des activités · Majorée de 4% pour couvrir la PFA (30 ml/kg d'aliment).</p>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.6rem">
-                <div><div class="form-lbl">Activité PWA</div><select id="pwa-add-activity" class="si" style="width:100%;font-size:11px"><option value="primo">Primo inoculation J1</option><option value="entretien">Entretien J3/J5/J7/J8/J10</option><option value="rotation">Système mature_post introduction alevins jeudi+lundi</option><option value="postintro">Système immature_post introduction alevins J14-J21</option></select></div>
+                <div><div class="form-lbl">Activité PWA</div><select id="pwa-add-activity" class="si" style="width:100%;font-size:11px" onchange="(function(){var el=document.getElementById('pwa-entretien-date-wrap');if(el)el.style.display=this.value==='entretien'?'block':'none';}).call(this)"><option value="primo">Primo inoculation J1</option><option value="entretien">Entretien J3/J5/J7/J8/J10</option><option value="rotation">Système mature_post introduction alevins jeudi+lundi</option><option value="postintro">Système immature_post introduction alevins J14-J21</option></select><div id="pwa-entretien-date-wrap" style="display:none;margin-top:4px"><div class="form-lbl">Date J1 (début de semaine d'entretien)</div><input type="date" id="pwa-entretien-j1" class="form-inp" style="font-size:11px" oninput="if(typeof calcPWA==='function')calcPWA()"></div></div>
                 <div><div class="form-lbl">Nb bassins</div><input type="number" id="pwa-add-bassins" class="form-inp" value="1" min="1"></div>
                 <div><div class="form-lbl">Volume / bassin</div><select id="pwa-add-volume" class="si" style="width:100%;font-size:11px"><option value="1.75">1,75 m³ (50 cm)</option><option value="3.8">3,80 m³ (110 cm)</option></select></div>
               </div>
@@ -1992,11 +1992,11 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 
 <!-- Modal Thème -->
 <div id="theme-modal" class="modal-overlay hidden">
-  <div class="modal-box" style="max-width:480px">
+  <div class="modal-box" style="max-width:480px;max-height:92vh;display:flex;flex-direction:column">
     <div class="modal-title">🎨 Thème d'affichage</div>
-    <p style="font-size:11px;color:var(--t2);margin-bottom:1rem">Choisissez le thème qui convient le mieux à votre environnement de travail. Votre choix est sauvegardé automatiquement.</p>
-    <div id="theme-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-bottom:1rem"></div>
-    <button class="dbtn" style="width:100%;padding:7px" onclick="G('theme-modal').classList.add('hidden')">Fermer</button>
+    <p style="font-size:11px;color:var(--t2);margin-bottom:.75rem">Choisissez le thème qui convient le mieux à votre environnement de travail. Votre choix est sauvegardé automatiquement.</p>
+    <div id="theme-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;margin-bottom:.75rem;overflow-y:auto;flex:1;padding-right:2px"></div>
+    <button class="dbtn" style="width:100%;padding:7px;flex-shrink:0" onclick="G('theme-modal').classList.add('hidden')">Fermer</button>
   </div>
 </div>
 
@@ -2610,6 +2610,8 @@ async function doAdminLogin(){
 async function doLogout(expired=false){
   try{logAudit(expired?'SESSION_EXPIREE':'DECONNEXION','Déconnexion '+(expired?'automatique':'manuelle'));}catch(e){}
   stopSession();
+  // Forcer la sauvegarde des modifications en attente avant de quitter
+  if(hasPendingSaves()){try{await flushPendingSaves();}catch(e){console.warn('flushPendingSaves:',e);}}
   APP.unsubs.forEach(u=>u());APP.unsubs=[];
   await auth.signOut();
   APP.user=null;APP.farmCode=null;APP.farmName=null;APP.species=null;
@@ -2757,7 +2759,26 @@ function applyRoleRestrictions(){
 // ═══════════════════════════════════════════════
 const farmCol=(col)=>db.collection('farms').doc(APP.farmCode).collection(col);
 const _dbt={};
-function debounce(key,fn,ms=600){clearTimeout(_dbt[key]);_dbt[key]=setTimeout(fn,ms);}
+const _pendingSaveKeys=new Set();
+function debounce(key,fn,ms=600){
+  clearTimeout(_dbt[key]);
+  _pendingSaveKeys.add(key);
+  _dbt[key]=setTimeout(()=>{_pendingSaveKeys.delete(key);fn();},ms);
+}
+function hasPendingSaves(){return _pendingSaveKeys.size>0;}
+async function flushPendingSaves(){
+  const keys=[..._pendingSaveKeys];
+  if(!keys.length)return;
+  for(const key of keys){
+    if(_dbt[key]){clearTimeout(_dbt[key]);_dbt[key]=null;_pendingSaveKeys.delete(key);}
+  }
+  // Force immediate batch write for bassins and feed
+  if(!APP.farmCode)return;
+  const batch=db.batch();
+  APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});});
+  FEED_TYPES.forEach(ft=>{batch.set(farmCol('feed').doc(ft.id),{batches:ft.batches});});
+  await batch.commit().catch(console.error);
+}
 let syncDotEl=null;
 function showSyncing(){syncDotEl=G('sync-dot');if(syncDotEl)syncDotEl.style.background='var(--warn)';}
 function showSynced(){if(syncDotEl)syncDotEl.style.background='var(--acc)';}
@@ -2765,6 +2786,7 @@ function showSyncErr(){if(syncDotEl)syncDotEl.style.background='var(--dng)';}
 
 function saveBassins(){
   if(!APP.farmCode)return;
+  if(!Array.isArray(APP.state.bassins)||APP.state.bassins.length===0)return;
   debounce('bassins',()=>{
     showSyncing();
     const batch=db.batch();
@@ -2773,6 +2795,14 @@ function saveBassins(){
     });
     batch.commit().then(showSynced).catch(showSyncErr);
   },600);
+}
+async function saveBassinsNow(){
+  if(!APP.farmCode||!Array.isArray(APP.state.bassins)||APP.state.bassins.length===0)return;
+  clearTimeout(_dbt['bassins']);_pendingSaveKeys.delete('bassins');
+  showSyncing();
+  const batch=db.batch();
+  APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});});
+  await batch.commit().then(showSynced).catch(showSyncErr);
 }
 function saveSuiviDoc(r){if(!APP.farmCode)return;showSyncing();farmCol('suivi').doc(String(r.id)).set(r).then(showSynced).catch(showSyncErr);}
 function deleteSuiviDoc(id){if(!APP.farmCode)return;showSyncing();farmCol('suivi').doc(String(id)).delete().then(showSynced).catch(showSyncErr);}
@@ -2833,19 +2863,37 @@ async function loadFarmData(){
 }
 
 function setupFarmListeners(){
-  // Utilisation de get() au lieu de onSnapshot pour éviter les erreurs WebChannel
-  // Les données se rafraîchissent à chaque navigation entre onglets
-  farmCol('bassins').get().then(snap=>{
+  // Désabonner les anciens listeners avant d'en créer de nouveaux
+  APP.unsubs.forEach(u=>{try{u();}catch(e){}});
+  APP.unsubs=[];
+
+  // Listener temps-réel pour les bassins (onSnapshot)
+  // Ignorer les mises à jour déclenchées par notre propre écriture locale (_localWrite)
+  let _bassinsLocalWrite=false;
+  const unsubBassins=farmCol('bassins').orderBy('_order').onSnapshot(snap=>{
+    if(_bassinsLocalWrite){_bassinsLocalWrite=false;return;}
     if(snap&&!snap.empty){
       const nb=snap.docs.map(d=>{
         const x={...d.data()};delete x._order;
         if(!x.feedId)x.feedId=getRationEntry(x.poids||1)?.id||FEED_TYPES[0]?.id;
         return x;
       });
-      APP.state.bassins=nb;APP.bCount=nb.length+1;buildBTable();popSelects();upAll();
+      APP.state.bassins=nb;APP.bCount=nb.length+1;
+      buildBTable();popSelects();upAll();
     }
-  }).catch(e=>console.warn('Bassins load:',e));
+  },e=>{
+    // Fallback get() si onSnapshot échoue (WebChannel)
+    console.warn('Bassins onSnapshot failed, fallback get():',e);
+    farmCol('bassins').get().then(snap=>{
+      if(snap&&!snap.empty){
+        const nb=snap.docs.map(d=>{const x={...d.data()};delete x._order;if(!x.feedId)x.feedId=getRationEntry(x.poids||1)?.id||FEED_TYPES[0]?.id;return x;});
+        APP.state.bassins=nb;APP.bCount=nb.length+1;buildBTable();popSelects();upAll();
+      }
+    }).catch(()=>{});
+  });
+  APP.unsubs.push(unsubBassins);
 
+  // Suivi : one-shot (rarement modifié par d'autres utilisateurs simultanément)
   farmCol('suivi').orderBy('date').get().then(snap=>{
     if(snap&&!snap.empty){
       const ns=snap.docs.map(d=>({...d.data()}));
@@ -2861,7 +2909,8 @@ function setupFarmListeners(){
     }).catch(()=>{});
   });
 
-  farmCol('feed').get().then(snap=>{
+  // Feed : listener temps-réel
+  const unsubFeed=farmCol('feed').onSnapshot(snap=>{
     if(snap&&!snap.empty){
       snap.docs.forEach(d=>{
         const ft=FEED_TYPES.find(f=>f.id===d.id);
@@ -2869,7 +2918,13 @@ function setupFarmListeners(){
       });
       if(G('t2')?.classList.contains('active'))renderFeed();
     }
-  }).catch(e=>console.warn('Feed load:',e));
+  },e=>{
+    console.warn('Feed onSnapshot failed, fallback get():',e);
+    farmCol('feed').get().then(snap=>{
+      if(snap&&!snap.empty){snap.docs.forEach(d=>{const ft=FEED_TYPES.find(f=>f.id===d.id);if(ft&&d.data().batches)ft.batches=d.data().batches;});}
+    }).catch(()=>{});
+  });
+  APP.unsubs.push(unsubFeed);
 }
 
 
@@ -5143,8 +5198,8 @@ async function renameBassin(i, newName){
     APP.state.bassins[i].name=newName;
     // Mettre à jour les pesées suivi qui référencent l'ancien nom
     APP.state.suivi.forEach(s=>{if(s.bassin===oldName)s.bassin=newName;});
-    // Sauvegarder bassins
-    saveBassins();
+    // Sauvegarder bassins de façon synchrone avant la requête suivi
+    await saveBassinsNow();
     // Mettre à jour les pesées suivi dans Firestore
     const suiviToUpdate=await farmCol('suivi').where('bassin','==',oldName).get();
     if(!suiviToUpdate.empty){
@@ -5170,23 +5225,29 @@ async function saveBassinRow(i){
   const dateStr=APP_historyDate||today();
   const isHistorical=!!APP_historyDate;
   const role=APP.user?.role||'Opérateur';
-  saveBassins();
-  farmCol('daily').doc(dateStr).set({bassins:APP.state.bassins,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).then(()=>{
+  try{
+    // Écriture atomique : bassins + daily dans le même batch
+    clearTimeout(_dbt['bassins']);_pendingSaveKeys.delete('bassins');
+    showSyncing();
+    const batch=db.batch();
+    APP.state.bassins.forEach((b2,j)=>{batch.set(farmCol('bassins').doc(String(j).padStart(3,'0')),{...b2,_order:j});});
+    batch.set(farmCol('daily').doc(dateStr),{bassins:APP.state.bassins,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await batch.commit();
+    showSynced();
     if(isHistorical&&role==='Opérateur'){
-      saveNotification(i,dateStr,b);
+      await saveNotification(i,dateStr,b);
       logAudit('modification',`Modification historique ${b.name}`,`Date: ${dateStr}`);
     } else {
       logAudit('modification',`Enregistrement ${b.name}`,`Date: ${dateStr}`);
     }
-    // Flash vert sur la ligne
     const tr=G('b-tbody')?.rows[i];
     if(tr){tr.style.background='rgba(0,201,167,.15)';setTimeout(()=>{tr.style.background='';},1500);}
-    // Toast notification visible
     showToast(`✅ ${b.name} enregistré avec succès`,'acc');
-  }).catch(e=>{
+  }catch(e){
+    showSyncErr();
     showToast(`❌ Erreur enregistrement ${b.name}`,'dng');
     console.error(e);
-  });
+  }
 }
 
 function showToast(msg, type='acc'){
@@ -5197,7 +5258,7 @@ function showToast(msg, type='acc'){
   document.body.appendChild(toast);
   setTimeout(()=>{toast.style.opacity='0';setTimeout(()=>toast.remove(),400);},3000);
 }
-function saveNotification(i,dateStr,b){
+async function saveNotification(i,dateStr,b){
   const notif={
     farmCode:APP.farmCode,
     operatorName:APP.user?.name||'Opérateur',
@@ -5208,7 +5269,7 @@ function saveNotification(i,dateStr,b){
     data:{alimReel:b.alimReel,temp:b.temp,ph:b.ph,DO:b.DO,NH3:b.NH3,NO2:b.NO2,TAN:b.TAN,imhoff:b.imhoff,PWA:b.probiot,TAC:b.TAC,poids:b.poids},
     read:false
   };
-  farmCol('notifications').add(notif).catch(console.error);
+  await farmCol('notifications').add(notif).catch(console.error);
 }
 
 async function checkNotifications(){
@@ -7758,6 +7819,13 @@ showScreen('screen-boot');
   'use strict';
   const onReady=(fn)=>{if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fn);else fn();};
   window.addEventListener('error',function(e){console.warn('Erreur interceptée non bloquante:',e.message);});
+  window.addEventListener('beforeunload',function(e){
+    if(typeof hasPendingSaves==='function'&&hasPendingSaves()){
+      e.preventDefault();
+      e.returnValue='Des modifications sont en cours de sauvegarde. Quitter maintenant pourrait entraîner une perte de données.';
+      return e.returnValue;
+    }
+  });
   function replaceBC(root=document.body){if(!root)return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while((n=w.nextNode())){if(n.nodeValue&&/BioClean 100|BIOCLEAN 100|Bioclean 100|BioClean/i.test(n.nodeValue))n.nodeValue=n.nodeValue.replace(/BioClean 100|BIOCLEAN 100|Bioclean 100|BioClean/gi,'BC 100');}}
   onReady(()=>{replaceBC();new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.nodeType===1)replaceBC(n);}))).observe(document.body,{childList:true,subtree:true});});
   function roleCanValidate(){const r=(window.APP&&APP.user&&APP.user.role)||'';return r==='Administrateur'||r==='Responsable'||r==='SuperAdmin'||r==='superadmin';}
@@ -8410,26 +8478,89 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
     return (Number(r.dose)||0)*cover;
   };
+  // Génère le calendrier de préparation entretien J3/J5/J7/J8/J10
+  function buildEntretienCalendar(j1DateStr, dose, cover){
+    var DAY_MS=86400000;
+    var j1=j1DateStr?new Date(j1DateStr):new Date();
+    // Jours d’administration (offset depuis J1)
+    var adminOffsets=[2,4,6,7,9]; // J3,J5,J7,J8,J10 (0-indexed depuis J1)
+    var prepOffsets=[1,3,5,6,8];  // J2,J4,J6,J7,J9 — bullage 24h avant chaque admin
+    // J7 est à la fois jour de préparation (pour J8) et jour d’administration
+    var labels=[‘J1’,’J2’,’J3’,’J4’,’J5’,’J6’,’J7’,’J8’,’J9’,’J10’];
+    var rows=’’;
+    for(var d=0;d<10;d++){
+      var date=new Date(j1.getTime()+d*DAY_MS);
+      var ds=date.toLocaleDateString(‘fr-FR’,{weekday:’short’,day:’2-digit’,month:’2-digit’});
+      var isAdmin=adminOffsets.indexOf(d)>=0;
+      var isPrep=prepOffsets.indexOf(d)>=0;
+      var bg=’’,txt=’’,badge=’’,vol=’’;
+      if(isAdmin&&isPrep){
+        bg=’rgba(155,143,255,.12)’;txt=’var(--purp)’;
+        badge=’<span style="font-size:8px;background:rgba(155,143,255,.2);color:var(--purp);border-radius:8px;padding:1px 6px;margin-right:3px">💉 Admin</span><span style="font-size:8px;background:rgba(255,179,71,.15);color:var(--warn);border-radius:8px;padding:1px 6px">🫧 Prép. J8</span>’;
+        vol=fmtNum(dose*cover,2)+’ L’;
+      } else if(isAdmin){
+        bg=’rgba(0,212,180,.08)’;txt=’var(--acc)’;
+        badge=’<span style="font-size:8px;background:rgba(0,212,180,.15);color:var(--acc);border-radius:8px;padding:1px 6px">💉 Administration</span>’;
+        vol=fmtNum(dose*cover,2)+’ L’;
+      } else if(isPrep){
+        bg=’rgba(255,179,71,.07)’;txt=’var(--warn)’;
+        badge=’<span style="font-size:8px;background:rgba(255,179,71,.15);color:var(--warn);border-radius:8px;padding:1px 6px">🫧 Préparation (bullage 24h)</span>’;
+        vol=’— (préparation)’;
+      } else {
+        bg=’transparent’;txt=’var(--t3)’;badge=’<span style="font-size:8px;color:var(--t3)">Pas d\’action</span>’;vol=’—‘;
+      }
+      rows+=’<tr style="background:’+bg+’">’
+        +’<td style="color:var(--t3);font-weight:700;font-family:var(--mono);padding:4px 7px">’+labels[d]+’</td>’
+        +’<td style="font-size:10px;color:’+txt+’;padding:4px 7px">’+ds+’</td>’
+        +’<td style="padding:4px 7px">’+badge+’</td>’
+        +’<td style="font-family:var(--mono);font-size:11px;font-weight:700;color:’+txt+’;padding:4px 7px;text-align:right">’+vol+’</td>’
+        +’</tr>’;
+    }
+    return ‘<div style="margin-top:.7rem"><div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.4rem">📅 Planning semaine d\’entretien</div>’
+      +’<div class="tw"><table style="font-size:10px"><thead><tr>’
+      +’<th style="text-align:left">Jour</th><th style="text-align:left">Date</th><th style="text-align:left">Action</th><th style="text-align:right">Vol. PWA</th>’
+      +’</tr></thead><tbody>’+rows+’</tbody></table></div>’
+      +’<div style="font-size:9px;color:var(--t2);margin-top:.4rem;line-height:1.5">🫧 Préparation = lancer le bullage la veille au soir. 💉 Administration = verser le PWA préparé en soirée, après bullage 24h. J7 cumule les deux actions.</div>’
+      +’</div>’;
+  }
+
   window.calcPWA=function(){
-    var list=$('pwa-plan-list'),res=$('pwa-result'); if(!res)return;
+    var list=$(‘pwa-plan-list’),res=$(‘pwa-result’); if(!res)return;
     window.PWA_PLAN=window.PWA_PLAN||[];
-    if(!window.PWA_PLAN.length){ window.PWA_PLAN=[{id:'def1',activity:'rotation',bassin:'Bassin 01',bassinVol:3.8,coverVol:3.8,nb:1,vol:3.8}]; }
+    if(!window.PWA_PLAN.length){ window.PWA_PLAN=[{id:’def1’,activity:’rotation’,bassin:’Bassin 01’,bassinVol:3.8,coverVol:3.8,nb:1,vol:3.8}]; }
     if(list) list.innerHTML=window.PWA_PLAN.map(function(row){
-      var rates=window.PWA_RATES||{}; var r=rates[row.activity]||rates.entretien||{label:row.activity,moment:'',dose:0.2};
+      var rates=window.PWA_RATES||{}; var r=rates[row.activity]||rates.entretien||{label:row.activity,moment:’’,dose:0.2};
       var q=window.pwaDoseLitres(row);
-      return '<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">'
-        +'<div style="flex:1"><strong style="color:var(--t1);font-size:11px">'+(r.label||row.activity)+'</strong><div style="font-size:9px;color:var(--t3)">'+(r.moment||'')+' · '+(row.bassin||'Bassin')+' · volume bassin '+fmtNum(row.bassinVol,2)+' m³ · volume traité '+fmtNum(row.coverVol,2)+' m³ · dose '+fmtNum(r.dose,2)+' L/m³</div></div>'
-        +'<div style="font-family:var(--mono);font-weight:800;color:var(--acc)">'+fmtNum(q,2)+' L</div>'
-        +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
-    }).join('');
-    var base=window.PWA_PLAN.reduce(function(s,row){return s+window.pwaDoseLitres(row);},0);
+      // Pour entretien : afficher la dose × 5 séances
+      var isEnt=row.activity===’entretien’;
+      var qDisplay=isEnt?fmtNum(q*5,2)+’ L (×5 séances)’:fmtNum(q,2)+’ L’;
+      return ‘<div style="display:flex;align-items:center;gap:.4rem;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .5rem;margin-bottom:.3rem">’
+        +’<div style="flex:1"><strong style="color:var(--t1);font-size:11px">’+(r.label||row.activity)+’</strong><div style="font-size:9px;color:var(--t3)">’+(r.moment||’’)+’ · ‘+(row.bassin||’Bassin’)+’ · volume bassin ‘+fmtNum(row.bassinVol,2)+’ m³ · volume traité ‘+fmtNum(row.coverVol,2)+’ m³ · dose ‘+fmtNum(r.dose,2)+’ L/m³’+(isEnt?’ · <span style="color:var(--purp)">5 administrations/semaine</span>’:’’)+’</div></div>’
+        +’<div style="font-family:var(--mono);font-weight:800;color:’+(isEnt?’var(--purp)’:’var(--acc)’)+’">’+qDisplay+’</div>’
+        +’<button class="dbtn" onclick="removePWAActivity(\’’+row.id+’\’)">×</button></div>’;
+    }).join(‘’);
+
+    // Volume de base : entretien compte × 5, les autres × 1
+    var base=window.PWA_PLAN.reduce(function(s,row){
+      var q=window.pwaDoseLitres(row);
+      return s+(row.activity===’entretien’?q*5:q);
+    },0);
     var pfa=base*0.04,total=base+pfa;
-    res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
-      +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+fmtNum(base,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+fmtNum(pfa,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+fmtNum(total,2)+' L</div></div></div>'
-      +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Calcul flexible : bassin sélectionné → volume réel du bassin → volume réellement à couvrir en m³ → dose PWA par m³. Le stock PWA n’est pas modifié ici : il est synchronisé par les réceptions, consommations et inventaires.</div>'
-      +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Toute correction de stock se fait par inventaire.</div>';
+    res.innerHTML=’<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">’
+      +’<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">’+fmtNum(base,2)+’ L</div></div>’
+      +’<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">’+fmtNum(pfa,2)+’ L</div></div>’
+      +’<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">’+fmtNum(total,2)+’ L</div></div></div>’
+      +’<div style="font-size:10px;color:var(--t2);line-height:1.6">Volume hebdomadaire. Entretien J3/J5/J7/J8/J10 = 5 administrations. Bullage 24h avant chaque séance. PFA +4% = réserve pour l\’alimentation des poissons.</div>’
+      +’<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Stock ajusté par Réceptions et Inventaire uniquement.</div>’;
+
+    // Calendrier entretien si au moins une ligne entretien
+    var entRow=window.PWA_PLAN.find(function(r){return r.activity===’entretien’;});
+    if(entRow){
+      var j1Input=$(‘pwa-entretien-j1’);
+      var j1Date=j1Input&&j1Input.value?j1Input.value:new Date().toISOString().slice(0,10);
+      var rates=window.PWA_RATES||{};var r=rates.entretien||{dose:0.2};
+      res.innerHTML+=buildEntretienCalendar(j1Date,r.dose,entRow.coverVol||entRow.vol||3.8);
+    }
   };
   window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
 
@@ -8610,49 +8741,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 
 
-<style id="ichtus-v24-prix-vente-styles">
+<!-- v24 remplacé par v28 — classes price-warn/price-ok conservées -->
+<style id="ichtus-prix-vente-base-styles">
 .price-rule-active{border-color:rgba(0,212,180,.45)!important}.price-warn{font-size:10px;color:var(--warn);line-height:1.5;margin-top:.35rem}.price-ok{font-size:10px;color:var(--acc);line-height:1.5;margin-top:.35rem}
 </style>
-<script id="ichtus-v24-prix-vente-synchro">
-(function(){
-'use strict';
-function G(id){return document.getElementById(id)}
-function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function n(v){var x=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(x)?0:x}
-function today(){return new Date().toISOString().slice(0,10)}
-function load(k,d){try{return JSON.parse(localStorage.getItem('ichtus_'+k)||JSON.stringify(d))}catch(e){return d}}
-function save(k,v){localStorage.setItem('ichtus_'+k,JSON.stringify(v))}
-function money(v){return n(v).toLocaleString('fr-FR')+' XOF'}
-function toast(msg,type){if(window.showToast)showToast(msg,type||'ok');else alert(msg)}
-function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur'}
-function canManageSalePrices(){var r=String(role()).toLowerCase();return r==='superadmin'||r==='super admin'||r==='responsable ferme'||r==='responsable'}
-function harvests(){return load('harvests',[])}
-function sales(){return load('sales',[])} function saveSales(a){save('sales',a)}
-function clients(){return load('clients',[])}
-function fishOuts(){return load('fish_outs',[])}
-function salePrices(){var a=load('sale_prices',[]);if(!a.length){a=[{id:'PV-'+Date.now(),fishType:'Tilapia GIFT',calibre:'Standard',min:1500,conseille:1800,premium:2000,currency:'XOF',start:today(),statut:'Actif'}];save('sale_prices',a)}return a}
-function saveSalePrices(a){save('sale_prices',a)}
-function activeSalePrices(){return salePrices().filter(function(p){return (p.statut||'Actif')==='Actif'})}
-function priceLabel(p){return (p.fishType||'Poisson')+' · '+(p.calibre||'Calibre')+' · conseillé '+money(p.conseille||0)}
-function fishStockByHarvest(hid){var h=harvests().find(function(x){return x.id===hid});var base=n(h&&h.kg);var vend=sales().filter(function(s){return s.harvestId===hid}).reduce(function(a,s){return a+n(s.kg)},0);var outs=fishOuts().filter(function(o){return o.harvestId===hid}).reduce(function(a,o){return a+n(o.kg)},0);return Math.max(0,base-vend-outs)}
-window.applySalePriceRule=function(){var sel=G('sale-price-rule'),inp=G('sale-price'),msg=G('sale-price-msg');if(!sel||!inp)return;var p=salePrices().find(function(x){return x.id===sel.value});if(p){inp.value=n(p.conseille);if(msg)msg.innerHTML='<span class="price-ok">Prix conseillé appliqué. Prix minimum : <b>'+money(p.min)+'</b>.</span>'}else{if(msg)msg.innerHTML='<span class="price-warn">Aucun barème sélectionné : le prix réel reste manuel.</span>'}}
-window.renderSalePricesPanel=function(){var pane=G('t5');if(!pane)return;var old=G('erp-sale-price-box');if(old)old.remove();var box=document.createElement('div');box.id='erp-sale-price-box';box.className='card';var can=canManageSalePrices();var rows=salePrices();box.innerHTML='<div class="ctitle"><span class="dot"></span>Prix de vente poisson</div><div class="erp-note">Barèmes définis uniquement par le <b>SuperAdmin</b> ou le <b>Responsable ferme</b>. Ils alimentent automatiquement le formulaire Vente : prix conseillé, prix minimum et alerte si le prix réel est trop bas.</div>'+
-(can?'<div class="admin-form"><input id="pv-type" class="form-inp" placeholder="Type poisson ex: Tilapia GIFT"><input id="pv-calibre" class="form-inp" placeholder="Calibre ex: 300-500 g"><input id="pv-min" type="number" class="form-inp" placeholder="Prix minimum/kg"><input id="pv-conseille" type="number" class="form-inp" placeholder="Prix conseillé/kg"><input id="pv-premium" type="number" class="form-inp" placeholder="Prix premium/kg"><select id="pv-currency" class="form-inp"><option>XOF</option><option>EUR</option><option>USD</option><option>GHS</option><option>CNY</option><option>RMB</option></select><input id="pv-start" type="date" class="form-inp" value="'+today()+'"><select id="pv-statut" class="form-inp"><option>Actif</option><option>Archivé</option></select></div><button class="sbtn" onclick="addSalePriceRuleERP()">Ajouter barème</button>':'<div class="price-warn">Lecture seule : modification réservée au SuperAdmin / Responsable ferme.</div>')+
-'<div class="tw" style="margin-top:.75rem"><table><thead><tr><th>Type</th><th>Calibre</th><th>Minimum/kg</th><th>Conseillé/kg</th><th>Premium/kg</th><th>Début validité</th><th>Statut</th><th>Action</th></tr></thead><tbody>'+rows.map(function(p){return '<tr class="'+((p.statut||'Actif')==='Actif'?'price-rule-active':'')+'"><td class="cn">'+esc(p.fishType)+'</td><td>'+esc(p.calibre)+'</td><td>'+money(p.min)+'</td><td>'+money(p.conseille)+'</td><td>'+money(p.premium)+'</td><td>'+esc(p.start||'')+'</td><td><span class="badge '+((p.statut||'Actif')==='Actif'?'b-ok':'b-warn')+'">'+esc(p.statut||'Actif')+'</span></td><td>'+(can?'<button class="ebtn" onclick="toggleSalePriceRuleERP(\''+esc(p.id)+'\')">'+((p.statut||'Actif')==='Actif'?'Archiver':'Activer')+'</button> <button class="dbtn" onclick="deleteSalePriceRuleERP(\''+esc(p.id)+'\')">Supprimer</button>':'—')+'</td></tr>'}).join('')+'</tbody></table></div>';
-var salesBox=G('erp-sales-box');if(salesBox&&salesBox.parentNode)salesBox.parentNode.insertBefore(box,salesBox);else pane.appendChild(box)};
-window.addSalePriceRuleERP=function(){if(!canManageSalePrices())return alert('Réservé au SuperAdmin / Responsable ferme.');var min=n(G('pv-min').value),cons=n(G('pv-conseille').value),prem=n(G('pv-premium').value);if(!G('pv-type').value.trim()||!G('pv-calibre').value.trim()||min<=0||cons<=0)return alert('Type, calibre, prix minimum et prix conseillé obligatoires.');if(cons<min)return alert('Le prix conseillé ne peut pas être inférieur au prix minimum.');var a=salePrices();a.push({id:'PV-'+Date.now(),fishType:G('pv-type').value.trim(),calibre:G('pv-calibre').value.trim(),min:min,conseille:cons,premium:prem||cons,currency:G('pv-currency').value,start:G('pv-start').value,statut:G('pv-statut').value,createdAt:new Date().toISOString(),createdBy:(window.APP&&APP.user&&APP.user.name)||'Utilisateur'});saveSalePrices(a);renderSalePricesPanel();renderSalesBoxERP();toast('✅ Barème de prix enregistré','ok')};
-window.toggleSalePriceRuleERP=function(id){if(!canManageSalePrices())return;var a=salePrices();var p=a.find(function(x){return x.id===id});if(p){p.statut=(p.statut||'Actif')==='Actif'?'Archivé':'Actif';saveSalePrices(a);renderSalePricesPanel();renderSalesBoxERP();}};
-window.deleteSalePriceRuleERP=function(id){if(!canManageSalePrices())return;var used=sales().some(function(s){return s.priceRuleId===id});if(used)return alert('Barème déjà utilisé dans une vente : archivez-le au lieu de le supprimer.');saveSalePrices(salePrices().filter(function(x){return x.id!==id}));renderSalePricesPanel();renderSalesBoxERP()};
-window.renderSalesBoxERP=function(){var c=G('erp-sales-content');if(!c)return;var hs=harvests();var prices=activeSalePrices();c.innerHTML='<div class="admin-form"><input id="sale-date" type="date" class="form-inp" value="'+today()+'"><select id="sale-hv" class="form-inp">'+hs.map(function(h){return '<option value="'+esc(h.id)+'">'+esc(h.date)+' · '+esc(h.bassinName)+' · stock '+fishStockByHarvest(h.id).toFixed(2)+' kg</option>'}).join('')+'</select><select id="sale-client" class="form-inp">'+clients().map(function(cl){return '<option>'+esc(cl.name)+'</option>'}).join('')+'</select><select id="sale-price-rule" class="form-inp" onchange="applySalePriceRule()"><option value="">Barème prix conseillé</option>'+prices.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(priceLabel(p))+'</option>'}).join('')+'</select><input id="sale-kg" type="number" class="form-inp" placeholder="kg vendus"><input id="sale-price" type="number" class="form-inp" placeholder="Prix réel/kg XOF"><select id="sale-pay" class="form-inp"><option>Espèces</option><option>Mobile money</option><option>Virement</option><option>Crédit client</option></select></div><div id="sale-price-msg" class="price-warn">Sélectionnez un barème pour appliquer automatiquement le prix conseillé.</div><button class="sbtn" onclick="addSaleERP()">Valider vente</button><div class="tw" style="margin-top:.7rem"><table><thead><tr><th>Date</th><th>Client</th><th>Récolte</th><th>Kg</th><th>Prix/kg</th><th>Barème</th><th>CA</th></tr></thead><tbody>'+sales().map(function(s){return '<tr><td>'+esc(s.date)+'</td><td>'+esc(s.client)+'</td><td>'+esc(s.harvestLabel)+'</td><td>'+n(s.kg).toFixed(2)+'</td><td>'+money(s.price)+'</td><td>'+esc(s.priceRuleLabel||'—')+'</td><td class="cn">'+money(n(s.kg)*n(s.price))+'</td></tr>'}).join('')+'</tbody></table></div>';};
-window.addSaleERP=function(){var hid=G('sale-hv')&&G('sale-hv').value,kg=n(G('sale-kg')&&G('sale-kg').value),price=n(G('sale-price')&&G('sale-price').value);if(!hid)return alert('Aucun stock poisson disponible.');if(kg<=0||price<=0)return alert('Quantité et prix obligatoires');if(kg>fishStockByHarvest(hid))return alert('Stock poisson insuffisant');var ruleId=G('sale-price-rule')?G('sale-price-rule').value:'';var p=salePrices().find(function(x){return x.id===ruleId});if(p&&price<n(p.min)&&!canManageSalePrices())return alert('Prix inférieur au minimum validé. Validation SuperAdmin / Responsable ferme requise.');if(p&&price<n(p.min)&&canManageSalePrices()&&!confirm('Prix réel inférieur au prix minimum validé. Continuer quand même ?'))return;var h=harvests().find(function(x){return x.id===hid})||{};var a=sales();a.push({id:'SALE-'+Date.now(),date:G('sale-date').value,harvestId:hid,harvestLabel:(h.date||'')+' '+(h.bassinName||''),cycleId:h.cycleId,bassinId:h.bassinId,client:G('sale-client').value||'Client non défini',kg:kg,price:price,payment:G('sale-pay').value,priceRuleId:p?p.id:'',priceRuleLabel:p?priceLabel(p):'',priceMin:p?n(p.min):0,createdAt:new Date().toISOString(),createdBy:(window.APP&&APP.user&&APP.user.name)||'Utilisateur'});saveSales(a);renderSalesBoxERP();if(window.renderSalePricesPanel)renderSalePricesPanel();if(window.renderHarvestModule)try{renderHarvestModule()}catch(e){}toast('✅ Vente validée : stock poisson diminué et CA synchronisé','ok')};
-function install(){var old=window.sw;if(!window.__ichtus_v24_sales_price_hook){window.__ichtus_v24_sales_price_hook=true;window.sw=function(id){if(old)old.apply(this,arguments);setTimeout(function(){if(id==='t5'){if(!G('erp-sales-box')){var pane=G('t5');if(pane){var box=document.createElement('div');box.id='erp-sales-box';box.className='card';box.innerHTML='<div class="ctitle"><span class="dot"></span>Ventes poisson</div><div id="erp-sales-content"></div>';pane.appendChild(box)}}renderSalePricesPanel();renderSalesBoxERP()}},0)}}
-setTimeout(function(){if(G('t5')){renderSalePricesPanel();renderSalesBoxERP()}console.log('ICHTUS v24 prix de vente synchronisés chargé')},300)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
-})();
-</script>
+<script id="ichtus-v24-prix-vente-synchro">/* Remplacé par ichtus-v28-prix-vente-editable-recoltes */</script>
 
 <style id="ichtus-v28-price-edit-style">
-.v28-help{background:rgba(0,212,180,.07);border:1px solid rgba(0,212,180,.22);border-radius:8px;padding:.65rem .8rem;font-size:11px;color:var(--t2);line-height:1.6;margin:.55rem 0}.v28-field{background:rgba(0,212,180,.09)!important;border:1px solid rgba(0,212,180,.45)!important;color:var(--t1)!important}.v28-field::placeholder{color:var(--acc)!important;opacity:.9}.v28-modal{position:fixed;inset:0;background:rgba(2,11,20,.88);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem}.v28-modal-box{background:var(--card);border:1px solid var(--b2);border-radius:12px;padding:1.2rem;width:100%;max-width:560px;box-shadow:0 18px 50px rgba(0,0,0,.45)}.v28-row-actions{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}.v28-lock{font-size:9px;color:var(--warn);border:1px solid rgba(255,179,71,.35);border-radius:10px;padding:2px 7px}.v28-ok{font-size:9px;color:var(--acc);border:1px solid rgba(0,212,180,.35);border-radius:10px;padding:2px 7px}.v28-danger-note{background:rgba(255,77,109,.09);border:1px solid rgba(255,77,109,.25);border-radius:8px;color:var(--dng);font-size:10px;padding:.55rem .7rem;margin:.45rem 0}
+.v28-help{background:rgba(0,212,180,.07);border:1px solid rgba(0,212,180,.22);border-radius:8px;padding:.65rem .8rem;font-size:11px;color:var(--t2);line-height:1.6;margin:.55rem 0}.v28-field{}.v28-modal{position:fixed;inset:0;background:rgba(2,11,20,.88);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem}.v28-modal-box{background:var(--card);border:1px solid var(--b2);border-radius:12px;padding:1.2rem;width:100%;max-width:560px;box-shadow:0 18px 50px rgba(0,0,0,.45)}.v28-row-actions{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}.v28-lock{font-size:9px;color:var(--warn);border:1px solid rgba(255,179,71,.35);border-radius:10px;padding:2px 7px}.v28-ok{font-size:9px;color:var(--acc);border:1px solid rgba(0,212,180,.35);border-radius:10px;padding:2px 7px}.v28-danger-note{background:rgba(255,77,109,.09);border:1px solid rgba(255,77,109,.25);border-radius:8px;color:var(--dng);font-size:10px;padding:.55rem .7rem;margin:.45rem 0}
 </style>
 <script id="ichtus-v28-prix-vente-editable-recoltes">
 (function(){
@@ -8688,7 +8784,22 @@ function fishStockByHarvest(hid){var h=harvests().find(function(x){return x.id==
 function totalFishStock(){return harvests().reduce(function(a,h){return a+fishStockByHarvest(h.id)},0)}
 function hasHarvestMovement(id){return sales().some(function(s){return s.harvestId===id})||fishOuts().some(function(o){return o.harvestId===id})}
 function salePrices(){var a=load('sale_prices',[]);if(!a.length){a=[{id:'PV-'+Date.now(),fishType:'Tilapia GIFT',calibre:'Standard',min:1500,conseille:1800,premium:2000,currency:'XOF',start:today(),statut:'Actif',history:[]}];save('sale_prices',a)}return a}
-function saveSalePrices(a){save('sale_prices',a)}
+function saveSalePrices(a){
+  save('sale_prices',a);
+  // Synchronisation Firebase
+  if(window.farmCol){
+    try{window.farmCol('config').doc('sale_prices').set({prices:a,updatedAt:new Date().toISOString()}).catch(function(e){console.warn('sale_prices sync:',e);});}catch(e){}
+  }
+}
+async function loadSalePricesFromFirebase(){
+  if(!window.farmCol)return;
+  try{
+    var snap=await window.farmCol('config').doc('sale_prices').get();
+    if(snap.exists&&snap.data().prices&&snap.data().prices.length){
+      save('sale_prices',snap.data().prices);
+    }
+  }catch(e){console.warn('loadSalePrices:',e);}
+}
 function activeSalePrices(){return salePrices().filter(function(p){return (p.statut||'Actif')==='Actif'})}
 function priceLabel(p){return (p.fishType||'Poisson')+' · '+(p.calibre||'Standard')+' · conseillé '+money(p.conseille||0)}
 window.canManageSalePrices=canManageSalePrices;
@@ -8701,7 +8812,48 @@ window.saveSalePriceEditor=function(){if(!canManageSalePrices())return alert('Le
 window.toggleSalePriceRuleERP=function(id){if(!canManageSalePrices())return alert('Lecture seule.');var a=salePrices();var p=a.find(function(x){return x.id===id});if(p){p.statut=(p.statut||'Actif')==='Actif'?'Archivé':'Actif';p.updatedAt=new Date().toISOString();saveSalePrices(a);renderSalePricesPanel();renderSalesBoxERP()}};
 window.deleteSalePriceRuleERP=function(id){if(!canManageSalePrices())return alert('Lecture seule.');if(sales().some(function(s){return s.priceRuleId===id}))return alert('Barème déjà utilisé dans une vente : archivez-le au lieu de le supprimer.');saveSalePrices(salePrices().filter(function(x){return x.id!==id}));renderSalePricesPanel();renderSalesBoxERP()};
 window.addSalePriceRuleERP=function(){window.openSalePriceEditor('')};
-window.renderSalePricesPanel=function(){var pane=G('t5');if(!pane)return;var old=G('erp-sale-price-box');if(old)old.remove();var box=document.createElement('div');box.id='erp-sale-price-box';box.className='card';var can=canManageSalePrices();var rows=salePrices();box.innerHTML='<div class="ctitle"><span class="dot"></span>Prix de vente poisson</div><div class="v28-help">Le SuperAdmin et le Responsable ferme peuvent créer ou modifier les barèmes. Le prix conseillé est proposé automatiquement dans les nouvelles ventes ; les anciennes ventes ne changent jamais.</div>'+(can?'<button class="sbtn" onclick="openSalePriceEditor(\'\')">+ Nouveau barème</button>':'<div class="v28-lock">Lecture seule : modification réservée au SuperAdmin / Responsable ferme.</div>')+'<div class="tw" style="margin-top:.75rem"><table><thead><tr><th>Type poisson</th><th>Calibre</th><th>Minimum/kg</th><th>Conseillé/kg</th><th>Premium/kg</th><th>Début validité</th><th>Statut</th><th>Action</th></tr></thead><tbody>'+rows.map(function(p){return '<tr><td class="cn">'+esc(p.fishType)+'</td><td>'+esc(p.calibre||'Standard')+'</td><td>'+money(p.min)+'</td><td>'+money(p.conseille)+'</td><td>'+money(p.premium)+'</td><td>'+esc(p.start||'')+'</td><td><span class="badge '+((p.statut||'Actif')==='Actif'?'b-ok':'b-warn')+'">'+esc(p.statut||'Actif')+'</span></td><td>'+(can?'<div class="v28-row-actions"><button class="ebtn" onclick="openSalePriceEditor(\''+esc(p.id)+'\')">Modifier</button><button class="ebtn" onclick="toggleSalePriceRuleERP(\''+esc(p.id)+'\')">'+((p.statut||'Actif')==='Actif'?'Archiver':'Activer')+'</button><button class="dbtn" onclick="deleteSalePriceRuleERP(\''+esc(p.id)+'\')">Supprimer</button></div>':'—')+'</td></tr>'}).join('')+'</tbody></table></div>';var salesBox=G('erp-sales-box');if(salesBox&&salesBox.parentNode)salesBox.parentNode.insertBefore(box,salesBox);else pane.appendChild(box)};
+window.renderSalePricesPanel=function(){
+  var pane=G('t5');if(!pane)return;
+  var old=G('erp-sale-price-box');if(old)old.remove();
+  var box=document.createElement('div');box.id='erp-sale-price-box';box.className='card';
+  var can=canManageSalePrices();var rows=salePrices();
+  var syncBadge='<span id="spv-sync" style="font-size:9px;color:var(--acc);margin-left:6px">☁ synchronisé</span>';
+  var legend='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.55rem 0">'
+    +'<div style="background:rgba(255,61,87,.08);border:1px solid rgba(255,61,87,.2);border-radius:6px;padding:.4rem .6rem"><div style="font-size:9px;font-weight:700;color:var(--dng);text-transform:uppercase;letter-spacing:.5px">Prix minimum</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Plancher non négociable. En dessous, la vente est bloquée ou doit être validée par le Responsable.</div></div>'
+    +'<div style="background:rgba(0,212,180,.06);border:1px solid rgba(0,212,180,.2);border-radius:6px;padding:.4rem .6rem"><div style="font-size:9px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.5px">Prix conseillé</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Prix standard du marché local. Appliqué automatiquement dans le formulaire de vente.</div></div>'
+    +'<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:.4rem .6rem"><div style="font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">Prix premium</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Pour clients fidèles, restaurants ou commandes grossiste. Indicatif seulement.</div></div>'
+    +'</div>';
+  box.innerHTML='<div class="ctitle"><span class="dot"></span>Barèmes de prix de vente poisson'+syncBadge+'</div>'
+    +'<div class="v28-help">Définis par le <b>Responsable ferme</b> ou le <b>SuperAdmin</b>. Chaque barème s\'applique uniquement aux nouvelles ventes — les ventes déjà enregistrées ne sont jamais modifiées rétroactivement.</div>'
+    +legend
+    +(can?'<button class="sbtn" onclick="openSalePriceEditor(\'\')">+ Nouveau barème</button>':'<div class="v28-lock">Lecture seule — modification réservée au Responsable ferme / SuperAdmin.</div>')
+    +'<div class="tw" style="margin-top:.75rem"><table><thead><tr>'
+    +'<th title="Espèce et qualité du poisson (ex: Tilapia GIFT, Tilapia hybride)">Type poisson</th>'
+    +'<th title="Tranche de poids ou calibre commercial (ex: 300–500 g / Standard)">Calibre</th>'
+    +'<th title="Prix plancher — la vente est bloquée en dessous sans accord du Responsable" style="color:var(--dng)">Minimum/kg ⚠</th>'
+    +'<th title="Prix de référence du marché — appliqué automatiquement dans les ventes" style="color:var(--acc)">Conseillé/kg ★</th>'
+    +'<th title="Prix pour clients premium ou grossistes — indicatif" style="color:var(--gold)">Premium/kg</th>'
+    +'<th>Validité depuis</th><th>Statut</th><th>Action</th>'
+    +'</tr></thead><tbody>'
+    +rows.map(function(p){
+      var isActif=(p.statut||'Actif')==='Actif';
+      return '<tr style="opacity:'+(isActif?'1':'0.5')+'">'
+        +'<td class="cn">'+esc(p.fishType)+'</td>'
+        +'<td>'+esc(p.calibre||'Standard')+'</td>'
+        +'<td style="color:var(--dng);font-weight:700">'+money(p.min)+'</td>'
+        +'<td style="color:var(--acc);font-weight:700">'+money(p.conseille)+'</td>'
+        +'<td style="color:var(--gold)">'+money(p.premium)+'</td>'
+        +'<td style="font-size:10px;color:var(--t3)">'+esc(p.start||'—')+'</td>'
+        +'<td><span class="badge '+(isActif?'b-ok':'b-warn')+'">'+esc(p.statut||'Actif')+'</span></td>'
+        +'<td>'+(can?'<div class="v28-row-actions"><button class="ebtn" onclick="openSalePriceEditor(\''+esc(p.id)+'\')">Modifier</button><button class="ebtn" onclick="toggleSalePriceRuleERP(\''+esc(p.id)+'\')">'+((isActif)?'Archiver':'Activer')+'</button><button class="dbtn" onclick="deleteSalePriceRuleERP(\''+esc(p.id)+'\')">Supprimer</button></div>':'—')+'</td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table></div>';
+  var salesBox=G('erp-sales-box');
+  if(salesBox&&salesBox.parentNode)salesBox.parentNode.insertBefore(box,salesBox);else pane.appendChild(box);
+  // Charger depuis Firebase en arrière-plan
+  if(typeof loadSalePricesFromFirebase==='function'){loadSalePricesFromFirebase().then(function(){renderSalePricesPanel();}).catch(function(){});}
+};
 window.renderSalesBoxERP=function(){var c=G('erp-sales-content');if(!c)return;var hs=harvests().filter(function(h){return fishStockByHarvest(h.id)>0});var prices=activeSalePrices();c.innerHTML='<div class="admin-form"><input id="sale-date" type="date" class="form-inp v28-field" value="'+today()+'"><select id="sale-hv" class="form-inp v28-field">'+(hs.length?hs.map(function(h){return '<option value="'+esc(h.id)+'">'+esc(h.date)+' · '+esc(h.bassinName)+' · '+esc(h.type||'Récolte')+' · stock '+fishStockByHarvest(h.id).toFixed(2)+' kg</option>'}).join(''):'<option value="">Aucun stock poisson disponible</option>')+'</select><select id="sale-client" class="form-inp v28-field">'+(clients().length?clients().map(function(cl){return '<option>'+esc(cl.name)+'</option>'}).join(''):'<option>Client non défini</option>')+'</select><select id="sale-price-rule" class="form-inp v28-field" onchange="applySalePriceRule()"><option value="">Barème prix conseillé</option>'+prices.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(priceLabel(p))+'</option>'}).join('')+'</select><input id="sale-kg" type="number" class="form-inp v28-field" placeholder="Quantité vendue en kg"><input id="sale-price" type="number" class="form-inp v28-field" placeholder="Prix réel/kg XOF"><select id="sale-pay" class="form-inp v28-field"><option>Espèces</option><option>Mobile money</option><option>Virement</option><option>Crédit client</option></select></div><div id="sale-price-msg" class="v28-help">Sélectionnez un stock poisson et un barème pour appliquer automatiquement le prix conseillé.</div><button class="sbtn" onclick="addSaleERP()">Valider vente</button><div class="tw" style="margin-top:.7rem"><table><thead><tr><th>Date</th><th>Client</th><th>Récolte</th><th>Kg</th><th>Prix/kg</th><th>Barème</th><th>CA</th></tr></thead><tbody>'+sales().map(function(s){return '<tr><td>'+esc(s.date)+'</td><td>'+esc(s.client)+'</td><td>'+esc(s.harvestLabel)+'</td><td>'+n(s.kg).toFixed(2)+'</td><td>'+money(s.price)+'</td><td>'+esc(s.priceRuleLabel||'—')+'</td><td class="cn">'+money(n(s.kg)*n(s.price))+'</td></tr>'}).join('')+'</tbody></table></div>'};
 window.addSaleERP=function(){var hid=G('sale-hv')&&G('sale-hv').value;var kg=n(G('sale-kg')&&G('sale-kg').value);var price=n(G('sale-price')&&G('sale-price').value);if(!hid)return alert('Aucun stock poisson disponible.');if(kg<=0||price<=0)return alert('Quantité et prix obligatoires.');if(kg>fishStockByHarvest(hid))return alert('Stock poisson insuffisant.');var ruleId=G('sale-price-rule')?G('sale-price-rule').value:'';var p=salePrices().find(function(x){return x.id===ruleId});if(p&&price<n(p.min)&&!canManageSalePrices())return alert('Prix inférieur au minimum validé. Validation SuperAdmin / Responsable ferme requise.');if(p&&price<n(p.min)&&canManageSalePrices()&&!confirm('Prix réel inférieur au prix minimum validé. Continuer ?'))return;var h=harvests().find(function(x){return x.id===hid})||{};var a=sales();a.push({id:'SALE-'+Date.now(),date:G('sale-date').value||today(),harvestId:hid,harvestLabel:(h.date||'')+' '+(h.bassinName||''),cycleId:h.cycleId,bassinId:h.bassinId,client:G('sale-client').value||'Client non défini',kg:kg,price:price,payment:G('sale-pay').value,priceRuleId:p?p.id:'',priceRuleLabel:p?priceLabel(p):'',priceMin:p?n(p.min):0,createdAt:new Date().toISOString(),createdBy:(window.APP&&APP.user&&APP.user.name)||'Utilisateur'});saveSales(a);renderSalesBoxERP();if(window.renderHarvestModule)try{renderHarvestModule()}catch(e){}toast('✅ Vente validée : stock poisson diminué et CA synchronisé','ok')};
 window.refreshHarvestBassinPreview=function(){var bid=G('hv-bassin')&&G('hv-bassin').value;if(!bid)return;var st=seedLiveState(bid)||{};var b=bassins().find(function(x){return x.id===bid})||{};if(G('hv-before-nb'))G('hv-before-nb').value=n(st.population)||'';if(G('hv-before-kg'))G('hv-before-kg').value=n(st.biomasse)||'';if(G('hv-vol-note'))G('hv-vol-note').innerHTML='Volume max bassin : <b>'+((n(b.volumeMaxM3)||12).toFixed(1))+' m³</b>. Le calcul de récolte partielle agit sur population/biomasse.';window.previewHarvestAfter()};
