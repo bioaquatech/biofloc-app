@@ -9061,5 +9061,303 @@ function hook(){if(window.__ichtus_v28_hooked)return;window.__ichtus_v28_hooked=
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else hook();
 })();
 </script>
+
+<script id="ichtus-v29-rentabilite-sync">
+/* ═══════════════════════════════════════════════════════════════════
+   ICHTUS v29 — Module Rentabilité & Synchronisation inter-onglets
+   - Firebase sync pour investissements, ventes, récoltes
+   - Tableau de rentabilité complet (CA, charges, amortissements, résultat)
+   - Liaisons automatiques entre tous les onglets financiers
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+function fc(col){return window.farmCol?window.farmCol(col):null;}
+function lsLoad(k,d){try{return JSON.parse(localStorage.getItem('ichtus_'+k)||JSON.stringify(d));}catch(e){return d;}}
+function lsSave(k,v){localStorage.setItem('ichtus_'+k,JSON.stringify(v));}
+function G(id){return document.getElementById(id);}
+function money(v){return Number(v||0).toLocaleString('fr-FR')+' XOF';}
+function pct(v){return (v||0).toFixed(1)+'%';}
+
+// ─── Firebase sync : Investissements ─────────────────────────────────────
+
+async function syncInvestmentsToFirebase(data){
+  var col=fc('investments');if(!col)return;
+  try{await col.doc('__all').set({data:data,updatedAt:new Date().toISOString()});}
+  catch(e){console.warn('sync investments:',e);}
+}
+async function loadInvestmentsFromFirebase(){
+  var col=fc('investments');if(!col)return;
+  try{
+    var snap=await col.doc('__all').get();
+    if(snap.exists&&Array.isArray(snap.data().data)){
+      lsSave('investments',snap.data().data);
+    }
+  }catch(e){console.warn('load investments:',e);}
+}
+
+// ─── Firebase sync : Ventes & Récoltes ───────────────────────────────────
+
+async function syncSalesToFirebase(data){
+  var col=fc('sales_erp');if(!col)return;
+  try{await col.doc('__all').set({data:data,updatedAt:new Date().toISOString()});}
+  catch(e){console.warn('sync sales:',e);}
+}
+async function syncHarvestsToFirebase(data){
+  var col=fc('harvests_erp');if(!col)return;
+  try{await col.doc('__all').set({data:data,updatedAt:new Date().toISOString()});}
+  catch(e){console.warn('sync harvests:',e);}
+}
+async function loadSalesHarvestsFromFirebase(){
+  var sc=fc('sales_erp'),hc=fc('harvests_erp');if(!sc||!hc)return;
+  try{
+    var [ss,hs]=await Promise.all([sc.doc('__all').get(),hc.doc('__all').get()]);
+    if(ss.exists&&Array.isArray(ss.data().data))lsSave('sales',ss.data().data);
+    if(hs.exists&&Array.isArray(hs.data().data))lsSave('harvests',hs.data().data);
+  }catch(e){console.warn('load sales/harvests:',e);}
+}
+
+// ─── Patch saveSales / saveHarvests pour déclencher Firebase ─────────────
+
+var _origSaveSales=window.saveSales;
+window.saveSales=function(a){
+  lsSave('sales',a);
+  syncSalesToFirebase(a);
+  refreshFinancials();
+  if(_origSaveSales&&_origSaveSales!==window.saveSales)try{_origSaveSales(a);}catch(e){}
+};
+var _origSaveHarvests=window.saveHarvests;
+window.saveHarvests=function(a){
+  lsSave('harvests',a);
+  syncHarvestsToFirebase(a);
+  refreshFinancials();
+  if(_origSaveHarvests&&_origSaveHarvests!==window.saveHarvests)try{_origSaveHarvests(a);}catch(e){}
+};
+
+// ─── Patch saveInvest pour déclencher Firebase ───────────────────────────
+
+var _origSaveInvest=window.saveInvestV12;
+window.saveInvestV12=function(){
+  if(_origSaveInvest)try{_origSaveInvest.apply(this,arguments);}catch(e){}
+  var invs=lsLoad('investments',[]);
+  syncInvestmentsToFirebase(invs);
+  refreshFinancials();
+};
+
+// ─── Agrégation des données financières ──────────────────────────────────
+
+function getCA(){
+  return (window.sales?window.sales():lsLoad('sales',[]))
+    .reduce(function(a,s){return a+Number(s.kg||0)*Number(s.price||0);},0);
+}
+function getKgVendus(){
+  return (window.sales?window.sales():lsLoad('sales',[]))
+    .reduce(function(a,s){return a+Number(s.kg||0);},0);
+}
+function getKgRecoltes(){
+  return (window.harvests?window.harvests():lsLoad('harvests',[]))
+    .reduce(function(a,h){return a+Number(h.kg||0);},0);
+}
+function getChargesTotal(type){
+  // type = 'Fixe' | 'Variable' | undefined (toutes)
+  var charges=window.APP_CHARGES||[];
+  return charges
+    .filter(function(c){return c.status!=='Rejetée'&&(!type||c.type===type);})
+    .reduce(function(a,c){return a+Number(c.amountXOF||c.amount||0);},0);
+}
+function getInvestissementsTotal(){
+  return (window.investments?window.investments():lsLoad('investments',[]))
+    .reduce(function(a,inv){return a+Number(inv.amount||0);},0);
+}
+function getAmortissementMensuel(){
+  return (window.investments?window.investments():lsLoad('investments',[]))
+    .reduce(function(a,inv){
+      var amt=Number(inv.amount||0),res=Number(inv.residual||0),yr=Number(inv.years||5)||5;
+      return a+(amt-res)/yr/12;
+    },0);
+}
+function getCoutIntrants(){
+  var prix=window.COMPTA_PRIX||{};
+  return Object.values(prix).reduce(function(a,v){return a+Number(v||0);},0);
+}
+
+// ─── Rendu du tableau de rentabilité ─────────────────────────────────────
+
+function badge(val,threshold,reverse){
+  var ok=reverse?(val<=threshold):(val>=threshold);
+  return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:'+(ok?'rgba(0,212,180,.15)':'rgba(255,61,87,.12)')+';color:'+(ok?'var(--acc)':'var(--dng)')+'">'+pct(val)+'</span>';
+}
+
+window.renderRentabilite=function(){
+  var pane=G('t13')||G('t5');if(!pane)return;
+  var old=G('v29-rentabilite-box');if(old)old.remove();
+  var box=document.createElement('div');box.id='v29-rentabilite-box';box.className='card';
+
+  var ca=getCA();
+  var kg=getKgVendus();
+  var kgRec=getKgRecoltes();
+  var chargesVar=getChargesTotal('Variable');
+  var chargesFix=getChargesTotal('Fixe');
+  var chargesTotal=getChargesTotal();
+  var coutIntrants=getCoutIntrants();
+  var amortMens=getAmortissementMensuel();
+  var invTotal=getInvestissementsTotal();
+
+  // Charges totales = exploitation + intrants + amortissements annualisés
+  // On utilise les mois actifs (au moins 1)
+  var chargesGlobales=chargesTotal+coutIntrants;
+  var resultatBrut=ca-chargesGlobales;
+  var margeB=ca>0?(resultatBrut/ca*100):0;
+  var coutRevient=kg>0?(chargesGlobales/kg):0;
+  var prixMoyenVente=kg>0?(ca/kg):0;
+  var seuil=ca>0&&resultatBrut!==0?(chargesFix/(1-(chargesVar/Math.max(ca,1))))||0:0;
+  var roi=invTotal>0?(resultatBrut/invTotal*100):0;
+
+  var met=function(lbl,val,sub,color){
+    return '<div class="met" style="background:var(--card)"><div class="mlbl">'+lbl+'</div>'
+      +'<div class="mval" style="font-size:16px;color:'+(color||'var(--t1)')+'">'+val+'</div>'
+      +(sub?'<div style="font-size:9px;color:var(--t3);margin-top:2px">'+sub+'</div>':'')+'</div>';
+  };
+
+  box.innerHTML=
+    '<div class="ctitle"><span class="dot"></span>📊 Tableau de rentabilité<span style="font-size:9px;color:var(--acc);margin-left:8px">☁ synchronisé</span></div>'
+    +'<div class="v28-help">Données issues de : <b>Ventes</b> (t5/t7), <b>Charges exploitation</b> (Firebase), <b>Prix intrants</b> (COMPTA), <b>Investissements</b> (Firebase). Se met à jour automatiquement à chaque modification.</div>'
+
+    // KPIs
+    +'<div class="mgrid" style="margin:.6rem 0">'
+      +met('CA total',money(ca),kg.toFixed(1)+' kg vendus','var(--acc)')
+      +met('Charges totales',money(chargesGlobales),'Exploitation + intrants','var(--dng)')
+      +met('Résultat brut',money(resultatBrut),'avant amortissements',resultatBrut>=0?'var(--acc)':'var(--dng)')
+      +met('Marge brute',badge(margeB,30),'CA − charges','')
+      +met('Coût de revient/kg',money(coutRevient),'charges ÷ kg vendus','var(--warn)')
+      +met('Prix moyen vente/kg',money(prixMoyenVente),'CA ÷ kg vendus','var(--gold)')
+    +'</div>'
+
+    // Détail
+    +'<div class="tw" style="margin-top:.5rem"><table><thead><tr><th>Poste</th><th style="text-align:right">Montant</th><th style="text-align:right">% CA</th></tr></thead><tbody>'
+    +'<tr><td><b style="color:var(--acc)">Chiffre d\'affaires</b></td><td style="text-align:right;font-weight:800;color:var(--acc)">'+money(ca)+'</td><td style="text-align:right">100%</td></tr>'
+    +'<tr><td>Charges variables</td><td style="text-align:right">'+money(chargesVar)+'</td><td style="text-align:right;color:var(--dng)">'+pct(ca>0?chargesVar/ca*100:0)+'</td></tr>'
+    +'<tr><td>Charges fixes</td><td style="text-align:right">'+money(chargesFix)+'</td><td style="text-align:right;color:var(--dng)">'+pct(ca>0?chargesFix/ca*100:0)+'</td></tr>'
+    +'<tr><td>Coût intrants (CUMP validés)</td><td style="text-align:right">'+money(coutIntrants)+'</td><td style="text-align:right;color:var(--warn)">'+pct(ca>0?coutIntrants/ca*100:0)+'</td></tr>'
+    +'<tr style="background:rgba(0,212,180,.06)"><td><b>Résultat brut</b></td><td style="text-align:right;font-weight:800;color:'+(resultatBrut>=0?'var(--acc)':'var(--dng)')+'">'+money(resultatBrut)+'</td><td style="text-align:right">'+pct(margeB)+'</td></tr>'
+    +'<tr><td>Amortissements (mensuel)</td><td style="text-align:right;color:var(--t3)">'+money(amortMens)+'</td><td style="text-align:right;color:var(--t3)">—</td></tr>'
+    +'<tr style="background:rgba(0,0,0,.04)"><td><b>Résultat net estimé</b></td><td style="text-align:right;font-weight:800;color:'+(resultatBrut-amortMens>=0?'var(--acc)':'var(--dng)')+'">'+money(resultatBrut-amortMens)+'</td><td style="text-align:right">'+pct(ca>0?(resultatBrut-amortMens)/ca*100:0)+'</td></tr>'
+    +'</tbody></table></div>'
+
+    // Seuil + ROI
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.6rem">'
+      +'<div style="background:rgba(155,143,255,.08);border:1px solid rgba(155,143,255,.2);border-radius:8px;padding:.6rem">'
+        +'<div style="font-size:9px;font-weight:700;color:var(--purp);text-transform:uppercase;letter-spacing:.5px">Seuil de rentabilité</div>'
+        +'<div style="font-size:18px;font-weight:800;color:var(--purp);font-family:var(--mono)">'+money(Math.max(0,seuil))+'</div>'
+        +'<div style="font-size:9px;color:var(--t3);margin-top:2px">CA à atteindre pour couvrir les charges fixes</div>'
+        +(ca>0&&seuil>0?'<div style="font-size:10px;margin-top:4px;color:'+(ca>=seuil?'var(--acc)':'var(--warn)')+'">CA actuel '+(ca>=seuil?'✅ dépasse':'⚠ n\'atteint pas')+' le seuil</div>':'')
+      +'</div>'
+      +'<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:.6rem">'
+        +'<div style="font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">ROI investissements</div>'
+        +'<div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+pct(roi)+'</div>'
+        +'<div style="font-size:9px;color:var(--t3);margin-top:2px">Résultat brut ÷ investissements totaux ('+money(invTotal)+')</div>'
+        +(invTotal>0?'<div style="font-size:10px;margin-top:4px;color:'+(roi>=15?'var(--acc)':roi>=0?'var(--warn)':'var(--dng)')+'">'+( roi>=15?'✅ Bon rendement':roi>=0?'⚠ Rendement faible':'❌ Perte')+'</div>':'<div style="font-size:10px;color:var(--t3);margin-top:4px">Ajoutez des investissements pour calculer le ROI</div>')
+      +'</div>'
+    +'</div>'
+
+    // Prod physique
+    +(kgRec>0?'<div style="font-size:10px;color:var(--t2);margin-top:.6rem;background:rgba(0,0,0,.04);border-radius:6px;padding:.5rem">'
+      +'📦 Production physique : <b>'+kgRec.toFixed(1)+' kg récoltés</b> · <b>'+kg.toFixed(1)+' kg vendus</b>'
+      +(kgRec>0?' · Taux de commercialisation : <b>'+pct(kgRec>0?kg/kgRec*100:0)+'</b>':'')
+      +'</div>':'')
+
+    +'<div style="font-size:9px;color:var(--t3);margin-top:.5rem">Données en temps réel. Les amortissements sont calculés linéairement sur la durée de vie de chaque équipement.</div>';
+
+  // Insertion : avant erp-sales-box si dans t5, sinon en tête de t13
+  var t13=G('t13');
+  if(t13){
+    var first=t13.firstChild;
+    if(first)t13.insertBefore(box,first);else t13.appendChild(box);
+  } else {
+    var salesBox=G('erp-sales-box');
+    if(salesBox&&salesBox.parentNode)salesBox.parentNode.insertBefore(box,salesBox);
+    else pane.appendChild(box);
+  }
+};
+
+// ─── refreshFinancials : point central de mise à jour ────────────────────
+
+window.refreshFinancials=function(){
+  setTimeout(function(){
+    try{if(window.renderRentabilite)renderRentabilite();}catch(e){}
+    try{if(window.upComptaSynthese)upComptaSynthese();}catch(e){}
+    try{if(window.renderAnalyseEconomique)renderAnalyseEconomique();}catch(e){}
+    try{if(window.renderDirection)renderDirection();}catch(e){}
+  },100);
+};
+
+// ─── Liaison inter-onglets : patch sw() ──────────────────────────────────
+
+(function(){
+  var prevSw=window.sw;
+  window.sw=function(id){
+    if(prevSw)prevSw.apply(this,arguments);
+    // Rafraîchit la rentabilité sur les onglets financiers
+    if(['t5','t13','t14'].indexOf(id)>=0){
+      setTimeout(function(){try{renderRentabilite();}catch(e){}},150);
+    }
+  };
+})();
+
+// ─── Patch addSaleERP / addHarvestERP pour déclencher refreshFinancials ──
+
+(function(){
+  var oa=window.addSaleERP;
+  window.addSaleERP=function(){
+    if(oa)oa.apply(this,arguments);
+    refreshFinancials();
+  };
+  var oh=window.addHarvestERP;
+  window.addHarvestERP=function(){
+    if(oh)oh.apply(this,arguments);
+    refreshFinancials();
+  };
+  // Patch charges sauvegarde
+  var os=window.saveCharge||window.saveChargeFromForm;
+  if(os){
+    window.saveChargeFromForm=function(){
+      if(os)os.apply(this,arguments);
+      refreshFinancials();
+    };
+  }
+})();
+
+// ─── Initialisation ──────────────────────────────────────────────────────
+
+(function init(){
+  var ready=function(){
+    // Charge données Firebase
+    if(window.farmCol){
+      Promise.all([
+        loadInvestmentsFromFirebase(),
+        loadSalesHarvestsFromFirebase()
+      ]).then(function(){refreshFinancials();}).catch(function(){refreshFinancials();});
+    }
+    // Rendu initial
+    setTimeout(function(){
+      try{renderRentabilite();}catch(e){}
+    },900);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready);
+  else setTimeout(ready,800);
+  // Re-init quand Firebase est prêt (auth change)
+  if(window.firebase&&firebase.auth){
+    firebase.auth().onAuthStateChanged(function(user){
+      if(user)setTimeout(function(){
+        Promise.all([loadInvestmentsFromFirebase(),loadSalesHarvestsFromFirebase()])
+          .then(refreshFinancials).catch(refreshFinancials);
+      },1200);
+    });
+  }
+  console.log('ICHTUS v29 rentabilité & sync chargé');
+})();
+
+})();
+</script>
 </body>
 </html>
