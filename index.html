@@ -1286,6 +1286,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
               <button class="sbtn" onclick="addPWAActivity()" style="font-size:11px;margin-bottom:.5rem">➕ Ajouter l'activité prévue</button>
               <div id="pwa-plan-list" style="margin-bottom:.6rem"></div>
               <div id="pwa-result" style="background:var(--inp);border-radius:8px;padding:.6rem;font-size:11px"></div>
+              <div id="pwa-monthly-cal" style="margin-top:.8rem"></div>
             </div>
             <div class="card">
               <div class="ctitle"><span class="dot" style="background:var(--purp)"></span>Mise à jour stock PWA</div>
@@ -4574,6 +4575,8 @@ function calcPWA(){
 }
 
 function exportPWAPdf(){
+  // Déléguer vers la nouvelle fiche semaine si disponible
+  if(typeof window.exportPWAWeekPdf==='function'){window.exportPWAWeekPdf();return;}
   var plan=window.PWA_PLAN||PWA_PLAN;
   if(!plan||!plan.length){alert('Aucune activité à exporter.');return;}
   var farmName=(window.APP&&APP.state&&APP.state.farmName)||'Ferme';
@@ -8563,14 +8566,270 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
     return (Number(r.dose)||0)*cover;
   };
-  // Génère le calendrier de préparation entretien J3/J5/J7/J8/J10
+  // ─── Données planning mensuel PWA (persistées en localStorage) ──────────
+  var PWA_MONTHLY_KEY='pwa_monthly_plan';
+  function loadMonthlyPlan(){try{return JSON.parse(localStorage.getItem(PWA_MONTHLY_KEY)||'[]');}catch(e){return [];}}
+  function saveMonthlyPlan(a){localStorage.setItem(PWA_MONTHLY_KEY,JSON.stringify(a));}
+  // Décalage J1 : nécessite Responsable ferme ou Super Admin
+  function canEditPwaJ1(){var r=role();return r==='Responsable'||r==='Responsable ferme'||r==='Administrateur'||r==='SuperAdmin'||r==='Super Admin';}
+  // Jours d'admin/prépa depuis J1 (0-indexed)
+  var ADMIN_OFFSETS=[2,4,6,7,9]; // J3,J5,J7,J8,J10
+  var PREP_OFFSETS=[0,2,4,5,7];  // J1,J3,J5,J6,J8 soir — H-36 (avant-veille soir) avant chaque admin
+  // Retourne la liste des événements (admin/prep) pour une entrée sur une plage de dates
+  function pwaEventsForEntry(entry, monthStart, monthEnd){
+    if(!entry.j1)return[];
+    var DAY=86400000;
+    var j1=new Date(entry.j1); j1.setHours(0,0,0,0);
+    var events=[];
+    // Calculer les répétitions du cycle J1→J10 dans le mois
+    // On cherche d'abord le premier cycle possible dans la fenêtre -9j..+30j
+    for(var cycle=0;cycle<20;cycle++){
+      var cycleStart=new Date(j1.getTime()+cycle*10*DAY);
+      ADMIN_OFFSETS.forEach(function(off){
+        var d=new Date(cycleStart.getTime()+off*DAY);
+        if(d>=monthStart&&d<=monthEnd) events.push({date:d,type:'admin',entry:entry,cycle:cycle});
+      });
+      PREP_OFFSETS.forEach(function(off){
+        var d=new Date(cycleStart.getTime()+off*DAY);
+        if(d>=monthStart&&d<=monthEnd) events.push({date:d,type:'prep',entry:entry,cycle:cycle});
+      });
+      if(cycleStart>monthEnd)break;
+    }
+    return events;
+  }
+  function dateKey(d){return d.toISOString().slice(0,10);}
+  function fmtDate(d,opts){return d.toLocaleDateString('fr-FR',opts||{day:'2-digit',month:'2-digit'});}
+  function fmtDay(d){return d.toLocaleDateString('fr-FR',{weekday:'short'});}
+
+  // ─── Rendu calendrier mensuel PWA ─────────────────────────────────────────
+  window.PWA_CALENDAR_MONTH=null; // {year,month} courant
+  window.renderPWAMonthlyCalendar=function(){
+    var container=$('pwa-monthly-cal');if(!container)return;
+    var now=new Date();
+    var ref=window.PWA_CALENDAR_MONTH||{year:now.getFullYear(),month:now.getMonth()};
+    window.PWA_CALENDAR_MONTH=ref;
+    var year=ref.year,month=ref.month;
+    var monthStart=new Date(year,month,1); monthStart.setHours(0,0,0,0);
+    var monthEnd=new Date(year,month+1,0); monthEnd.setHours(23,59,59,999);
+    var plan=loadMonthlyPlan();
+    var bs=(window.APP&&APP.state&&APP.state.bassins)||[];
+    var activeBassins=bs.filter(function(b){return b.statut==='Actif';});
+    var rates=window.PWA_RATES||{};
+    var dose=Number((rates.entretien||{}).dose)||0.2;
+    var monthLabel=monthStart.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+    // Nombre de jours dans le mois
+    var daysInMonth=monthEnd.getDate();
+    // Construire index des événements par date+bassinId
+    var evByDateBassin={};
+    plan.forEach(function(entry){
+      var events=pwaEventsForEntry(entry,monthStart,monthEnd);
+      events.forEach(function(ev){
+        var key=dateKey(ev.date)+'_'+entry.bassinId;
+        if(!evByDateBassin[key])evByDateBassin[key]=[];
+        evByDateBassin[key].push(ev);
+      });
+    });
+    // Totaux par date
+    var totalByDate={};
+    for(var dk in evByDateBassin){
+      var dpart=dk.split('_')[0];
+      evByDateBassin[dk].forEach(function(ev){
+        if(ev.type==='admin'){
+          var vol=dose*(ev.entry.coverVol||ev.entry.vol||3.8);
+          totalByDate[dpart]=(totalByDate[dpart]||0)+vol*2; // ×2 matin+soir
+        }
+      });
+    }
+    // Sélecteur de bassins avec J1
+    var bassinRows=activeBassins.map(function(b){
+      var entry=plan.find(function(e){return e.bassinId===b.name;});
+      var j1=entry?entry.j1:'';
+      var origJ1=entry?entry.origJ1||entry.j1:'';
+      var changed=entry&&entry.j1&&entry.origJ1&&entry.j1!==entry.origJ1;
+      var canEdit=canEditPwaJ1();
+      return '<tr>'
+        +'<td style="padding:4px 8px;white-space:nowrap;font-weight:700;color:var(--t1)">'+esc(b.name)+'</td>'
+        +'<td style="padding:4px 8px;font-size:10px;color:var(--t3)">'+fmtNum(b.vol||3.8,1)+' m³</td>'
+        +'<td style="padding:4px 8px">'
+          +(canEdit
+            ?'<input type="date" value="'+(j1||'')+'" style="font-size:10px;padding:2px 5px;border:1px solid var(--b1);border-radius:4px;background:var(--inp);color:var(--t1)" onchange="window.setPwaJ1(\''+esc(b.name)+'\',this.value)">'
+            :'<span style="font-size:10px;color:var(--t2)">'+(j1||'<span style="color:var(--warn)">⚠️ Non définie</span>')+'</span>')
+          +(changed?'<span style="font-size:9px;color:var(--warn);margin-left:4px" title="Décalé — était '+origJ1+'">⚠️ Décalé</span>':'')
+        +'</td>'
+        +'<td style="padding:4px 8px">'
+          +(canEdit&&j1?'<button onclick="window.ackPwaJ1Shift(\''+esc(b.name)+'\')" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 7px;cursor:pointer">✅ Acquitter</button>':'')
+        +'</td>'
+        +'</tr>';
+    }).join('');
+    // En-têtes colonnes jours
+    var dayHeaders='<th style="white-space:nowrap;padding:4px 5px;background:var(--acc);color:#04101e;font-size:10px">Bassin</th>'
+      +'<th style="padding:4px 5px;background:var(--acc);color:#04101e;font-size:10px">m³</th>';
+    for(var dd=1;dd<=daysInMonth;dd++){
+      var dobj=new Date(year,month,dd);
+      var isToday=dateKey(dobj)===dateKey(new Date());
+      var dow=fmtDay(dobj).slice(0,3);
+      dayHeaders+='<th style="padding:3px 4px;background:'+(isToday?'var(--purp)':'var(--acc)')+';color:'+(isToday?'#fff':'#04101e')+';font-size:9px;text-align:center;min-width:32px">'
+        +'<div>'+String(dd).padStart(2,'0')+'</div><div style="font-weight:400">'+dow+'</div></th>';
+    }
+    // Lignes bassins
+    var bassinCalRows=activeBassins.map(function(b){
+      var cells='<td style="padding:4px 7px;font-weight:700;white-space:nowrap;font-size:10px;color:var(--t1)">'+esc(b.name)+'</td>'
+        +'<td style="padding:4px 6px;font-size:9px;color:var(--t3)">'+fmtNum(b.vol||3.8,1)+'</td>';
+      for(var dd=1;dd<=daysInMonth;dd++){
+        var dobj=new Date(year,month,dd);dobj.setHours(0,0,0,0);
+        var dk=dateKey(dobj)+'_'+b.name;
+        var evs=evByDateBassin[dk]||[];
+        var hasAdmin=evs.some(function(e){return e.type==='admin';});
+        var hasPrep=evs.some(function(e){return e.type==='prep';});
+        var hasOnly=hasAdmin&&hasPrep;
+        var entry=loadMonthlyPlan().find(function(e){return e.bassinId===b.name;});
+        var vol=dose*(entry?entry.coverVol||entry.vol||b.vol||3.8:b.vol||3.8);
+        var cellContent,bg,title;
+        if(hasOnly){bg='rgba(155,143,255,.18)';cellContent='<div style="font-size:8px;color:var(--purp);font-weight:700">💉🫧</div><div style="font-size:8px;color:var(--purp);font-weight:800">2×'+fmtNum(vol,2)+'</div><div style="font-size:7px;color:var(--warn)">+Prép. soir</div>';title='Admin matin+soir + Prép. soir H-36 pour J10'}
+        else if(hasAdmin){bg='rgba(0,212,180,.13)';cellContent='<div style="font-size:8px;color:var(--acc);font-weight:700">💉</div><div style="font-size:9px;color:var(--acc);font-weight:800">2×'+fmtNum(vol,2)+'</div>';title='Administration (matin+soir)'}
+        else if(hasPrep){bg='rgba(255,179,71,.1)';cellContent='<div style="font-size:8px;color:var(--warn)">🫧</div><div style="font-size:8px;color:var(--warn);font-weight:700">Prép. soir</div><div style="font-size:7px;color:var(--warn)">H-36</div>';title='Bullage soir — H-36 avant admin'}
+        else{bg='transparent';cellContent='<div style="color:var(--t3);font-size:9px">—</div>';title='';}
+        var isToday=dateKey(dobj)===dateKey(new Date());
+        cells+='<td style="text-align:center;padding:2px;background:'+(isToday?'rgba(155,143,255,.08)':bg)+';border:'+(isToday?'1px solid var(--purp)':'none')+'" title="'+title+'">'+cellContent+'</td>';
+      }
+      return '<tr>'+cells+'</tr>';
+    }).join('');
+    // Ligne totaux
+    var totalRow='<tr style="background:var(--card)"><td style="padding:4px 7px;font-weight:700;font-size:10px;color:var(--t2)">Total ferme</td><td></td>';
+    var stockPWA=0;
+    var stockItem=(window.APP_INTRANTS||[]).find(function(i){return i.id==='pwa_prep'||i.id==='bioclean';});
+    if(stockItem&&typeof getItemCurrentStock==='function')stockPWA=getItemCurrentStock(stockItem.id);
+    for(var dd2=1;dd2<=daysInMonth;dd2++){
+      var dobj2=new Date(year,month,dd2);dobj2.setHours(0,0,0,0);
+      var dk2=dateKey(dobj2);
+      var tot=totalByDate[dk2]||0;
+      var overStock=stockPWA>0&&tot>stockPWA;
+      totalRow+='<td style="text-align:center;padding:2px;background:var(--card)">'
+        +(tot>0?'<div style="font-size:8px;font-weight:800;color:'+(overStock?'var(--dng)':'var(--gold)')+'">'+fmtNum(tot,1)+'L</div>':'<div style="color:var(--t3);font-size:9px">—</div>')
+        +'</td>';
+    }
+    totalRow+='</tr>';
+    container.innerHTML=
+      '<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">'
+      +'<button onclick="window.pwaCalPrev()" style="background:var(--inp);border:1px solid var(--b1);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--t1)">◀</button>'
+      +'<strong style="font-size:13px;color:var(--t1);text-transform:capitalize">'+monthLabel+'</strong>'
+      +'<button onclick="window.pwaCalNext()" style="background:var(--inp);border:1px solid var(--b1);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--t1)">▶</button>'
+      +'<button onclick="window.exportPWAWeekPdf()" style="background:var(--dng);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer;margin-left:auto">📄 Fiche semaine PDF</button>'
+      +'</div>'
+      // Tableau saisie J1
+      +(activeBassins.length?
+        '<div style="margin-bottom:.7rem"><div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.3rem">📅 Date J1 par bassin'
+        +(!canEditPwaJ1()?'<span style="font-size:9px;font-weight:400;color:var(--warn);margin-left:.4rem">(modification réservée Responsable ferme / Super Admin)</span>':'')
+        +'</div>'
+        +'<div class="tw"><table style="font-size:10px"><thead><tr>'
+        +'<th>Bassin</th><th>Volume</th><th>Date J1</th><th></th>'
+        +'</tr></thead><tbody>'+bassinRows+'</tbody></table></div></div>'
+        :'<div style="font-size:10px;color:var(--warn);padding:.5rem">Aucun bassin actif trouvé.</div>')
+      // Calendrier mensuel
+      +'<div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:.3rem">📆 Calendrier mensuel — PWA 2×/jour (matin + soir)</div>'
+      +'<div class="tw"><table style="font-size:10px;border-collapse:collapse"><thead><tr>'+dayHeaders+'</tr></thead><tbody>'+bassinCalRows+totalRow+'</tbody></table></div>'
+      +'<div style="font-size:9px;color:var(--t2);margin-top:.5rem;line-height:1.7">💉 Administration <strong>2×/jour</strong> (matin + soir) — J3,J5,J7,J8,J10 · 🫧 <strong>Prép. soir H-36</strong> = bullage lancé le soir de l\'avant-veille (J1,J3,J5,J6,J8 soir) pour efficacité maximale à H+36 · J8 = admin + prép. J10 · Ligne <strong>Total ferme</strong> = litres à sortir du stock ce jour.</div>';
+  };
+  window.pwaCalPrev=function(){if(!window.PWA_CALENDAR_MONTH)return;var m=window.PWA_CALENDAR_MONTH;m.month--;if(m.month<0){m.month=11;m.year--;}window.renderPWAMonthlyCalendar();};
+  window.pwaCalNext=function(){if(!window.PWA_CALENDAR_MONTH)return;var m=window.PWA_CALENDAR_MONTH;m.month++;if(m.month>11){m.month=0;m.year++;}window.renderPWAMonthlyCalendar();};
+  window.setPwaJ1=function(bassinId,newDate){
+    if(!canEditPwaJ1()){toast('❌ Modification réservée au Responsable ferme ou Super Admin','dng');return;}
+    var plan=loadMonthlyPlan();
+    var entry=plan.find(function(e){return e.bassinId===bassinId;});
+    var bs=(window.APP&&APP.state&&APP.state.bassins)||[];
+    var b=bs.find(function(x){return x.name===bassinId;})||{};
+    if(entry){
+      if(!entry.origJ1&&entry.j1&&entry.j1!==newDate)entry.origJ1=entry.j1;
+      entry.j1=newDate;
+    } else {
+      plan.push({bassinId:bassinId,j1:newDate,origJ1:null,coverVol:b.vol||3.8,vol:b.vol||3.8,activity:'entretien'});
+    }
+    saveMonthlyPlan(plan);
+    window.renderPWAMonthlyCalendar();
+    if(typeof calcPWA==='function')calcPWA();
+    toast('✅ Date J1 mise à jour — calendrier recalculé','ok');
+  };
+  window.ackPwaJ1Shift=function(bassinId){
+    var plan=loadMonthlyPlan();
+    var entry=plan.find(function(e){return e.bassinId===bassinId;});
+    if(entry){entry.origJ1=null;saveMonthlyPlan(plan);window.renderPWAMonthlyCalendar();}
+  };
+
+  // ─── Export PDF fiche semaine terrain ────────────────────────────────────
+  window.exportPWAWeekPdf=function(){
+    var plan=loadMonthlyPlan();
+    var bs=(window.APP&&APP.state&&APP.state.bassins)||[];
+    var activeBassins=bs.filter(function(b){return b.statut==='Actif';});
+    var rates=window.PWA_RATES||{};
+    var dose=Number((rates.entretien||{}).dose)||0.2;
+    var farmName=(window.APP&&APP.state&&APP.state.farmName)||'Ferme';
+    // Semaine courante (lundi→dimanche)
+    var today=new Date();today.setHours(0,0,0,0);
+    var dow=today.getDay();var mondayOff=dow===0?-6:1-dow;
+    var monday=new Date(today.getTime()+mondayOff*86400000);
+    var days=[];for(var i=0;i<7;i++)days.push(new Date(monday.getTime()+i*86400000));
+    var DAY_NAMES=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+    // En-têtes
+    var headers='<th>Bassin</th><th>Vol m³</th>';
+    days.forEach(function(d,i){headers+='<th style="text-align:center">'+DAY_NAMES[i]+'<br><span style="font-weight:400;font-size:9px">'+fmtDate(d)+'</span></th>';});
+    headers+='<th>Total sem.</th>';
+    // Lignes bassins
+    var bassinRows='';
+    var totByDay=days.map(function(){return 0;});
+    activeBassins.forEach(function(b){
+      var entry=plan.find(function(e){return e.bassinId===b.name;});
+      var j1Str=entry?entry.j1:'';
+      if(!j1Str){
+        bassinRows+='<tr><td>'+esc(b.name)+'</td><td>'+fmtNum(b.vol||3.8,1)+'</td>';
+        days.forEach(function(){bassinRows+='<td style="text-align:center;color:#9ca3af;font-size:9px">J1 ?</td>';});
+        bassinRows+='<td></td></tr>';
+        return;
+      }
+      var j1=new Date(j1Str);j1.setHours(0,0,0,0);
+      var vol=dose*(entry.coverVol||entry.vol||b.vol||3.8);
+      var weekTotal=0;
+      var cells='';
+      days.forEach(function(d,di){
+        // Déterminer offset depuis dernier J1 de cycle
+        var diff=Math.round((d.getTime()-j1.getTime())/86400000);
+        var cycleOff=((diff%10)+10)%10;
+        var isAdmin=ADMIN_OFFSETS.indexOf(cycleOff)>=0;
+        var isPrep=PREP_OFFSETS.indexOf(cycleOff)>=0;
+        var hasOnly=isAdmin&&isPrep;
+        if(isAdmin){weekTotal+=vol*2;totByDay[di]+=vol*2;
+          cells+='<td style="text-align:center;background:'+(hasOnly?'#f3f0ff':'#f0fdf4')+'"><div style="font-weight:700;font-size:10px;color:'+(hasOnly?'#7c3aed':'#0d9488')+'">'+(hasOnly?'💉🫧':'💉')+'</div><div style="font-size:9px">M '+fmtNum(vol,2)+' L</div><div style="font-size:9px">S '+fmtNum(vol,2)+' L</div></td>';
+        } else if(isPrep){
+          cells+='<td style="text-align:center;background:#fffbeb"><div style="font-size:10px;color:#d97706">🫧</div><div style="font-size:9px;color:#d97706;font-weight:700">Prép. soir</div><div style="font-size:8px;color:#d97706">H-36</div></td>';
+        } else {
+          cells+='<td style="text-align:center;color:#d1d5db">—</td>';
+        }
+      });
+      bassinRows+='<tr><td style="font-weight:700">'+esc(b.name)+'</td><td>'+fmtNum(b.vol||3.8,1)+'</td>'+cells+'<td style="font-weight:700;color:#0d9488">'+fmtNum(weekTotal,2)+' L</td></tr>';
+    });
+    // Ligne total
+    var totalCells='';var grandTotal=0;
+    totByDay.forEach(function(t){grandTotal+=t;totalCells+='<td style="text-align:center;font-weight:700;color:#0d9488">'+(t>0?fmtNum(t,2)+' L':'—')+'</td>';});
+    bassinRows+='<tr style="background:#f0fdf4"><td colspan="2" style="font-weight:700">Total ferme</td>'+totalCells+'<td style="font-weight:700;color:#0d9488">'+fmtNum(grandTotal,2)+' L</td></tr>';
+    var w=window.open('','_blank','width=1000,height=700');
+    if(!w)return alert('Autorisez les pop-ups pour exporter en PDF');
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fiche PWA semaine — '+farmName+'</title>'
+      +'<style>*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;font-size:11px}body{padding:14px;color:#111}h1{font-size:15px;margin-bottom:2px}p.sub{font-size:10px;color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse}th{background:#0d9488;color:#fff;padding:5px 7px;text-align:left}td{padding:4px 6px;border-bottom:1px solid #e5e7eb}tr:nth-child(even) td{background:#f9fafb}.note{font-size:9px;color:#6b7280;margin-top:10px;line-height:1.6}@media print{button{display:none}}</style>'
+      +'</head><body>'
+      +'<h1>📋 Fiche hebdomadaire PWA — '+esc(farmName)+'</h1>'
+      +'<p class="sub">Semaine du '+fmtDate(monday)+' au '+fmtDate(days[6])+' · Export '+new Date().toLocaleDateString('fr-FR')+' · Dose entretien : '+fmtNum(dose,2)+' L/m³</p>'
+      +'<table><thead><tr>'+headers+'</tr></thead><tbody>'+bassinRows+'</tbody></table>'
+      +'<div class="note">💉 Administration 2×/jour (M=Matin / S=Soir) — J3,J5,J7,J8,J10 · 🫧 <strong>Prép. soir H-36</strong> = lancer bullage le soir de l\'avant-veille (J1,J3,J5,J6,J8 soir) · Efficacité maximale à H+36 · J8 = admin + prép. pour J10</div>'
+      +'<br><button onclick="window.print()" style="padding:6px 18px;background:#0d9488;color:#fff;border:none;border-radius:4px;cursor:pointer">🖨️ Imprimer</button>'
+      +'</body></html>');
+    w.document.close();
+  };
+
+  // Génère le calendrier de préparation entretien J3/J5/J7/J8/J10 (vue compacte legacy)
   function buildEntretienCalendar(j1DateStr, dose, cover){
     var DAY_MS=86400000;
     var j1=j1DateStr?new Date(j1DateStr):new Date();
-    // Jours d\'administration (offset depuis J1)
-    var adminOffsets=[2,4,6,7,9]; // J3,J5,J7,J8,J10 (0-indexed depuis J1)
-    var prepOffsets=[1,3,5,6,8];  // J2,J4,J6,J7,J9 — bullage 24h avant chaque admin
-    // J7 est à la fois jour de préparation (pour J8) et jour d\'administration
+    var adminOffsets=[2,4,6,7,9];
+    var prepOffsets=[0,2,4,5,7]; // H-36 : avant-veille soir
     var labels=['J1','J2','J3','J4','J5','J6','J7','J8','J9','J10'];
     var rows='';
     for(var d=0;d<10;d++){
@@ -8581,7 +8840,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       var bg='',txt='',badge='',vol='';
       if(isAdmin&&isPrep){
         bg='rgba(155,143,255,.12)';txt='var(--purp)';
-        badge='<span style="font-size:8px;background:rgba(155,143,255,.2);color:var(--purp);border-radius:8px;padding:1px 6px;margin-right:3px">💉 Admin</span><span style="font-size:8px;background:rgba(255,179,71,.15);color:var(--warn);border-radius:8px;padding:1px 6px">🫧 Prép. J8</span>';
+        badge='<span style="font-size:8px;background:rgba(155,143,255,.2);color:var(--purp);border-radius:8px;padding:1px 6px;margin-right:3px">💉 Admin matin+soir</span><span style="font-size:8px;background:rgba(255,179,71,.15);color:var(--warn);border-radius:8px;padding:1px 6px">🫧 Prép. soir H-36</span>';
         vol=fmtNum(dose*cover,2)+' L';
       } else if(isAdmin){
         bg='rgba(0,212,180,.08)';txt='var(--acc)';
@@ -8589,8 +8848,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         vol=fmtNum(dose*cover,2)+' L';
       } else if(isPrep){
         bg='rgba(255,179,71,.07)';txt='var(--warn)';
-        badge='<span style="font-size:8px;background:rgba(255,179,71,.15);color:var(--warn);border-radius:8px;padding:1px 6px">🫧 Préparation (bullage 24h)</span>';
-        vol='— (préparation)';
+        badge='<span style="font-size:8px;background:rgba(255,179,71,.15);color:var(--warn);border-radius:8px;padding:1px 6px">🫧 Prép. soir — bullage H-36</span>';
+        vol='— (bullage soir)';
       } else {
         bg='transparent';txt='var(--t3)';badge='<span style="font-size:8px;color:var(--t3)">Pas d\'action</span>';vol='—';
       }
@@ -8605,7 +8864,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       +'<div class="tw"><table style="font-size:10px"><thead><tr>'
       +'<th style="text-align:left">Jour</th><th style="text-align:left">Date</th><th style="text-align:left">Action</th><th style="text-align:right">Vol. PWA</th>'
       +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
-      +'<div style="font-size:9px;color:var(--t2);margin-top:.4rem;line-height:1.5">🫧 Préparation = lancer le bullage la veille au soir. 💉 Administration = verser le PWA préparé en soirée, après bullage 24h. J7 cumule les deux actions.</div>'
+      +'<div style="font-size:9px;color:var(--t2);margin-top:.4rem;line-height:1.5">🫧 <strong>Prép. soir H-36</strong> = lancer le bullage le soir de l\'avant-veille (J-2 soir) pour une efficacité maximale à H+36. 💉 <strong>Administration matin + soir</strong> = verser le PWA maturé. J8 cumule les deux actions.</div>'
       +'</div>';
   }
 
@@ -8643,13 +8902,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Stock ajusté par Réceptions et Inventaire uniquement.</div>'
       +'<button class="sbtn" onclick="exportPWAPdf()" style="margin-top:.6rem;font-size:11px;width:100%">📄 Exporter le planning en PDF</button>';
 
-    // Calendrier entretien si au moins une ligne entretien avec date
-    var entRow=window.PWA_PLAN.find(function(r){return r.activity==='entretien';});
-    if(entRow){
-      var j1Date=entRow.dateDebut||new Date().toISOString().slice(0,10);
-      var rates=window.PWA_RATES||{};var r=rates.entretien||{dose:0.2};
-      res.innerHTML+=buildEntretienCalendar(j1Date,r.dose,entRow.coverVol||entRow.vol||3.8);
-    }
+    // Calendrier mensuel PWA
+    setTimeout(function(){if(typeof window.renderPWAMonthlyCalendar==='function')window.renderPWAMonthlyCalendar();},50);
   };
   window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
 
@@ -8731,7 +8985,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
   var oldSwLog=window.swLog;
   if(typeof oldSwLog==='function'){
-    window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},30); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
+    window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA(); if(typeof window.renderPWAMonthlyCalendar==='function')window.renderPWAMonthlyCalendar();},50); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
   }
   document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},300); });
 })();
