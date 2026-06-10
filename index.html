@@ -831,7 +831,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
             </div>
             <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px">
               <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,201,167,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</span>
-              <span style="color:var(--t2)"><strong style="color:var(--t1)">Mélasse C/N = 15:1 (Phase 1, TAN &lt;1 mg/L).</strong> 9004 Starter 40%prot : <strong style="color:var(--warn)">~1 364 ml/kg aliment</strong> · 9008 Grower 32%prot : <strong style="color:var(--warn)">~1 032 ml/kg aliment</strong> · <em>Phase 2 (TAN ≥1 mg/L) : basée sur TAN × volume — voir onglet 🍽️ Rationnement.</em></span>
+              <span style="color:var(--t2)"><strong style="color:var(--t1)">Mélasse — ratio C/N évolue sur le cycle.</strong> S0–S4 C/N 15:1 (floc immature) · S4–S16 C/N 10:1 (floc mature, nitrifiantes actives) · S16–S22 C/N 15:1 (charge TAN max, grande biomasse) · <em>Phase 2 (TAN ≥1 mg/L) : ajustement basé sur TAN × volume — voir onglet 🍽️ Rationnement.</em></span>
             </div>
             <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px">
               <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,201,167,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</span>
@@ -958,19 +958,16 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
             <th style="padding:6px 10px;border-bottom:2px solid var(--b2)">Phase</th>
           </tr></thead>
           <tbody>
-            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Alevinette &lt;1g</td><td style="padding:6px 10px;color:var(--gold);font-weight:700">K1 Starter</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">6</td><td style="padding:6px 10px;text-align:center">8–10%</td><td style="padding:6px 10px;text-align:center">S1–S2</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Démarrage floc</td></tr>
-            <tr><td style="padding:6px 10px;font-weight:700">Alevin 1–5g</td><td style="padding:6px 10px;color:#a78bfa;font-weight:700">K4 2mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">5</td><td style="padding:6px 10px;text-align:center">5–8%</td><td style="padding:6px 10px;text-align:center">S2–S3</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Démarrage floc</td></tr>
-            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Juvénile 5–25g</td><td style="padding:6px 10px;color:#a78bfa;font-weight:700">K4 2mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">5</td><td style="padding:6px 10px;text-align:center">3–5%</td><td style="padding:6px 10px;text-align:center">S3–S5</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--acc2)">Grossissement</td></tr>
-            <tr><td style="padding:6px 10px;font-weight:700">Juvénile 25–50g</td><td style="padding:6px 10px;color:#a78bfa;font-weight:700">K4 2mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">6</td><td style="padding:6px 10px;text-align:center">2–3%</td><td style="padding:6px 10px;text-align:center">S5–S7</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--acc2)">Grossissement</td></tr>
-            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Pré-adulte 50–100g</td><td style="padding:6px 10px;color:#34d399;font-weight:700">K5 3mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">5</td><td style="padding:6px 10px;text-align:center">2–3%</td><td style="padding:6px 10px;text-align:center">S7–S10</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--acc2)">Grossissement</td></tr>
-            <tr><td style="padding:6px 10px;font-weight:700">Adulte 100–200g</td><td style="padding:6px 10px;color:#34d399;font-weight:700">K5 3mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">4</td><td style="padding:6px 10px;text-align:center">1.5–2%</td><td style="padding:6px 10px;text-align:center">S10–S13</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--acc2)">Grossissement</td></tr>
-            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Finition 200–400g</td><td style="padding:6px 10px;color:#f87171;font-weight:700">K6 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">4</td><td style="padding:6px 10px;text-align:center">1.5%</td><td style="padding:6px 10px;text-align:center">S13–S17</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Finition</td></tr>
-            <tr><td style="padding:6px 10px;font-weight:700">Finition 400–600g</td><td style="padding:6px 10px;color:#f87171;font-weight:700">K6 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">3</td><td style="padding:6px 10px;text-align:center">1–1.5%</td><td style="padding:6px 10px;text-align:center">S17–S20</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Finition</td></tr>
-            <tr style="background:rgba(167,139,250,.06)"><td style="padding:6px 10px;font-weight:700">Marché &gt;600g</td><td style="padding:6px 10px;color:#f87171;font-weight:700">K6 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">3</td><td style="padding:6px 10px;text-align:center">1%</td><td style="padding:6px 10px;text-align:center">S20–S22</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--warn)">Finition</td></tr>
+            <tr style="background:rgba(96,165,250,.07)"><td style="padding:6px 10px;font-weight:700">S0–S3 · 5–25 g (K4)</td><td style="padding:6px 10px;color:#60a5fa;font-weight:700">9008 Floating 2.0mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">6</td><td style="padding:6px 10px;text-align:center">3.6%</td><td style="padding:6px 10px;text-align:center">S0–S3</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Floc immature · NH₄ élevé</td></tr>
+            <tr><td style="padding:6px 10px;font-weight:700">S4–S6 · 25–50 g (K4)</td><td style="padding:6px 10px;color:#38bdf8;font-weight:700">9008 Floating 2.0mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">5</td><td style="padding:6px 10px;text-align:center">3.2%</td><td style="padding:6px 10px;text-align:center">S4–S6</td><td style="padding:6px 10px;text-align:center;color:var(--acc)">15→10:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Transition · nitrif. s'établissent</td></tr>
+            <tr style="background:rgba(245,158,11,.07)"><td style="padding:6px 10px;font-weight:700">S7–S9 · 50–100 g (K5)</td><td style="padding:6px 10px;color:#f59e0b;font-weight:700">9008 Floating 3.0mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">4</td><td style="padding:6px 10px;text-align:center">2.3%</td><td style="padding:6px 10px;text-align:center">S7–S9</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Floc mature · nitrif. actives</td></tr>
+            <tr><td style="padding:6px 10px;font-weight:700">S10–S14 · 100–200 g (K5)</td><td style="padding:6px 10px;color:#fbbf24;font-weight:700">9008 Floating 3.0mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">4</td><td style="padding:6px 10px;text-align:center">2.0%</td><td style="padding:6px 10px;text-align:center">S10–S14</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">10:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Grossissement · DO protégé</td></tr>
+            <tr style="background:rgba(248,113,113,.07)"><td style="padding:6px 10px;font-weight:700">S15–S22 · 200–400 g (K6)</td><td style="padding:6px 10px;color:#f87171;font-weight:700">9008 Floating 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">3</td><td style="padding:6px 10px;text-align:center">1.6%</td><td style="padding:6px 10px;text-align:center">S15–S22</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">10→15:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Charge TAN max · remonter C/N S16</td></tr>
+            <tr><td style="padding:6px 10px;font-weight:700">&gt;S22 · &gt;400 g (K6) ⚠️</td><td style="padding:6px 10px;color:#fca5a5;font-weight:700">9008 Floating 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">3</td><td style="padding:6px 10px;text-align:center">1.4%</td><td style="padding:6px 10px;text-align:center">&gt;S22</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Finition · TAN sous contrôle</td></tr>
           </tbody>
         </table>
         </div>
-        <div style="font-size:9px;color:var(--t3);margin-top:.3rem">Réduction Biofloc appliquée : −20% (floc mature Imhoff 25–40 mL/L) · Fréquences : 6-5-5-6-5-4-4-3-3 selon stade</div>
+        <div style="font-size:9px;color:var(--t3);margin-top:.3rem">Cycle démarre à S0 · alevins 5 g · 9008 Floating 2.0mm · Réduction Biofloc −20% (Imhoff 25–40 mL/L) · ⚠️ &gt;600 g : réduire à 2 repas/j · C/N : S0–S4 = 15:1 (floc immature) → S4–S16 = 10:1 (floc mature) → S16–S22 = 15:1 (charge TAN max)</div>
       </div>
 
       <!-- Résultats par bassin -->
@@ -2338,20 +2335,18 @@ function sp(){return getSpecies();}
 // ═══════════════════════════════════════════════
 // ─────────────────────────────────────────────────────────────────────────────
 // TABLE DE RATIONNEMENT — Koudijs AKF · Biofloc Tilapia GIFT · Lomé 28–30°C
-// Source : Dossier technique ICHTUS v8 + Amendements v8.7 (Juin 2026)
-// Fréquences amendées : 6·5·5·6·5·4·4·3·3 (séquence K1→K6b)
+// Source : Dossier technique ICHTUS v8 p.62 (Juin 2026)
+// Cycle démarre S0 · alevins 5 g · 9008 Floating 2.0mm (pas de nurserie 9004)
+// Fréquences : 6·5·4·4·3·3 (K4→K4b→K5→K5b→K6→K6b)
 // Réduction Biofloc −20% sur ration Koudijs (floc optimal 25–40 ml/L Imhoff)
+// C/N mélasse : S0–S4=15:1 (floc immature) · S4–S16=10:1 (floc mature) · S16–S22=15:1 (charge TAN max)
 // Note : au-delà de 600 g de poids individuel, réduire à 2 repas par jour.
 // ─────────────────────────────────────────────────────────────────────────────
 const KOUDIJS_PROFILE={
   id:'koudijs',
   nom:'Koudijs AKF',
   types:[
-    // K1–K3 : Starter 9004 (40% CP) — phase pré-grossissement
-    {id:'K1', name:'9004 Poudre 0',    granule:'<0.5mm',    protein:40, maxPoids:1,    rate:0.080, freq:6, color:'#a78bfa', stage:'0.01–1 g'},
-    {id:'K2', name:'9004 Crumble 1',   granule:'0.5-0.8mm', protein:40, maxPoids:2.5,  rate:0.048, freq:5, color:'#c084fc', stage:'1–2.5 g'},
-    {id:'K3', name:'9004 Crumble 2',   granule:'0.8-1.2mm', protein:40, maxPoids:5,    rate:0.044, freq:5, color:'#34d399', stage:'2.5–5 g'},
-    // K4–K6b : Grower 9008 (32% CP) — phase grossissement + finition
+    // K4–K6b : Grower 9008 (32% CP) — cycle ICHTUS démarre S0 alevins 5g
     {id:'K4', name:'9008 Floating 2.0mm', granule:'2.0mm',  protein:32, maxPoids:25,   rate:0.036, freq:6, color:'#60a5fa', stage:'5–25 g'},
     {id:'K4b',name:'9008 Floating 2.0mm', granule:'2.0mm',  protein:32, maxPoids:50,   rate:0.032, freq:5, color:'#38bdf8', stage:'25–50 g'},
     {id:'K5', name:'9008 Floating 3.0mm', granule:'3.0mm',  protein:32, maxPoids:100,  rate:0.023, freq:4, color:'#f59e0b', stage:'50–100 g'},
@@ -2383,15 +2378,12 @@ let FEED_TYPES=JSON.parse(JSON.stringify(FEED_TYPES_DEFAULT));
 // K4–K4b Grower 32%CP 2mm : 271 GHS/20kg → 705 XOF/kg · sac 20kg
 // K5–K5b Grower 32%CP 3mm : 241 GHS/20kg → 627 XOF/kg · sac 20kg
 // K6–K6b Grower 32%CP 4.5mm : 219 GHS/20kg → 569 XOF/kg · sac 20kg
-FEED_TYPES[0].batches=[{id:1,qty:10,price:1212}];   // K1 Poudre 0  — sac 10kg
-FEED_TYPES[1].batches=[{id:1,qty:10,price:1212}];   // K2 Crumble 1 — sac 10kg
-FEED_TYPES[2].batches=[{id:1,qty:10,price:1212}];   // K3 Crumble 2 — sac 10kg
-FEED_TYPES[3].batches=[{id:1,qty:20,price:705}];    // K4  Floating 2mm — sac 20kg
-FEED_TYPES[4].batches=[{id:1,qty:20,price:705}];    // K4b Floating 2mm — sac 20kg
-FEED_TYPES[5].batches=[{id:1,qty:20,price:627}];    // K5  Floating 3mm — sac 20kg
-FEED_TYPES[6].batches=[{id:1,qty:20,price:627}];    // K5b Floating 3mm — sac 20kg
-FEED_TYPES[7].batches=[{id:1,qty:20,price:569}];    // K6  Floating 4.5mm — sac 20kg
-FEED_TYPES[8].batches=[{id:1,qty:20,price:569}];    // K6b Floating 4.5mm — sac 20kg
+FEED_TYPES[0].batches=[{id:1,qty:20,price:705}];    // K4  Floating 2mm  — sac 20kg
+FEED_TYPES[1].batches=[{id:1,qty:20,price:705}];    // K4b Floating 2mm  — sac 20kg
+FEED_TYPES[2].batches=[{id:1,qty:20,price:627}];    // K5  Floating 3mm  — sac 20kg
+FEED_TYPES[3].batches=[{id:1,qty:20,price:627}];    // K5b Floating 3mm  — sac 20kg
+FEED_TYPES[4].batches=[{id:1,qty:20,price:569}];    // K6  Floating 4.5mm — sac 20kg
+FEED_TYPES[5].batches=[{id:1,qty:20,price:569}];    // K6b Floating 4.5mm — sac 20kg
 let batchId=10;
 
 // ═══════════════════════════════════════════════
@@ -2618,15 +2610,12 @@ async function doLogout(expired=false){
   APP.state={bassins:[],suivi:[],suiviId:0,logoUrl:null};
   applyFarmLogo(null);
   FEED_TYPES=JSON.parse(JSON.stringify(FEED_TYPES_DEFAULT));
-  FEED_TYPES[0].batches=[{id:1,qty:10,price:1212}]; // K1
-  FEED_TYPES[1].batches=[{id:1,qty:10,price:1212}]; // K2
-  FEED_TYPES[2].batches=[{id:1,qty:10,price:1212}]; // K3
-  FEED_TYPES[3].batches=[{id:1,qty:20,price:705}];  // K4
-  FEED_TYPES[4].batches=[{id:1,qty:20,price:705}];  // K4b
-  FEED_TYPES[5].batches=[{id:1,qty:20,price:627}];  // K5
-  FEED_TYPES[6].batches=[{id:1,qty:20,price:627}];  // K5b
-  FEED_TYPES[7].batches=[{id:1,qty:20,price:569}];  // K6
-  FEED_TYPES[8].batches=[{id:1,qty:20,price:569}];  // K6b
+  FEED_TYPES[0].batches=[{id:1,qty:20,price:705}];  // K4
+  FEED_TYPES[1].batches=[{id:1,qty:20,price:705}];  // K4b
+  FEED_TYPES[2].batches=[{id:1,qty:20,price:627}];  // K5
+  FEED_TYPES[3].batches=[{id:1,qty:20,price:627}];  // K5b
+  FEED_TYPES[4].batches=[{id:1,qty:20,price:569}];  // K6
+  FEED_TYPES[5].batches=[{id:1,qty:20,price:569}];  // K6b
   G('b-farm').value='';G('b-user').value='';G('b-pass').value='';
   if(expired)alert('⏱ Session expirée — veuillez vous reconnecter.');
   showScreen('screen-boot');
@@ -2847,7 +2836,7 @@ async function loadFarmData(){
     } else {
       APP.state.bassins=Array.from({length:16},(_,i)=>({
         name:`Bassin ${String(i+1).padStart(2,'0')}`,vol:3.8,nbInit:1000,mort:0,poids:5+i*0.3,
-        alimReel:0,temp:null,ph:null,DO:null,NH3:null,NO2:null,TAN:null,imhoff:null,probiot:null,TAC:null,basifiant:null,basifiantType:null,carb:null,carbType:null,statut:'Actif',feedId:FEED_TYPES[0]?.id||'K1',harvestDate:null
+        alimReel:0,temp:null,ph:null,DO:null,NH3:null,NO2:null,TAN:null,imhoff:null,probiot:null,TAC:null,basifiant:null,basifiantType:null,carb:null,carbType:null,statut:'Actif',feedId:FEED_TYPES[0]?.id||'K4',harvestDate:null
       }));
       APP.bCount=17;
     }
@@ -5211,7 +5200,7 @@ function getDisplayBassins(){
 
 function addBassin(){
   if(APP_historyDate){alert('⚠️ Impossible d\'ajouter un bassin en mode historique.');return;}
-  APP.state.bassins.push({name:`Bassin ${String(APP.bCount).padStart(2,'0')}`,vol:3.8,nbInit:1000,mort:0,poids:5,alimReel:0,temp:null,ph:null,DO:null,NH3:null,statut:'Actif',feedId:FEED_TYPES[0]?.id||'K1',harvestDate:null,_hasData:false});
+  APP.state.bassins.push({name:`Bassin ${String(APP.bCount).padStart(2,'0')}`,vol:3.8,nbInit:1000,mort:0,poids:5,alimReel:0,temp:null,ph:null,DO:null,NH3:null,statut:'Actif',feedId:FEED_TYPES[0]?.id||'K4',harvestDate:null,_hasData:false});
   APP.bCount++;buildBTable();popSelects();upAll();saveBassins();
 }
 
