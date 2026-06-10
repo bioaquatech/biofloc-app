@@ -8739,7 +8739,59 @@ function save(k,v){localStorage.setItem('ichtus_'+k,JSON.stringify(v))}
 function money(v){return n(v).toLocaleString('fr-FR')+' XOF'}
 function toast(msg,type){if(window.showToast)showToast(msg,type||'ok');else alert(msg)}
 function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur'}
-function canManageSalePrices(){var r=String(role()).toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g,'');return ['superadmin','super admin','administrateur','admin','responsable ferme','responsable','proprietaire','gerant','manager','owner'].indexOf(r)>=0||r.indexOf('admin')>=0||r.indexOf('responsable')>=0||r.indexOf('superadmin')>=0}
+// Déverrouillage prix : utilise le mot de passe de connexion Firebase (même code d'accès que la connexion)
+var _adminPinUnlocked=false;
+function canManageSalePrices(){return _adminPinUnlocked}
+window.unlockPriceAdmin=function(){
+  var old=G('v28-pin-modal');if(old)old.remove();
+  var user=window.firebase&&firebase.auth&&firebase.auth().currentUser;
+  var email=user&&user.email;
+  var d=document.createElement('div');d.id='v28-pin-modal';d.className='v28-modal';
+  d.innerHTML='<div class="v28-modal-box" style="max-width:360px;text-align:center">'
+    +'<div class="ctitle" style="justify-content:center"><span class="dot"></span>🔐 Confirmation d\'identité</div>'
+    +'<div class="v28-help" style="text-align:left">Saisissez votre <b>mot de passe de connexion</b> pour accéder à la gestion des barèmes de prix. Ce déverrouillage est valable pour la session en cours.</div>'
+    +(email?'<div style="font-size:10px;color:var(--acc);margin:.3rem 0">👤 '+esc(email)+'</div>':'')
+    +'<input id="v28-pin-input" type="password" class="form-inp" placeholder="Votre mot de passe" style="text-align:center;margin:.6rem 0" onkeydown="if(event.key===\'Enter\')checkPricePin()">'
+    +'<div id="v28-pin-err" style="color:var(--dng);font-size:11px;min-height:16px;margin-bottom:.4rem"></div>'
+    +'<div class="v28-row-actions">'
+    +'<button class="sbtn" style="flex:2" onclick="checkPricePin()">🔓 Confirmer</button>'
+    +'<button class="dbtn" style="flex:1" onclick="document.getElementById(\'v28-pin-modal\').remove()">Annuler</button>'
+    +'</div>'
+    +'<div style="margin-top:.6rem;font-size:9px;color:var(--t3)">Même mot de passe que votre connexion à la ferme.</div>'
+    +'</div>';
+  document.body.appendChild(d);
+  setTimeout(function(){var i=G('v28-pin-input');if(i)i.focus();},100);
+};
+window.checkPricePin=function(){
+  var inp=G('v28-pin-input');var errEl=G('v28-pin-err');
+  function showErr(msg){if(errEl){errEl.textContent=msg;}inp.value='';inp.focus();}
+  if(!inp||!inp.value)return showErr('⚠ Veuillez saisir votre mot de passe.');
+  var fbUser=window.firebase&&firebase.auth&&firebase.auth().currentUser;
+  if(!fbUser||!fbUser.email){
+    // Pas de Firebase dispo : fallback sur mot de passe opérateur stocké localement
+    var localUsers=JSON.parse(localStorage.getItem('ichtus_users')||'[]');
+    var appUser=window.APP&&APP.user&&APP.user.username;
+    var found=localUsers.find(function(u){return u.username===appUser&&u.password===inp.value});
+    if(found){_adminPinUnlocked=true;var m=G('v28-pin-modal');if(m)m.remove();renderSalePricesPanel();toast('🔓 Administration prix déverrouillée.','ok');}
+    else showErr('❌ Mot de passe incorrect.');
+    return;
+  }
+  // Ré-authentification Firebase avec le mot de passe saisi
+  var credential=firebase.auth.EmailAuthProvider.credential(fbUser.email,inp.value);
+  fbUser.reauthenticateWithCredential(credential)
+    .then(function(){
+      _adminPinUnlocked=true;
+      var m=G('v28-pin-modal');if(m)m.remove();
+      renderSalePricesPanel();
+      toast('🔓 Administration prix déverrouillée pour cette session.','ok');
+    })
+    .catch(function(){showErr('❌ Mot de passe incorrect. Réessayez.');});
+};
+window.lockPriceAdmin=function(){
+  _adminPinUnlocked=false;
+  renderSalePricesPanel();
+  toast('🔒 Administration prix verrouillée.','warn');
+};
 function bassins(){var a=load('bassins_ref',[]);if(!a.length&&window.APP&&APP.state&&Array.isArray(APP.state.bassins)){a=APP.state.bassins.map(function(b,i){return {id:b.id||b.name||('B'+(i+1)),name:b.name||('Bassin '+(i+1)),volumeMaxM3:n(b.volumeMaxM3||b.vol||b.volume)||12,type:'Production',statut:'Actif'}})}if(!a.length)a=Array.from({length:16},function(_,i){return {id:'B'+(i+1),name:'Bassin '+String(i+1).padStart(2,'0'),volumeMaxM3:12,type:'Production',statut:'Actif'}});return a}
 function saveBassins(a){save('bassins_ref',a)}
 function cycles(){return load('cycles',[])} function saveCycles(a){save('cycles',a)}
@@ -8870,10 +8922,18 @@ window.renderSalePricesPanel=function(){
     +'<div style="background:rgba(0,212,180,.06);border:1px solid rgba(0,212,180,.2);border-radius:6px;padding:.4rem .6rem"><div style="font-size:9px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.5px">Prix conseillé</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Prix standard du marché local. Appliqué automatiquement dans le formulaire de vente.</div></div>'
     +'<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:.4rem .6rem"><div style="font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">Prix premium</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Pour clients fidèles, restaurants ou commandes grossiste. Indicatif seulement.</div></div>'
     +'</div>';
+  var adminBar=can
+    ?'<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.4rem 0">'
+      +'<button class="sbtn" onclick="openSalePriceEditor(\'\')">➕ Nouveau barème</button>'
+      +'<button class="dbtn" onclick="lockPriceAdmin()" title="Verrouiller le mode admin">🔒 Verrouiller</button>'
+      +'</div>'
+    :'<div style="display:flex;gap:.5rem;align-items:center;margin:.4rem 0">'
+      +'<button class="sbtn" onclick="unlockPriceAdmin()" style="background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.4);color:var(--gold)">🔐 Modifier les prix (mot de passe requis)</button>'
+      +'</div>';
   box.innerHTML='<div class="ctitle"><span class="dot"></span>Barèmes de prix de vente poisson'+syncBadge+'</div>'
-    +'<div class="v28-help">Définis par le <b>Responsable ferme</b> ou le <b>SuperAdmin</b>. Chaque barème s\'applique uniquement aux nouvelles ventes — les ventes déjà enregistrées ne sont jamais modifiées rétroactivement.</div>'
+    +'<div class="v28-help">Consulté par tous. Modifiable uniquement après saisie du <b>code PIN admin</b>. Chaque barème s\'applique uniquement aux nouvelles ventes — les ventes déjà enregistrées ne sont jamais modifiées rétroactivement.</div>'
     +legend
-    +(can?'<button class="sbtn" onclick="openSalePriceEditor(\'\')">+ Nouveau barème</button>':'<div class="v28-lock">Lecture seule — modification réservée au Responsable ferme / SuperAdmin.</div>')
+    +adminBar
     +'<div class="tw" style="margin-top:.75rem"><table><thead><tr>'
     +'<th title="Espèce et qualité du poisson (ex: Tilapia GIFT, Tilapia hybride)">Type poisson</th>'
     +'<th title="Tranche de poids ou calibre commercial (ex: 300–500 g / Standard)">Calibre</th>'
@@ -8892,7 +8952,14 @@ window.renderSalePricesPanel=function(){
         +'<td style="color:var(--gold)">'+money(p.premium)+'</td>'
         +'<td style="font-size:10px;color:var(--t3)">'+esc(p.start||'—')+'</td>'
         +'<td><span class="badge '+(isActif?'b-ok':'b-warn')+'">'+esc(p.statut||'Actif')+'</span></td>'
-        +'<td><div class="v28-row-actions">'+(can?'<button class="ebtn" title="Modifier ce barème de prix" onclick="openSalePriceEditor(\''+esc(p.id)+'\')">✏ Modifier</button><button class="ebtn" title="'+(isActif?'Archiver ce barème':'Réactiver ce barème')+'" onclick="toggleSalePriceRuleERP(\''+esc(p.id)+'\')">'+((isActif)?'📦 Archiver':'✅ Activer')+'</button><button class="dbtn" title="Supprimer définitivement" onclick="deleteSalePriceRuleERP(\''+esc(p.id)+'\')">🗑</button>':'<span class="v28-lock" title="Modification réservée au Responsable ferme / SuperAdmin">🔒 Réservé admin</span>')+'</div></td>'
+        +'<td><div class="v28-row-actions">'
+          +(can
+            ?'<button class="ebtn" title="Modifier ce barème" onclick="openSalePriceEditor(\''+esc(p.id)+'\')">✏ Modifier</button>'
+             +'<button class="ebtn" title="'+(isActif?'Archiver':'Réactiver')+'" onclick="toggleSalePriceRuleERP(\''+esc(p.id)+'\')">'+((isActif)?'📦 Archiver':'✅ Activer')+'</button>'
+             +'<button class="dbtn" title="Supprimer" onclick="deleteSalePriceRuleERP(\''+esc(p.id)+'\')">🗑</button>'
+            :'<button class="ebtn" onclick="unlockPriceAdmin()" title="Cliquez pour confirmer votre mot de passe" style="font-size:9px;opacity:.7">🔐 Modifier</button>'
+          )
+        +'</div></td>'
         +'</tr>';
     }).join('')
     +'</tbody></table></div>';
