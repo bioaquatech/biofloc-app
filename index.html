@@ -4506,10 +4506,19 @@ function addPWAActivity(){
   const a=G('pwa-add-activity')?.value||'entretien';
   const nb=Math.max(1,parseInt(G('pwa-add-bassins')?.value||'1'));
   const vol=+(G('pwa-add-volume')?.value||1.75);
-  PWA_PLAN.push({id:Date.now()+Math.random(),activity:a,nb,vol});
+  var entry={id:Date.now()+Math.random(),activity:a,nb,vol};
+  PWA_PLAN.push(entry);
+  if(window.PWA_PLAN)window.PWA_PLAN.push(entry);
   calcPWA();
 }
-function removePWAActivity(id){PWA_PLAN=PWA_PLAN.filter(x=>String(x.id)!==String(id));calcPWA();}
+function removePWAActivity(id){
+  // Synchronise les deux références pour éviter les conflits entre scripts
+  var plan=window.PWA_PLAN||PWA_PLAN;
+  plan=plan.filter(function(x){return String(x.id)!==String(id);});
+  window.PWA_PLAN=plan;
+  PWA_PLAN=plan;
+  calcPWA();
+}
 function pwaDoseLitres(row){
   const r=PWA_RATES[row.activity]||PWA_RATES.entretien;
   if(row.activity==='rotation'&&Math.abs(row.vol-3.8)<0.01)return 0.38*row.nb; // dossier technique : 380 ml à hauteur 110 cm
