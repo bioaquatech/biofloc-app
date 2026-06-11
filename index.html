@@ -8982,6 +8982,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     window.swLog=function(panel){ var ret=oldSwLog.apply(this,arguments); if(panel==='probio')setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA(); if(typeof window.renderPWAMonthlyCalendar==='function')window.renderPWAMonthlyCalendar();},50); if(panel==='stock')setTimeout(function(){if(typeof renderStockEntries==='function')renderStockEntries();},30); return ret; };
   }
   document.addEventListener('DOMContentLoaded',function(){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},300); });
+  if(document.readyState!=='loading'){ setTimeout(function(){installPwaUi(); if(typeof calcPWA==='function')calcPWA();},150); }
 })();
 </script>
 
