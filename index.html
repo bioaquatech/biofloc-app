@@ -2194,6 +2194,46 @@ catch(e){secondaryApp=firebase.initializeApp(firebaseConfig,'secondary');}
 const secondaryAuth=secondaryApp.auth();
 
 // ═══════════════════════════════════════════════
+// AUTO-RESTORE SESSION ON REFRESH
+// ═══════════════════════════════════════════════
+auth.onAuthStateChanged(async function(firebaseUser){
+  if(!firebaseUser)return; // pas de session Firebase → landing page normale
+  if(APP.user)return;      // déjà connecté (login manuel en cours)
+  const farmCode=localStorage.getItem('ichtus_last_farmCode');
+  if(!farmCode)return;     // farmCode inconnu → impossible de restaurer
+  try{
+    showLoader('Restauration de la session…');
+    const [userSnap,farmSnap]=await Promise.all([
+      db.collection('users').doc(firebaseUser.uid).get(),
+      db.collection('farms').doc(farmCode).get()
+    ]);
+    if(!farmSnap.exists||farmSnap.data().active===false){hideLoader();return;}
+    const userData=userSnap.exists?userSnap.data():{name:firebaseUser.email,role:'Opérateur',farmCode};
+    const farmData=farmSnap.data();
+    APP.user={uid:firebaseUser.uid,email:firebaseUser.email,name:userData.name||firebaseUser.email,role:userData.role||'Opérateur',farmCode,canBackup:userData.canBackup||false};
+    APP.farmCode=farmCode;
+    APP.farmName=farmData.name||farmCode;
+    APP.farmMessages=farmData.farmMessages||[];
+    try{
+      if(farmData.speciesId==='custom'&&farmData.speciesCustom){
+        const idx=SPECIES_PROFILES.findIndex(s=>s.id==='custom');
+        if(idx>=0)SPECIES_PROFILES[idx]={...SPECIES_PROFILES[idx],...farmData.speciesCustom};
+        APP.species=SPECIES_PROFILES[idx>=0?idx:0];
+      } else if(farmData.speciesId){
+        APP.species=SPECIES_PROFILES.find(s=>s.id===farmData.speciesId)||SPECIES_PROFILES[0];
+      } else { APP.species=SPECIES_PROFILES[0]; }
+    }catch(e){APP.species=SPECIES_PROFILES[0];}
+    await loadPlatformSettings().catch(()=>{});
+    await loadFarmData();
+    hideLoader();
+    showFarmApp();
+  }catch(e){
+    hideLoader();
+    console.warn('Auto-restore session failed:',e);
+  }
+});
+
+// ═══════════════════════════════════════════════
 // APP STATE
 // ═══════════════════════════════════════════════
 const G=id=>document.getElementById(id);
@@ -2550,6 +2590,7 @@ async function doLogin(){
     const role=userData.role||'Opérateur';
     APP.user={uid:cred.user.uid,email,name:userData.name||username,role,farmCode,canBackup:userData.canBackup||false};
     APP.farmCode=farmCode;
+    localStorage.setItem('ichtus_last_farmCode',farmCode);
     showLoader('Étape 3/4 — Vérification de la ferme…');
     const farmSnap=await db.collection('farms').doc(farmCode).get().catch(e=>{throw new Error('❌ Ferme inaccessible : '+e.message);});
     if(!farmSnap.exists){await auth.signOut();throw new Error('❌ Ferme "'+farmCode+'" introuvable dans la base de données.');}
@@ -2632,6 +2673,7 @@ async function doLogout(expired=false){
   APP.unsubs.forEach(u=>u());APP.unsubs=[];
   await auth.signOut();
   APP.user=null;APP.farmCode=null;APP.farmName=null;APP.species=null;
+  localStorage.removeItem('ichtus_last_farmCode');
   APP.state={bassins:[],suivi:[],suiviId:0,logoUrl:null};
   applyFarmLogo(null);
   FEED_TYPES=JSON.parse(JSON.stringify(FEED_TYPES_DEFAULT));
@@ -4543,7 +4585,7 @@ function addPWAActivity(){
   var dateDebut=G('pwa-activity-date')?.value||new Date().toISOString().slice(0,10);
   if(!dateDebut){alert('Veuillez saisir une date de début.');return;}
   var plan=_pwaLoad();
-  plan.push({id:Date.now()+Math.random(),activity:a,bassin:bassin,bassinId:bassinId,bassinVol:bassinVol,coverVol:cover,nb:1,vol:cover,dateDebut:dateDebut});
+  plan.push({id:Date.now()+Math.random(),activity:a,bassin:bassin,bassinId:bassinId,bassinVol:bassinVol,coverVol:cover,nb:1,vol:cover,dateDebut:dateDebut,j1:dateDebut});
   _pwaSave(plan);
   calcPWA();
   if(typeof window.renderPWAMonthlyCalendar==='function')window.renderPWAMonthlyCalendar();
@@ -4587,7 +4629,8 @@ function calcPWA(){
       +'<div style="font-family:var(--mono);font-weight:800;font-size:13px;color:'+(isEnt?'var(--purp)':'var(--acc)')+'">'+qDisplay+'</div>'
       +'<button class="dbtn" onclick="removePWAActivity(\''+row.id+'\')">×</button></div>';
   }).join('');
-  const base=plan.reduce((s,row)=>s+pwaDoseLitres(row),0);
+  // Total : entretien = dose × 5 séances × 2/j ; autres activités = dose simple
+  const base=plan.reduce((s,row)=>{const q=pwaDoseLitres(row);return s+(row.activity==='entretien'?q*5*2:q);},0);
   const pfa=base*0.04;
   const total=base+pfa;
   res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
@@ -8578,9 +8621,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   var PREP_OFFSETS=[0,2,4,5,7];  // J1,J3,J5,J6,J8 soir — H-36 (avant-veille soir) avant chaque admin
   // Retourne la liste des événements (admin/prep) pour une entrée sur une plage de dates
   function pwaEventsForEntry(entry, monthStart, monthEnd){
-    if(!entry.j1)return[];
+    var j1Str=entry.j1||entry.dateDebut;
+    if(!j1Str)return[];
     var DAY=86400000;
-    var j1=new Date(entry.j1); j1.setHours(0,0,0,0);
+    var j1=new Date(j1Str); j1.setHours(0,0,0,0);
     var events=[];
     // Calculer les répétitions du cycle J1→J10 dans le mois
     // On cherche d'abord le premier cycle possible dans la fenêtre -9j..+30j
@@ -8742,13 +8786,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     if(!canEditPwaJ1()){toast('❌ Modification réservée au Responsable ferme ou Super Admin','dng');return;}
     var plan=loadMonthlyPlan();
     var entry=plan.find(function(e){return e.bassinId===bassinId;});
-    var bs=(window.APP&&APP.state&&APP.state.bassins)||[];
-    var b=bs.find(function(x){return x.name===bassinId;})||{};
+    var allBassins=typeof window.bassins==='function'?window.bassins():(window.APP&&APP.state&&APP.state.bassins)||[];
+    var b=allBassins.find(function(x){return x.id===bassinId||x.name===bassinId;})||{};
+    var bvol=Number(b.volumeMaxM3||b.vol||b.volume)||3.8;
     if(entry){
-      if(!entry.origJ1&&entry.j1&&entry.j1!==newDate)entry.origJ1=entry.j1;
-      entry.j1=newDate;
+      if(!entry.origJ1&&(entry.j1||entry.dateDebut)&&(entry.j1||entry.dateDebut)!==newDate)entry.origJ1=entry.j1||entry.dateDebut;
+      entry.j1=newDate; entry.dateDebut=newDate;
     } else {
-      plan.push({bassinId:bassinId,j1:newDate,origJ1:null,coverVol:b.vol||3.8,vol:b.vol||3.8,activity:'entretien'});
+      plan.push({bassinId:bassinId,j1:newDate,dateDebut:newDate,origJ1:null,coverVol:bvol,vol:bvol,bassinVol:bvol,activity:'entretien'});
     }
     saveMonthlyPlan(plan);
     window.renderPWAMonthlyCalendar();
@@ -9023,14 +9068,6 @@ function load(k,d){try{return JSON.parse(localStorage.getItem('ichtus_'+k)||JSON
 function save(k,v){localStorage.setItem('ichtus_'+k,JSON.stringify(v))}
 function money(v){var cur=(load('finance_cfg',{currency:'XOF'}).currency)||'XOF';return n(v).toLocaleString('fr-FR')+' '+cur;}
 function toast(msg,type){if(window.showToast)showToast(msg,type||'ok');else alert(msg)}
-function bassins(){
-  var a=load('bassins_ref',[]);
-  if(!a.length && window.APP&&APP.state&&Array.isArray(APP.state.bassins)){
-    a=APP.state.bassins.map(function(b,i){return {id:b.id||b.name||('B'+(i+1)),name:b.name||('Bassin '+(i+1)),volumeMaxM3:n(b.volumeMaxM3||b.vol||b.volume)||12,type:'Production',statut:'Actif'}});
-  }
-  if(!a.length)a=Array.from({length:16},function(_,i){return {id:'B'+(i+1),name:'Bassin '+String(i+1).padStart(2,'0'),volumeMaxM3:12,type:'Production',statut:'Actif'}});
-  return a;
-}
 function saveBassins(a){save('bassins_ref',a)}
 function cycles(){return load('cycles',[])} function saveCycles(a){save('cycles',a)}
 function clients(){return load('clients',[])} function saveClients(a){save('clients',a)}
@@ -9042,7 +9079,17 @@ function cycleName(c){return c?(c.name||c.code||c.id):'—'}
 function bassinById(id){return bassins().find(function(b){return b.id===id||b.name===id})}
 function usageBassin(b){var id=b.id,name=b.name;return {cycles:cycles().filter(function(c){return (c.bassins||[]).indexOf(id)>=0}).length,harvests:harvests().filter(function(h){return h.bassinId===id||h.bassin===id||h.bassin===name}).length,sales:sales().filter(function(s){return s.bassinId===id||s.bassin===id||s.bassin===name}).length,total:0}}
 function usageCycle(c){var id=c.id,code=c.code;var u={harvests:harvests().filter(function(h){return h.cycleId===id||h.cycle===code||h.cycle===id}).length,sales:sales().filter(function(s){return s.cycleId===id||s.cycle===code||s.cycle===id}).length,outs:fishOuts().filter(function(o){return o.cycleId===id||o.cycle===code||o.cycle===id}).length,total:0};u.total=u.harvests+u.sales+u.outs;return u}
-function syncBassins(){var bs=bassins(), cs=cycles();bs.forEach(function(b){var c=cs.find(function(x){return (x.bassins||[]).indexOf(b.id)>=0 && x.statut!=='Archivé' && x.statut!=='Annulé'});b.cycleId=c?c.id:'';b.statut='Actif'});saveBassins(bs)}
+function syncBassins(){
+  var VALID_STATUTS=['Actif','Récolté','Quarantaine','Réserve'];
+  var bs=bassins(), cs=cycles();
+  bs.forEach(function(b){
+    var c=cs.find(function(x){return (x.bassins||[]).indexOf(b.id)>=0 && x.statut!=='Archivé' && x.statut!=='Annulé'});
+    b.cycleId=c?c.id:'';
+    // Normaliser seulement les anciens statuts obsolètes ; préserver Récolté/Quarantaine/Réserve
+    if(!b.statut||b.statut==='Libre'||b.statut==='Occupé'||VALID_STATUTS.indexOf(b.statut)<0){b.statut='Actif';}
+  });
+  saveBassins(bs);
+}
 function fishStockByHarvest(hid){var h=harvests().find(function(x){return x.id===hid});var base=n(h&&h.kg);var vend=sales().filter(function(s){return s.harvestId===hid}).reduce(function(a,s){return a+n(s.kg)},0);var outs=fishOuts().filter(function(o){return o.harvestId===hid}).reduce(function(a,o){return a+n(o.kg)},0);return Math.max(0,base-vend-outs)}
 function totalFishStock(){return harvests().reduce(function(a,h){return a+fishStockByHarvest(h.id)},0)}
 function ensureNav(){
@@ -9301,6 +9348,7 @@ function bassins(){
   return a;
 }
 function saveBassins(a){save('bassins_ref',a)}
+window.bassins=bassins; // expose globally for PWA select and other modules
 function cycles(){return load('cycles',[])} function saveCycles(a){save('cycles',a)}
 function clients(){return load('clients',[])}
 function harvests(){return load('harvests',[])} function saveHarvests(a){save('harvests',a)}
@@ -9802,6 +9850,9 @@ window.refreshFinancials=function(){
   }
   console.log('ICHTUS v29 rentabilité & sync chargé');
 })();
+
+// Populate PWA bassin select now that bassins() is defined and exposed
+if(window.fillPwaBassinSelect)window.fillPwaBassinSelect();
 
 })();
 
