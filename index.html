@@ -2861,6 +2861,34 @@ async function saveBassinsNow(){
   APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});});
   await batch.commit().then(showSynced).catch(showSyncErr);
 }
+// Sync ERP bassins (localStorage bassins_ref) → APP.state.bassins → Firebase
+// Call after any ERP bassin save/create/delete
+window.syncERPBassinsToProduction=async function(resetMode){
+  if(!APP.farmCode){toast('Connectez-vous à une ferme d\'abord','warn');return;}
+  var erpBs=typeof window.bassins==='function'?window.bassins():[];
+  if(!erpBs.length){toast('Aucun bassin ERP à synchroniser','warn');return;}
+  var existing=Array.isArray(APP.state.bassins)?APP.state.bassins:[];
+  var FEED_ID=(typeof FEED_TYPES!=='undefined'&&FEED_TYPES[0])?FEED_TYPES[0].id:'K4';
+  var newList=erpBs.map(function(eb){
+    var prev=resetMode?null:existing.find(function(x){return x.id===eb.id||x.name===eb.name;});
+    // defaults first, then prev (preserves monitoring data + production statut), then ERP infra fields (name/id/volume only)
+    return Object.assign({
+      nbInit:1000,mort:0,poids:5,alimReel:0,feedId:FEED_ID,harvestDate:null,
+      temp:null,ph:null,DO:null,TAN:null,NH3:null,NO2:null,
+      imhoff:null,probiot:null,TAC:null,basifiant:null,basifiantType:null,carb:null,carbType:null,
+      statut:'Actif',type:'Production'
+    },prev||{},{
+      name:eb.name,id:eb.id,vol:Number(eb.volumeMaxM3)||12,volumeMaxM3:Number(eb.volumeMaxM3)||12
+    });
+  });
+  APP.state.bassins=newList;APP.bCount=newList.length+1;
+  saveBassins();
+  if(typeof buildBTable==='function')buildBTable();
+  if(typeof popSelects==='function')popSelects();
+  if(typeof upAll==='function')upAll();
+  if(window.fillPwaBassinSelect)fillPwaBassinSelect();
+  toast('✅ '+(resetMode?'Réinitialisation':'Synchronisation')+' — '+newList.length+' bassins','ok');
+};
 function saveSuiviDoc(r){if(!APP.farmCode)return;showSyncing();farmCol('suivi').doc(String(r.id)).set(r).then(showSynced).catch(showSyncErr);}
 function deleteSuiviDoc(id){if(!APP.farmCode)return;showSyncing();farmCol('suivi').doc(String(id)).delete().then(showSynced).catch(showSyncErr);}
 function saveFeed(){
@@ -2913,6 +2941,13 @@ async function loadFarmData(){
     if(!fSnap.empty){fSnap.docs.forEach(d=>{const ft=FEED_TYPES.find(f=>f.id===d.id);if(ft&&d.data().batches)ft.batches=d.data().batches;});}
     if(cfgSnap.exists&&cfgSnap.data().probioStock!==undefined&&G('g-probio'))G('g-probio').value=cfgSnap.data().probioStock;
     if(window.fillPwaBassinSelect)setTimeout(fillPwaBassinSelect,100);
+    // Auto-sync ERP bassins → production if ERP has entries but Firebase is empty/default
+    setTimeout(function(){
+      var erpBs=typeof window.bassins==='function'?window.bassins():[];
+      var prodBs=Array.isArray(APP.state.bassins)?APP.state.bassins:[];
+      var isDefault=prodBs.length===16&&prodBs.every(function(b){return /^Bassin\s+0?\d+$/.test(b.name||'')&&(b.vol===3.8||b.volumeMaxM3===3.8);});
+      if(erpBs.length>0&&(prodBs.length===0||isDefault)&&window.syncERPBassinsToProduction)syncERPBassinsToProduction(false);
+    },500);
   }catch(e){
     console.error('loadFarmData error:',e);
     // Continuer avec des données vides plutôt que de bloquer la connexion
@@ -8564,13 +8599,28 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function todaySafe(){return typeof window.today==='function'?today():(new Date()).toISOString().slice(0,10);}
   function fmtNum(v,d){v=Number(v)||0;return v.toFixed(d==null?2:d).replace('.',',');}
   function getBassinsForPwa(){
-    // Source prioritaire : ERP localStorage (bassins_ref), fallback Firebase, fallback défaut 16
-    var bs=typeof window.bassins==='function'?window.bassins():[];
-    if(!bs.length&&window.APP&&APP.state&&Array.isArray(APP.state.bassins)&&APP.state.bassins.length){
-      bs=APP.state.bassins.map(function(b,i){return {id:b.id||b.name||('B'+(i+1)),name:b.name||('Bassin '+String(i+1).padStart(2,'0')),volumeMaxM3:Number(b.volumeMaxM3||b.vol||b.volume)||12,statut:'Actif'};});
+    // Fusion des deux sources : Firebase (APP.state.bassins) + ERP localStorage (bassins_ref)
+    var firebaseBs=[];
+    if(window.APP&&APP.state&&Array.isArray(APP.state.bassins)&&APP.state.bassins.length){
+      firebaseBs=APP.state.bassins.map(function(b,i){
+        return {id:b.id||b.name||('B'+(i+1)),name:b.name||('Bassin '+String(i+1).padStart(2,'0')),volumeMaxM3:Number(b.volumeMaxM3||b.vol||b.volume)||12,statut:'Actif'};
+      });
     }
-    if(!bs.length){bs=Array.from({length:16},function(_,i){return {id:'B'+(i+1),name:'Bassin '+String(i+1).padStart(2,'0'),volumeMaxM3:12,statut:'Actif'};});}
-    return bs;
+    var erpBs=typeof window.bassins==='function'?window.bassins().filter(function(b){
+      // Exclure les bassins ERP qui sont juste les défauts génériques (B1..B16 sans config réelle)
+      return b.name&&!/^Bassin\s+0?[0-9]+$/.test(b.name)||b.volumeMaxM3!==12;
+    }):[];
+    // Priorité : bassins Firebase (production réelle) + bassins ERP non-défaut
+    var merged=firebaseBs.slice();
+    erpBs.forEach(function(eb){
+      var exists=merged.some(function(fb){return fb.id===eb.id||fb.name===eb.name;});
+      if(!exists)merged.push(eb);
+    });
+    // Fallback : bassins ERP complets si Firebase vide
+    if(!merged.length&&typeof window.bassins==='function')merged=window.bassins();
+    // Dernier fallback : 16 défauts
+    if(!merged.length){merged=Array.from({length:16},function(_,i){return {id:'B'+(i+1),name:'Bassin '+String(i+1).padStart(2,'0'),volumeMaxM3:12,statut:'Actif'};});}
+    return merged;
   }
   function bassinOptions(){
     return getBassinsForPwa().map(function(b){
@@ -9099,8 +9149,10 @@ function ensureNav(){
 }
 function tabHtml(active){var tabs=[['bassins','Bassins'],['cycles','Cycles'],['clients','Clients'],['biofloc','Paramètres biofloc'],['finance','Paramètres financiers'],['invest','Investissements']];return '<div class="erp-tabs">'+tabs.map(function(t){return '<button class="'+(active===t[0]?'active':'')+'" onclick="renderParamERP(\''+t[0]+'\')">'+t[1]+'</button>'}).join('')+'</div>'}
 window.renderParamERP=function(which){ensureNav();var root=G('t15');if(!root)return;root.innerHTML=tabHtml(which||'bassins')+'<div id="erp-param-content"></div>';var c=G('erp-param-content');({bassins:renderBassins,cycles:renderCycles,clients:renderClients,biofloc:renderBiofloc,finance:renderFinance,invest:renderInvest})[which||'bassins'](c)};
-function renderBassins(c){var bs=bassins();c.innerHTML='<div class="card"><div class="ctitle"><span class="dot"></span>Bassins</div><div class="erp-note">Le <b>volume maximal m³</b> est une donnée fixe d\'infrastructure. Il est obligatoire et sera seulement affiché dans PWA/PFA/LAB ; le calcul utilise le volume à traiter saisi manuellement.</div></div><div class="tw"><table><thead><tr><th>Code technique</th><th>Nom affiché</th><th>Volume max m³</th><th>Type</th><th>Statut</th><th>Cycle actif</th><th>Usage</th><th>Action</th></tr></thead><tbody>'+bs.map(function(b,i){var u=usageBassin(b);u.total=u.cycles+u.harvests+u.sales;var locked=u.total>0,cy=cycles().find(function(x){return x.id===b.cycleId});return '<tr><td><input id="bs-code-'+i+'" class="erp-input" value="'+esc(b.id)+'" '+(locked?'disabled title="Code verrouillé"':'')+'></td><td><input id="bs-name-'+i+'" class="erp-input" value="'+esc(b.name||b.id)+'"></td><td><input id="bs-vol-'+i+'" type="number" min="0" step="0.1" class="erp-input" style="width:85px" value="'+(n(b.volumeMaxM3)||12)+'"></td><td><select id="bs-type-'+i+'" class="erp-input"><option '+((b.type||'Production')==='Production'?'selected':'')+'>Production</option><option '+(b.type==='Quarantaine'?'selected':'')+'>Quarantaine</option><option '+(b.type==='Test'?'selected':'')+'>Test</option><option '+(b.type==='Réserve'?'selected':'')+'>Réserve</option></select></td><td><select id="bs-statut-'+i+'" class="erp-input"><option '+((!b.statut||b.statut==='Actif')?'selected':'')+'>Actif</option><option '+(b.statut==='Récolté'?'selected':'')+'>Récolté</option><option '+(b.statut==='Quarantaine'?'selected':'')+'>Quarantaine</option><option '+(b.statut==='Réserve'?'selected':'')+'>Réserve</option></select></td><td>'+(cy?esc(cycleName(cy)):'—')+'</td><td><span class="erp-chip '+(locked?'warn':'ok')+'">'+u.total+' donnée(s)</span><div class="erp-small">Cycles '+u.cycles+' · Récoltes '+u.harvests+' · Ventes '+u.sales+'</div></td><td><button class="sbtn" style="padding:3px 8px;font-size:10px" onclick="saveBassinERP('+i+')">Enregistrer</button></td></tr>'}).join('')+'</tbody></table></div>'}
-window.saveBassinERP=function(i){var bs=bassins(),b=bs[i],u=usageBassin(b);u.total=u.cycles+u.harvests+u.sales;var code=(G('bs-code-'+i).value||'').trim(),name=(G('bs-name-'+i).value||'').trim(),vol=n(G('bs-vol-'+i).value),typ=G('bs-type-'+i).value,statut=G('bs-statut-'+i).value||'Actif';if(!code||!name||vol<=0)return alert('Code, nom et volume maximal obligatoire.');if(code!==b.id&&u.total>0)return alert('Code verrouillé : le bassin contient déjà des données. Modifiez seulement le nom affiché.');if(code!==b.id&&bs.some(function(x,j){return j!==i&&x.id===code}))return alert('Ce code existe déjà.');if(code!==b.id){var old=b.id;cycles().forEach(function(c){c.bassins=(c.bassins||[]).map(function(x){return x===old?code:x})});saveCycles(cycles());b.id=code}b.name=name;b.volumeMaxM3=vol;b.volumeM3=vol;b.vol=vol;b.type=typ;b.statut=statut;saveBassins(bs);syncBassins();if(window.fillPwaBassinSelect)fillPwaBassinSelect();toast('✅ Bassin enregistré','ok');renderParamERP('bassins')};
+function renderBassins(c){var bs=bassins();c.innerHTML='<div class="card"><div class="ctitle"><span class="dot"></span>Bassins <span style="font-size:10px;font-weight:400;color:var(--t3)">— source unique ERP → Qualité d\'eau → PWA</span></div><div class="erp-note">Créez ici vos bassins. Ils sont automatiquement synchronisés vers la section <b>Bassins &amp; Qualité d\'eau</b> et le <b>sélecteur PWA</b>. Le <b>volume maximal m³</b> est une donnée fixe d\'infrastructure.</div>'+'<div class="admin-form" style="display:grid;grid-template-columns:1fr 1fr 80px 1fr 1fr auto;gap:6px;align-items:end;margin-top:8px"><input id="bs-new-code" class="form-inp" placeholder="Code ex: B01" style="margin:0"><input id="bs-new-name" class="form-inp" placeholder="Nom ex: Bassin 01" style="margin:0"><input id="bs-new-vol" type="number" min="0.1" step="0.1" class="form-inp" placeholder="m³" style="margin:0;width:80px"><select id="bs-new-type" class="form-inp" style="margin:0"><option>Production</option><option>Quarantaine</option><option>Test</option><option>Réserve</option></select><select id="bs-new-statut" class="form-inp" style="margin:0"><option>Actif</option><option>Récolté</option><option>Quarantaine</option><option>Réserve</option></select><button class="sbtn" onclick="addBassinERP()" style="white-space:nowrap">+ Ajouter</button></div>'+'<div style="margin-top:8px;display:flex;gap:8px"><button class="sbtn" style="background:var(--warn);font-size:11px;padding:4px 10px" onclick="if(confirm(\'Réinitialiser section Bassins &amp; Qualité d\\\'eau depuis ERP ? Les données de monitoring (températures, qualité eau) seront conservées, seules les nouvelles lignes/volumes seront mis à jour.\'))syncERPBassinsToProduction(false)">🔄 Sync → Production</button><button class="dbtn" style="font-size:11px;padding:4px 10px" onclick="if(confirm(\'⚠️ RÉINITIALISATION COMPLÈTE : vider et reconstruire la section Bassins depuis ERP. Toutes les données de monitoring seront perdues. Continuer ?\'))syncERPBassinsToProduction(true)">🗑️ Réinitialiser depuis ERP</button></div></div><div class="tw"><table><thead><tr><th>Code technique</th><th>Nom affiché</th><th>Volume max m³</th><th>Type</th><th>Statut</th><th>Cycle actif</th><th>Usage</th><th>Action</th></tr></thead><tbody>'+bs.map(function(b,i){var u=usageBassin(b);u.total=u.cycles+u.harvests+u.sales;var locked=u.total>0,cy=cycles().find(function(x){return x.id===b.cycleId});return '<tr><td><input id="bs-code-'+i+'" class="erp-input" value="'+esc(b.id)+'" '+(locked?'disabled title="Code verrouillé"':'')+'></td><td><input id="bs-name-'+i+'" class="erp-input" value="'+esc(b.name||b.id)+'"></td><td><input id="bs-vol-'+i+'" type="number" min="0" step="0.1" class="erp-input" style="width:85px" value="'+(n(b.volumeMaxM3)||12)+'"></td><td><select id="bs-type-'+i+'" class="erp-input"><option '+((b.type||'Production')==='Production'?'selected':'')+'>Production</option><option '+(b.type==='Quarantaine'?'selected':'')+'>Quarantaine</option><option '+(b.type==='Test'?'selected':'')+'>Test</option><option '+(b.type==='Réserve'?'selected':'')+'>Réserve</option></select></td><td><select id="bs-statut-'+i+'" class="erp-input"><option '+((!b.statut||b.statut==='Actif')?'selected':'')+'>Actif</option><option '+(b.statut==='Récolté'?'selected':'')+'>Récolté</option><option '+(b.statut==='Quarantaine'?'selected':'')+'>Quarantaine</option><option '+(b.statut==='Réserve'?'selected':'')+'>Réserve</option></select></td><td>'+(cy?esc(cycleName(cy)):'—')+'</td><td><span class="erp-chip '+(locked?'warn':'ok')+'">'+u.total+' donnée(s)</span><div class="erp-small">Cycles '+u.cycles+' · Récoltes '+u.harvests+' · Ventes '+u.sales+'</div></td><td style="display:flex;gap:4px"><button class="sbtn" style="padding:3px 8px;font-size:10px" onclick="saveBassinERP('+i+')">Enregistrer</button>'+(u.total===0?'<button class="dbtn" style="padding:3px 8px;font-size:10px" onclick="deleteBassinERP('+i+')">✕</button>':'')+'</td></tr>'}).join('')+'</tbody></table></div>'}
+window.saveBassinERP=function(i){var bs=bassins(),b=bs[i],u=usageBassin(b);u.total=u.cycles+u.harvests+u.sales;var code=(G('bs-code-'+i).value||'').trim(),name=(G('bs-name-'+i).value||'').trim(),vol=n(G('bs-vol-'+i).value),typ=G('bs-type-'+i).value,statut=G('bs-statut-'+i).value||'Actif';if(!code||!name||vol<=0)return alert('Code, nom et volume maximal obligatoire.');if(code!==b.id&&u.total>0)return alert('Code verrouillé : le bassin contient déjà des données. Modifiez seulement le nom affiché.');if(code!==b.id&&bs.some(function(x,j){return j!==i&&x.id===code}))return alert('Ce code existe déjà.');if(code!==b.id){var old=b.id;cycles().forEach(function(c){c.bassins=(c.bassins||[]).map(function(x){return x===old?code:x})});saveCycles(cycles());b.id=code}b.name=name;b.volumeMaxM3=vol;b.volumeM3=vol;b.vol=vol;b.type=typ;b.statut=statut;saveBassins(bs);syncBassins();if(window.syncERPBassinsToProduction)syncERPBassinsToProduction(false);else if(window.fillPwaBassinSelect)fillPwaBassinSelect();toast('✅ Bassin enregistré','ok');renderParamERP('bassins')};
+window.addBassinERP=function(){var code=(G('bs-new-code').value||'').trim(),name=(G('bs-new-name').value||'').trim(),vol=n(G('bs-new-vol').value),typ=G('bs-new-type').value,statut=G('bs-new-statut').value||'Actif';if(!code||!name||vol<=0)return alert('Code, nom et volume maximal obligatoires.');var bs=bassins();if(bs.some(function(b){return b.id===code}))return alert('Ce code existe déjà.');bs.push({id:code,name:name,volumeMaxM3:vol,volumeM3:vol,vol:vol,type:typ,statut:statut,cycleId:''});saveBassins(bs);syncBassins();if(window.syncERPBassinsToProduction)syncERPBassinsToProduction(false);toast('✅ Bassin ajouté','ok');renderParamERP('bassins');};
+window.deleteBassinERP=function(i){var bs=bassins(),b=bs[i];if(!b)return;var u=usageBassin(b);u.total=u.cycles+u.harvests+u.sales;if(u.total>0)return alert('Suppression interdite : bassin lié à des données.');if(!confirm('Supprimer le bassin '+esc(b.name)+' ?'))return;bs.splice(i,1);saveBassins(bs);syncBassins();if(window.syncERPBassinsToProduction)syncERPBassinsToProduction(false);toast('Bassin supprimé','warn');renderParamERP('bassins');};
 function renderCycles(c){var bs=bassins(),cs=cycles();c.innerHTML='<div class="card"><div class="ctitle"><span class="dot"></span>Créer un cycle</div><div class="admin-form"><input id="cy-code" class="form-inp" placeholder="Code cycle : GIFT-2026-01"><input id="cy-name" class="form-inp" placeholder="Nom affiché"><input id="cy-start" type="date" class="form-inp" value="'+today()+'"><input id="cy-end" type="date" class="form-inp"><input id="cy-strain" class="form-inp" placeholder="Souche"><select id="cy-statut" class="form-inp"><option>Actif</option><option>Prévu</option></select></div><button class="sbtn" onclick="addCycleERP()">Créer le cycle</button></div><div class="tw"><table><thead><tr><th>Code</th><th>Nom</th><th>Période</th><th>Bassins affectés</th><th>Usage</th><th>Actions</th></tr></thead><tbody>'+cs.map(function(cy){var u=usageCycle(cy);return '<tr><td class="cn">'+esc(cy.code||cy.id)+'</td><td><input class="erp-input" id="cy-name-edit-'+esc(cy.id)+'" value="'+esc(cycleName(cy))+'"></td><td>'+esc(cy.start||'')+' → '+esc(cy.end||'')+'</td><td><div class="erp-checkgrid">'+bs.map(function(b){var other=cs.find(function(x){return x.id!==cy.id&&x.statut!=='Archivé'&&(x.bassins||[]).indexOf(b.id)>=0});var ck=(cy.bassins||[]).indexOf(b.id)>=0;return '<label title="Volume max '+(n(b.volumeMaxM3)||12)+' m³"><input type="checkbox" class="cycb-'+esc(cy.id)+'" value="'+esc(b.id)+'" '+(ck?'checked':'')+' '+(other?'disabled':'')+'> '+esc(b.name||b.id)+(other?' 🔒':'')+'</label>'}).join('')+'</div><button class="sbtn" style="padding:2px 7px;font-size:10px;margin-top:4px" onclick="saveCycleBassinsERP(\''+esc(cy.id)+'\')">Affecter</button></td><td><span class="erp-chip '+(u.total?'warn':'ok')+'">'+u.total+' donnée(s)</span><div class="erp-small">Récoltes '+u.harvests+' · Ventes '+u.sales+' · Sorties '+u.outs+'</div></td><td class="erp-actions"><button class="sbtn" style="padding:2px 7px;font-size:10px" onclick="renameCycleERP(\''+esc(cy.id)+'\')">Renommer</button>'+(u.total===0?'<button class="dbtn" onclick="deleteCycleERP(\''+esc(cy.id)+'\')">Supprimer</button>':'<button class="abtn" style="padding:2px 7px;font-size:10px" onclick="archiveCycleERP(\''+esc(cy.id)+'\')">Archiver</button>')+'</td></tr>'}).join('')+'</tbody></table></div>'}
 window.addCycleERP=function(){var code=(G('cy-code').value||'').trim(),name=(G('cy-name').value||'').trim();if(!code||!name)return alert('Code et nom du cycle obligatoires');var cs=cycles();if(cs.some(function(c){return c.code===code||c.id===code}))return alert('Ce code cycle existe déjà');cs.push({id:'CY-'+Date.now(),code:code,name:name,start:G('cy-start').value,end:G('cy-end').value,strain:G('cy-strain').value,statut:G('cy-statut').value,bassins:[]});saveCycles(cs);toast('✅ Cycle créé','ok');renderParamERP('cycles')};
 window.renameCycleERP=function(id){var cs=cycles(),c=cs.find(function(x){return x.id===id});if(!c)return;c.name=G('cy-name-edit-'+id).value||c.name;saveCycles(cs);toast('✅ Nom du cycle mis à jour','ok');renderParamERP('cycles')};
