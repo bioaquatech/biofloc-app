@@ -8765,15 +8765,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
   // ─── Export PDF fiche semaine terrain ────────────────────────────────────
   window.exportPWAWeekPdf=function(){
-    var plan=loadMonthlyPlan();
+    var plan=_pwaLoad();  // source unique
     var bs1=(window.APP&&APP.state&&Array.isArray(APP.state.bassins))?APP.state.bassins:[];
     var bs2=(typeof bassins==='function')?bassins():[];
     var seen2={};var allBs2=[];
     bs1.concat(bs2).forEach(function(b){var key=b.name||b.id;if(key&&!seen2[key]){seen2[key]=true;allBs2.push(b);}});
     var activeBassins=allBs2.filter(function(b){return !b.statut||b.statut==='Actif';});
     var rates=window.PWA_RATES||{};
-    var dose=Number((rates.entretien||{}).dose)||0.2;
     var farmName=(window.APP&&APP.state&&APP.state.farmName)||'Ferme';
+    // helpers locaux si hors IIFE
+    var _fmt2=function(v,d){return Number(v||0).toFixed(d!=null?d:2).replace('.',',');};
+    var _fmtDate=function(d){return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});};
     // Semaine courante (lundi→dimanche)
     var today=new Date();today.setHours(0,0,0,0);
     var dow=today.getDay();var mondayOff=dow===0?-6:1-dow;
@@ -8782,52 +8784,56 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     var DAY_NAMES=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
     // En-têtes
     var headers='<th>Bassin</th><th>Vol m³</th>';
-    days.forEach(function(d,i){headers+='<th style="text-align:center">'+DAY_NAMES[i]+'<br><span style="font-weight:400;font-size:9px">'+fmtDate(d)+'</span></th>';});
+    days.forEach(function(d,i){headers+='<th style="text-align:center">'+DAY_NAMES[i]+'<br><span style="font-weight:400;font-size:9px">'+_fmtDate(d)+'</span></th>';});
     headers+='<th>Total sem.</th>';
     // Lignes bassins
     var bassinRows='';
     var totByDay=days.map(function(){return 0;});
     activeBassins.forEach(function(b){
-      var entry=plan.find(function(e){return e.bassinId===b.name;});
-      var j1Str=entry?entry.j1:'';
+      // Chercher par bassinId OU bassin (les deux champs possibles selon la source)
+      var entry=plan.find(function(e){return e.bassinId===b.name||e.bassin===b.name||e.bassinId===b.id||e.bassin===b.id;});
+      var j1Str=entry?entry.j1||entry.dateDebut:'';
       if(!j1Str){
-        bassinRows+='<tr><td>'+esc(b.name)+'</td><td>'+fmtNum(b.vol||3.8,1)+'</td>';
+        bassinRows+='<tr><td>'+esc(b.name)+'</td><td>'+_fmt2(b.vol||3.8,1)+'</td>';
         days.forEach(function(){bassinRows+='<td style="text-align:center;color:#9ca3af;font-size:9px">J1 ?</td>';});
-        bassinRows+='<td></td></tr>';
+        bassinRows+='<td style="color:#9ca3af">—</td></tr>';
         return;
       }
       var j1=new Date(j1Str);j1.setHours(0,0,0,0);
-      var vol=dose*(entry.coverVol||entry.vol||b.vol||3.8);
+      // Dose selon activité réelle (primo, entretien, postintro...)
+      var activ=entry?entry.activity||'entretien':'entretien';
+      var doseRate=Number(((rates[activ]||rates.entretien||{}).dose))||0.2;
+      var cover=Number(entry.coverVol||entry.vol||b.vol||3.8);
+      var vol=doseRate*cover;
       var weekTotal=0;
       var cells='';
       days.forEach(function(d,di){
-        // Déterminer offset depuis dernier J1 de cycle
         var diff=Math.round((d.getTime()-j1.getTime())/86400000);
         var cycleOff=((diff%10)+10)%10;
         var isAdmin=ADMIN_OFFSETS.indexOf(cycleOff)>=0;
         var isPrep=PREP_OFFSETS.indexOf(cycleOff)>=0;
         var hasOnly=isAdmin&&isPrep;
         if(isAdmin){weekTotal+=vol*2;totByDay[di]+=vol*2;
-          cells+='<td style="text-align:center;background:'+(hasOnly?'#f3f0ff':'#f0fdf4')+'"><div style="font-weight:700;font-size:10px;color:'+(hasOnly?'#7c3aed':'#0d9488')+'">'+(hasOnly?'💉🫧':'💉')+'</div><div style="font-size:9px">M '+fmtNum(vol,2)+' L</div><div style="font-size:9px">S '+fmtNum(vol,2)+' L</div></td>';
+          cells+='<td style="text-align:center;background:'+(hasOnly?'#f3f0ff':'#f0fdf4')+'"><div style="font-weight:700;font-size:10px;color:'+(hasOnly?'#7c3aed':'#0d9488')+'">'+(hasOnly?'💉🫧':'💉')+'</div><div style="font-size:9px">M '+_fmt2(vol)+' L</div><div style="font-size:9px">S '+_fmt2(vol)+' L</div></td>';
         } else if(isPrep){
           cells+='<td style="text-align:center;background:#fffbeb"><div style="font-size:10px;color:#d97706">🫧</div><div style="font-size:9px;color:#d97706;font-weight:700">Prép. soir</div><div style="font-size:8px;color:#d97706">H-36</div></td>';
         } else {
           cells+='<td style="text-align:center;color:#d1d5db">—</td>';
         }
       });
-      bassinRows+='<tr><td style="font-weight:700">'+esc(b.name)+'</td><td>'+fmtNum(b.vol||3.8,1)+'</td>'+cells+'<td style="font-weight:700;color:#0d9488">'+fmtNum(weekTotal,2)+' L</td></tr>';
+      bassinRows+='<tr><td style="font-weight:700">'+esc(b.name)+'</td><td>'+_fmt2(b.vol||3.8,1)+'</td>'+cells+'<td style="font-weight:700;color:#0d9488">'+_fmt2(weekTotal)+' L</td></tr>';
     });
     // Ligne total
     var totalCells='';var grandTotal=0;
-    totByDay.forEach(function(t){grandTotal+=t;totalCells+='<td style="text-align:center;font-weight:700;color:#0d9488">'+(t>0?fmtNum(t,2)+' L':'—')+'</td>';});
-    bassinRows+='<tr style="background:#f0fdf4"><td colspan="2" style="font-weight:700">Total ferme</td>'+totalCells+'<td style="font-weight:700;color:#0d9488">'+fmtNum(grandTotal,2)+' L</td></tr>';
+    totByDay.forEach(function(t){grandTotal+=t;totalCells+='<td style="text-align:center;font-weight:700;color:#0d9488">'+(t>0?_fmt2(t)+' L':'—')+'</td>';});
+    bassinRows+='<tr style="background:#f0fdf4"><td colspan="2" style="font-weight:700">Total ferme</td>'+totalCells+'<td style="font-weight:700;color:#0d9488">'+_fmt2(grandTotal)+' L</td></tr>';
     var w=window.open('','_blank','width=1000,height=700');
     if(!w)return alert('Autorisez les pop-ups pour exporter en PDF');
     w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fiche PWA semaine — '+farmName+'</title>'
       +'<style>*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;font-size:11px}body{padding:14px;color:#111}h1{font-size:15px;margin-bottom:2px}p.sub{font-size:10px;color:#666;margin-bottom:10px}table{width:100%;border-collapse:collapse}th{background:#0d9488;color:#fff;padding:5px 7px;text-align:left}td{padding:4px 6px;border-bottom:1px solid #e5e7eb}tr:nth-child(even) td{background:#f9fafb}.note{font-size:9px;color:#6b7280;margin-top:10px;line-height:1.6}@media print{button{display:none}}</style>'
       +'</head><body>'
       +'<h1>📋 Fiche hebdomadaire PWA — '+esc(farmName)+'</h1>'
-      +'<p class="sub">Semaine du '+fmtDate(monday)+' au '+fmtDate(days[6])+' · Export '+new Date().toLocaleDateString('fr-FR')+' · Dose entretien : '+fmtNum(dose,2)+' L/m³</p>'
+      +'<p class="sub">Semaine du '+_fmtDate(monday)+' au '+_fmtDate(days[6])+' · Export '+new Date().toLocaleDateString('fr-FR')+' · Dose entretien : '+_fmt2((rates.entretien||{dose:0.2}).dose)+' L/m³ · Primo : '+_fmt2((rates.primo||{dose:4.7}).dose)+' L/m³</p>'
       +'<table><thead><tr>'+headers+'</tr></thead><tbody>'+bassinRows+'</tbody></table>'
       +'<div class="note">💉 Administration 2×/jour (M=Matin / S=Soir) — J3,J5,J7,J8,J10 · 🫧 <strong>Prép. soir H-36</strong> = lancer bullage le soir de l\'avant-veille (J1,J3,J5,J6,J8 soir) · Efficacité maximale à H+36 · J8 = admin + prép. pour J10</div>'
       +'<br><button onclick="window.print()" style="padding:6px 18px;background:#0d9488;color:#fff;border:none;border-radius:4px;cursor:pointer">🖨️ Imprimer</button>'
