@@ -1966,8 +1966,47 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 <div id="stock-modal" class="modal-overlay hidden">
   <div class="modal-box" style="max-width:500px">
     <div class="modal-title">📥 Nouvelle entrée en stock</div>
-    <div><div class="form-lbl">Intrant *</div>
-      <select id="stock-intrant" class="si" style="width:100%;font-size:11px"></select>
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+        <span class="form-lbl" style="margin:0">Intrant *</span>
+        <button onclick="toggleNewIntrantForm()" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 7px;cursor:pointer">➕ Créer un intrant</button>
+      </div>
+      <input id="stock-intrant-search" class="form-inp" placeholder="🔍 Rechercher un intrant..." style="font-size:11px;margin-bottom:3px" oninput="filterStockIntrantList()">
+      <select id="stock-intrant" class="si" style="width:100%;font-size:11px;max-height:160px" onchange="onStockIntrantChange()"></select>
+      <!-- Mini-formulaire création intrant inline -->
+      <div id="new-intrant-form" style="display:none;background:rgba(0,201,167,.06);border:1px solid rgba(0,201,167,.2);border-radius:6px;padding:.5rem;margin-top:.4rem">
+        <div style="font-size:10px;font-weight:700;color:var(--acc);margin-bottom:.4rem">Nouvel intrant</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.35rem">
+          <div style="grid-column:1/-1"><input id="ni-name" class="form-inp" placeholder="Nom de l'intrant *" style="font-size:10px"></div>
+          <div>
+            <select id="ni-cat" class="form-inp" style="font-size:10px">
+              <option value="aliment">🐟 Aliment</option>
+              <option value="basifiant">🧱 Basifiant</option>
+              <option value="carbohydrate">🌾 Carbohydrate</option>
+              <option value="probiotique">🧫 Probiotique</option>
+              <option value="additif" selected>🧪 Additif</option>
+              <option value="autre">📦 Autre</option>
+            </select>
+          </div>
+          <div>
+            <select id="ni-unit" class="form-inp" style="font-size:10px">
+              <option value="kg">kg</option>
+              <option value="L">L</option>
+              <option value="g">g</option>
+              <option value="ml">ml</option>
+              <option value="pièce">pièce</option>
+              <option value="m²">m²</option>
+            </select>
+          </div>
+          <div style="grid-column:1/-1"><input id="ni-cond" class="form-inp" placeholder="Conditionnement (ex: 25 kg/sac)" style="font-size:10px"></div>
+          <div style="grid-column:1/-1"><input id="ni-seuil" class="form-inp" type="number" step="0.01" placeholder="Seuil alerte stock (optionnel)" style="font-size:10px"></div>
+        </div>
+        <div style="display:flex;gap:.3rem;margin-top:.4rem">
+          <button onclick="createIntrantFromStock()" style="font-size:9px;background:var(--acc);color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;flex:1">✅ Créer et sélectionner</button>
+          <button onclick="toggleNewIntrantForm()" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer">✕</button>
+        </div>
+        <div id="ni-msg" style="font-size:9px;margin-top:.3rem"></div>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.4rem">
       <div><div class="form-lbl">Quantité *</div><input id="stock-qty" class="form-inp" type="number" value="1" step="0.001" min="0.001"></div>
@@ -4074,19 +4113,36 @@ async function toggleFarmActivation(farmCode, currentlyActive){
 const UNITS_LIST=['kg','g','L','mL','m','cm','pièces','sacs','bidons','bouteilles','boîtes','rouleaux','lots','doses','autre'];
 
 const DEFAULT_INTRANTS=[
+  // Aliments
   {id:'k1',name:'Aliment K1 Starter',unit:'kg',conditionnement:'1.2 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
   {id:'k4',name:'Aliment K4 Granulé 2mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
   {id:'k5',name:'Aliment K5 Granulé 3mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
   {id:'k6',name:'Aliment K6 Granulé 4.5mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
+  // Basifiants
   {id:'caco3',name:'CaCO₃ — Carbonate de calcium',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'basifiant',isDefault:true},
   {id:'nahco3',name:'NaHCO₃ — Bicarbonate de sodium',unit:'kg',conditionnement:'1 kg/paquet',monitoringType:'strategic',category:'basifiant',isDefault:true},
+  // Carbohydrates
   {id:'melasse',name:'Mélasse de canne',unit:'L',conditionnement:'25 L/bidon',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
   {id:'farine_ble',name:'Farine de blé',unit:'kg',conditionnement:'50 kg/sac',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
   {id:'farine_mais',name:'Farine de maïs',unit:'kg',conditionnement:'50 kg/sac',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
-  {id:'sel',name:'Sel marin non iodé',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'additif',isDefault:true},
+  // Probiotiques
   {id:'bioclean',name:'BC 100',unit:'L',conditionnement:'1 L/bouteille',monitoringType:'special',seuil:2,category:'probiotique',isDefault:true},
   {id:'lacto_conc',name:'Concentré de Lactobacillus',unit:'L',conditionnement:'1 L/bouteille',monitoringType:'special',seuil:1,anticipation:20,category:'probiotique',isDefault:true},
   {id:'pwa_prep',name:'Préparation PWA',unit:'L',conditionnement:'vrac',monitoringType:'special',validite:72,category:'probiotique',isDefault:true},
+  // Additifs
+  {id:'sel',name:'Sel marin non iodé',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'additif',isDefault:true},
+  {id:'vit_c',name:'Vitamine C (acide ascorbique)',unit:'kg',conditionnement:'1 kg/sachet',monitoringType:'optional',category:'additif',isDefault:true},
+  {id:'premix_vit',name:'Prémix vitamines-minéraux',unit:'kg',conditionnement:'1 kg/sachet',monitoringType:'optional',category:'additif',isDefault:true},
+  {id:'bacillus_sub',name:'Bacillus subtilis',unit:'kg',conditionnement:'1 kg/sachet',monitoringType:'optional',category:'additif',isDefault:true},
+  {id:'h2o2',name:'Peroxyde d\'hydrogène H₂O₂',unit:'L',conditionnement:'1 L/bidon',monitoringType:'optional',category:'additif',isDefault:true},
+  {id:'zeolite',name:'Zéolite (absorbant NH₃)',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'optional',category:'additif',isDefault:true},
+  {id:'alun',name:'Sulfate d\'aluminium (alun)',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'optional',category:'additif',isDefault:true},
+  // Matériel (amortissable — exclu du stock consommable, suivi séparé)
+  {id:'aerateur',name:'Aérateur / Diffuseur',unit:'pièce',conditionnement:'unité',monitoringType:'optional',category:'materiel',amortissable:true,isDefault:true},
+  {id:'pompe',name:'Pompe à eau',unit:'pièce',conditionnement:'unité',monitoringType:'optional',category:'materiel',amortissable:true,isDefault:true},
+  {id:'filet',name:'Filet de récolte',unit:'pièce',conditionnement:'unité',monitoringType:'optional',category:'materiel',amortissable:true,isDefault:true},
+  {id:'sonde_do',name:'Sonde / Oxymètre',unit:'pièce',conditionnement:'unité',monitoringType:'optional',category:'materiel',amortissable:true,isDefault:true},
+  {id:'bache',name:'Bâche / Géomembrane',unit:'m²',conditionnement:'rouleau',monitoringType:'optional',category:'materiel',amortissable:true,isDefault:true},
 ];
 
 let APP_INTRANTS=[...DEFAULT_INTRANTS];
@@ -4286,15 +4342,9 @@ async function validateSeuilsChanges(){
 }
 
 function getItemCurrentStock(intrantId){
-  const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===intrantId);
-  const totalIn=entries.reduce((s,e)=>s+(e.quantity||0),0);
-  const item=APP_INTRANTS.find(i=>i.id===intrantId);
-  if(item&&item.category==='aliment'){
-    const totalUsed=APP.state.bassins.filter(b=>b.statut==='Actif').reduce((s,b)=>s+(b.alimReel||0),0);
-    return Math.max(0,totalIn-totalUsed);
-  }
-  const totalMov=(APP_STOCK_MOVEMENTS||[]).filter(m=>m.intrantId===intrantId&&m.type==='sortie').reduce((s,m)=>s+(m.quantity||0),0);
-  return Math.max(0,totalIn-totalMov);
+  const totalIn=(APP_STOCK_ENTRIES||[]).filter(e=>e.validated&&e.intrantId===intrantId).reduce((s,e)=>s+(e.quantity||0),0);
+  const totalOut=(APP_STOCK_MOVEMENTS||[]).filter(m=>m.intrantId===intrantId&&m.type==='sortie').reduce((s,m)=>s+(m.quantity||0),0);
+  return Math.max(0,totalIn-totalOut);
 }
 
 function openAddIntrant(){
@@ -4303,6 +4353,61 @@ function openAddIntrant(){
   G('int-cond').value='';if(G('int-seuil'))G('int-seuil').value='0';G('int-msg').textContent='';
   document.querySelector('[name="int-monitoring"][value="strategic"]').checked=true;
   G('intrant-modal').classList.remove('hidden');
+}
+
+function buildStockIntrantOptions(filter,preselect){
+  const catLabels={aliment:'🐟 Aliments',basifiant:'🧱 Basifiants',carbohydrate:'🌾 Carbohydrates',probiotique:'🧫 Probiotiques',additif:'🧪 Additifs',autre:'📦 Autres'};
+  const q=(filter||'').toLowerCase();
+  const grouped={};
+  APP_INTRANTS.filter(i=>!i.amortissable&&i.category!=='materiel'&&(!q||i.name.toLowerCase().includes(q)||i.category.toLowerCase().includes(q))).forEach(i=>{const c=i.category||'autre';if(!grouped[c])grouped[c]=[];grouped[c].push(i);});
+  return Object.entries(catLabels).filter(([c])=>grouped[c]).map(([c,lbl])=>'<optgroup label="'+lbl+'">'+grouped[c].map(i=>'<option value="'+i.id+'"'+(i.id===preselect?' selected':'')+'>'+ i.name+' ('+i.unit+')</option>').join('')+'</optgroup>').join('');
+}
+
+function filterStockIntrantList(){
+  const q=G('stock-intrant-search').value;
+  const cur=G('stock-intrant').value;
+  G('stock-intrant').innerHTML=buildStockIntrantOptions(q,cur);
+}
+
+function toggleNewIntrantForm(){
+  const f=G('new-intrant-form');
+  f.style.display=f.style.display==='none'?'block':'none';
+  if(f.style.display==='block')G('ni-name').focus();
+}
+
+function onStockIntrantChange(){
+  const it=APP_INTRANTS.find(i=>i.id===G('stock-intrant').value);
+  if(it&&it.conditionnement)G('stock-cond').value=it.conditionnement;
+}
+
+async function createIntrantFromStock(){
+  const name=(G('ni-name').value||'').trim();
+  const cat=G('ni-cat').value;
+  const unit=G('ni-unit').value;
+  const cond=(G('ni-cond').value||'').trim();
+  const seuilRaw=G('ni-seuil').value;
+  const seuil=seuilRaw?+seuilRaw:undefined;
+  const msg=G('ni-msg');
+  if(!name){msg.style.color='var(--dng)';msg.textContent='⚠️ Nom obligatoire';return;}
+  const id='int_'+Date.now();
+  const intrant={id,name,category:cat,unit,conditionnement:cond||undefined,seuil:seuil||undefined,monitoringType:'optional',isDefault:false,createdAt:new Date().toISOString(),createdBy:APP.user?.name||'?'};
+  try{
+    msg.style.color='var(--t3)';msg.textContent='Enregistrement...';
+    await withTimeout(farmCol('intrants').doc(id).set(intrant),6000);
+    APP_INTRANTS.push(intrant);
+    // Rafraîchir le dropdown et sélectionner le nouvel intrant
+    const sel=G('stock-intrant');
+    if(G('stock-intrant-search'))G('stock-intrant-search').value='';
+    sel.innerHTML=buildStockIntrantOptions('',id);
+    sel.value=id;
+    if(cond)G('stock-cond').value=cond;
+    G('new-intrant-form').style.display='none';
+    G('ni-name').value='';G('ni-cond').value='';G('ni-seuil').value='';
+    msg.textContent='';
+    showToast('✅ Intrant créé : '+name,'acc');
+    // Rafraîchir le catalogue si visible
+    if(typeof renderIntrants==='function')renderIntrants();
+  }catch(e){msg.style.color='var(--dng)';msg.textContent='❌ '+e.message;}
 }
 
 async function saveIntrant(){
@@ -4339,8 +4444,8 @@ function openAddStock(preselect){
   G('stock-expiry').value='';G('stock-supplier').value='';G('stock-notes').value='';
   G('stock-lot').value='';G('stock-facture').value='';G('stock-cond').value='';G('stock-msg').textContent='';
   const sel=G('stock-intrant');
-  sel.innerHTML=APP_INTRANTS.map(i=>'<option value="'+i.id+'"'+(i.id===preselect?' selected':'')+'>'+ i.name+' ('+i.unit+')</option>').join('');
-  // Pre-fill conditioning from intrant
+  if(G('stock-intrant-search'))G('stock-intrant-search').value='';
+  sel.innerHTML=buildStockIntrantOptions('',preselect);
   if(preselect){const it=APP_INTRANTS.find(i=>i.id===preselect);if(it&&it.conditionnement)G('stock-cond').value=it.conditionnement;}
 }
 
@@ -5991,28 +6096,34 @@ async function saveBassinRow(i){
   const isHistorical=!!APP_historyDate;
   const role=APP.user?.role||'Opérateur';
   try{
-    // Écriture atomique : bassins + daily dans le même batch
     clearTimeout(_dbt['bassins']);_pendingSaveKeys.delete('bassins');
     showSyncing();
     const batch=db.batch();
     APP.state.bassins.forEach((b2,j)=>{batch.set(farmCol('bassins').doc(String(j).padStart(3,'0')),{...b2,_order:j});});
     batch.set(farmCol('daily').doc(dateStr),{bassins:APP.state.bassins,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+
+    // Mouvements de sortie dans le même batch (atomique, pas de désynchronisation inventaire)
+    const pendingMovs=[];
+    if(!isHistorical){
+      const sn=b.name.replace(/\s+/g,'_');
+      const who=APP.user?.name||'?';
+      // alimReel=g, probiot=ml, carb=ml(melasse)/g(autres), basifiant=g → convertis en unité stock (kg ou L)
+      const mkMov=(type,intrantId,qty,unit)=>({id:'mov_'+type+'_'+sn+'_'+dateStr,intrantId,quantity:qty,unit,date:dateStr,type:'sortie',source:'daily',bassin:b.name,createdAt:new Date().toISOString(),createdBy:who});
+      if(b.alimReel>0){const feedId=b.feedId||'aliment';const m=mkMov('alim',feedId,b.alimReel/1000,'kg');batch.set(farmCol('stock_movements').doc(m.id),m);pendingMovs.push(m);}
+      if(b.probiot>0){const m=mkMov('pwa','pwa_prep',b.probiot/1000,'L');batch.set(farmCol('stock_movements').doc(m.id),m);pendingMovs.push(m);}
+      if(b.carb>0){const carbId=b.carbType||'melasse';const carbUnit=carbId==='melasse'?'L':'kg';const m=mkMov('carb',carbId,b.carb/1000,carbUnit);batch.set(farmCol('stock_movements').doc(m.id),m);pendingMovs.push(m);}
+      if(b.basifiant>0){const m=mkMov('bas',b.basifiantType||'caco3',b.basifiant/1000,'kg');batch.set(farmCol('stock_movements').doc(m.id),m);pendingMovs.push(m);}
+    }
+
     await batch.commit();
+    // Mise à jour locale après commit réussi
+    pendingMovs.forEach(m=>{const idx=APP_STOCK_MOVEMENTS.findIndex(x=>x.id===m.id);if(idx>=0)APP_STOCK_MOVEMENTS[idx]=m;else APP_STOCK_MOVEMENTS.push(m);});
     showSynced();
     if(isHistorical&&role==='Opérateur'){
       await saveNotification(i,dateStr,b);
       logAudit('modification',`Modification historique ${b.name}`,`Date: ${dateStr}`);
     } else {
       logAudit('modification',`Enregistrement ${b.name}`,`Date: ${dateStr}`);
-    }
-    // Mouvement de sortie PWA si probiot saisi pour aujourd'hui (pas historique)
-    if(!isHistorical&&b.probiot>0){
-      const movId='mov_'+b.name.replace(/\s+/g,'_')+'_'+dateStr;
-      const mov={id:movId,intrantId:'pwa_prep',quantity:b.probiot/1000,date:dateStr,type:'sortie',source:'daily',bassin:b.name,createdAt:new Date().toISOString(),createdBy:APP.user?.name||'?'};
-      farmCol('stock_movements').doc(movId).set(mov).then(()=>{
-        const idx=APP_STOCK_MOVEMENTS.findIndex(m=>m.id===movId);
-        if(idx>=0)APP_STOCK_MOVEMENTS[idx]=mov;else APP_STOCK_MOVEMENTS.push(mov);
-      }).catch(e=>console.warn('Movement:',e));
     }
     const tr=G('b-tbody')?.rows[i];
     if(tr){tr.style.background='rgba(0,201,167,.15)';setTimeout(()=>{tr.style.background='';},1500);}
