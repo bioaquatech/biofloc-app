@@ -4751,33 +4751,32 @@ function setPwaExportMonth(){
 function exportPWAPlanningPdf(){
   var fromEl=G('pwa-export-from'),toEl=G('pwa-export-to');
   var fromStr=fromEl&&fromEl.value,toStr=toEl&&toEl.value;
-  if(!fromStr||!toStr){alert('Sélectionnez une plage de dates.');return;}
+  if(!fromStr||!toStr){alert('Selectionnez une plage de dates.');return;}
   var plan=_pwaLoad();
-  if(!plan||!plan.length){alert('Aucune activité planifiée.');return;}
+  if(!plan||!plan.length){alert('Aucune activite planifiee.');return;}
   var rates=window.PWA_RATES||PWA_RATES||{};
   var farmName=(window.APP&&APP.state&&APP.state.farmName)||'Ferme';
   var DAY=86400000;
-  var ADMIN_OFF=[2,4,6,7,9]; // J3,J5,J7,J8,J10 (offset 0-based depuis J1)
-  var PREP_OFF=[0,2,4,5,7];  // H-48 avant chaque admin day
+  var ADMIN_OFF=[2,4,6,7,9];
+  var PREP_OFF=[0,2,4,5,7];
   var ADMIN_J=[3,5,7,8,10];
-  var TAN_ADMIN_OFF=[11,13]; // J12, J14
-  var TAN_PREP_OFF=[9,11];   // J10 soir, J12 soir
+  var TAN_ADMIN_OFF=[11,13];
+  var TAN_PREP_OFF=[9,11];
   var TAN_J=[12,14];
   var dFrom=new Date(fromStr);dFrom.setHours(0,0,0,0);
   var dTo=new Date(toStr);dTo.setHours(23,59,59,999);
-  var DAY_FR=['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'];
-  var fmtD=function(d){return DAY_FR[d.getDay()]+' '+d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});};
+  var DAY_LONG=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  var MONTHS=['jan','fev','mar','avr','mai','jun','jul','aou','sep','oct','nov','dec'];
+  var fmtDLong=function(d){return DAY_LONG[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()];};
   var fmt2=function(v){return Number(v||0).toFixed(2).replace('.',',');};
   var esc2=function(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-  var td='padding:5px 7px;border-bottom:1px solid #e5e7eb;vertical-align:middle;font-size:11px;';
-  // Générer événements selon activité dans la plage
+  var dateKey=function(d){return d.toISOString().slice(0,10);};
   function cycleEvents(entry,df,dt){
     var j1s=entry.j1||entry.dateDebut;if(!j1s)return[];
     var activ=entry.activity||'entretien';
     var j1=new Date(j1s);j1.setHours(0,0,0,0);
     var evs=[];
     if(activ==='tan'){
-      // J12 et J14 depuis J1, occurrence unique
       TAN_ADMIN_OFF.forEach(function(off){var d=new Date(j1.getTime()+off*DAY);if(d>=df&&d<=dt)evs.push({date:d,type:'admin',entry:entry});});
       TAN_PREP_OFF.forEach(function(off){var d=new Date(j1.getTime()+off*DAY);if(d>=df&&d<=dt)evs.push({date:d,type:'prep',entry:entry});});
       return evs;
@@ -4804,82 +4803,134 @@ function exportPWAPlanningPdf(){
     }
   });
   allEvents.sort(function(a,b){var dt=a.date-b.date;return dt!==0?dt:(a.type==='admin'?-1:1);});
-  if(!allEvents.length){alert('Aucune activité dans cette période.\nEssayez le bouton "Mois".');return;}
-  var rows=allEvents.map(function(item){
-    var entry=item.entry,activ=entry.activity||'entretien';
-    var r=rates[activ]||rates.entretien||{label:activ,dose:0.2};
-    var cover=Number(entry.coverVol||entry.vol||3.8);
-    var volUnit=Number(r.dose||0.2)*cover;
-    var isPrimo=activ==='primo';
-    var isPrep=item.type==='prep';
-    var bassin=entry.bassin||entry.bassinId||'?';
-    var dateStr=fmtD(item.date);
-    if(isPrep){
-      var adminDate=new Date(item.date.getTime()+2*DAY);
-      var prepTotal=volUnit*1.04;
-      return '<tr style="background:#fffbeb">'
-        +'<td style="'+td+'font-weight:600;white-space:nowrap;color:#92400e">'+dateStr+'</td>'
-        +'<td style="'+td+'color:#d97706;font-weight:700">Preparer ce soir (bullage) - admin le '+fmtD(adminDate)+'</td>'
-        +'<td style="'+td+'">'+esc2(bassin)+'</td>'
-        +'<td style="'+td+'text-align:right">'+fmt2(cover)+' m3</td>'
-        +'<td style="'+td+'text-align:center;color:#9ca3af">-</td>'
-        +'<td style="'+td+'text-align:right;font-weight:800;color:#d97706">'+fmt2(prepTotal)+' L (+4%)</td>'
-        +'</tr>';
-    } else {
-      var j1b=new Date(entry.j1||entry.dateDebut);j1b.setHours(0,0,0,0);
-      var jLabel='';
-      if(activ==='entretien'){
-        var diff=Math.round((item.date-j1b)/DAY);
-        var cycOff=((diff%10)+10)%10;
-        var idx=ADMIN_OFF.indexOf(cycOff);
-        jLabel=' (J'+(idx>=0?ADMIN_J[idx]:(cycOff+1))+')';
-      } else if(activ==='tan'){
-        var diff=Math.round((item.date-j1b)/DAY);
-        var idx=TAN_ADMIN_OFF.indexOf(diff);
-        jLabel=' (J'+(idx>=0?TAN_J[idx]:(diff+1))+')';
-      }
-      var typeLabel=(isPrimo?'Primo-inoculation J1':(r.label||activ)+jLabel);
-      var bg=isPrimo?'#f0f9ff':(activ==='entretien'?'#f0fdf4':(activ==='tan'?'#fff7ed':'#fefce8'));
-      // PWA = dose unique le soir — matin toujours vide
-      return '<tr style="background:'+bg+'">'
-        +'<td style="'+td+'font-weight:600;white-space:nowrap">'+dateStr+'</td>'
-        +'<td style="'+td+'font-weight:700">'+typeLabel+'</td>'
-        +'<td style="'+td+'">'+esc2(bassin)+'</td>'
-        +'<td style="'+td+'text-align:right">'+fmt2(cover)+' m3</td>'
-        +'<td style="'+td+'text-align:center;color:#9ca3af">-</td>'
-        +'<td style="'+td+'text-align:right;color:#0d9488;font-weight:800">'+fmt2(volUnit)+' L</td>'
+  if(!allEvents.length){alert('Aucune activite dans cette periode.\nEssayez le bouton "Mois".');return;}
+  // Grouper par date
+  var byDate={};var dateOrder=[];
+  allEvents.forEach(function(item){
+    var dk=dateKey(item.date);
+    if(!byDate[dk]){byDate[dk]={date:item.date,preps:[],admins:[]};dateOrder.push(dk);}
+    if(item.type==='prep')byDate[dk].preps.push(item);
+    else byDate[dk].admins.push(item);
+  });
+  // Générer sections par jour
+  var sections=dateOrder.map(function(dk){
+    var day=byDate[dk];
+    var hasPrep=day.preps.length>0;
+    var hasAdmin=day.admins.length>0;
+    var headerBg=hasPrep&&hasAdmin?'#7c3aed':(hasPrep?'#d97706':'#0d9488');
+    var headerLabel=hasPrep&&hasAdmin?'Preparation + Administration':hasPrep?'Preparation soir':'Administration soir';
+    var html='';
+    // En-tete jour
+    html+='<tr><td colspan="5" style="background:'+headerBg+';color:#fff;padding:7px 10px;font-weight:700;font-size:12px">'
+      +fmtDLong(day.date)
+      +'<span style="float:right;font-size:10px;font-weight:400;opacity:.85">'+headerLabel+'</span>'
+      +'</td></tr>';
+    // Lignes prep
+    if(hasPrep){
+      var prepTotal=0;
+      day.preps.forEach(function(item){
+        var entry=item.entry,activ=entry.activity||'entretien';
+        var r=rates[activ]||rates.entretien||{dose:0.2};
+        var cover=Number(entry.coverVol||entry.vol||3.8);
+        var vol=Number(r.dose||0.2)*cover*1.04;
+        prepTotal+=vol;
+        var adminDate=new Date(item.date.getTime()+2*DAY);
+        var bassin=entry.bassin||entry.bassinId||'?';
+        html+='<tr style="background:#fffbeb">'
+          +'<td style="padding:5px 10px;font-size:10px;color:#92400e;border-bottom:1px solid #fde68a">Bullage soir</td>'
+          +'<td style="padding:5px 8px;font-size:10px;color:#d97706;border-bottom:1px solid #fde68a">Prep. pour admin du '+fmtDLong(adminDate)+'</td>'
+          +'<td style="padding:5px 8px;font-size:10px;border-bottom:1px solid #fde68a">'+esc2(bassin)+'</td>'
+          +'<td style="padding:5px 8px;font-size:10px;color:#6b7280;border-bottom:1px solid #fde68a;text-align:right">'+fmt2(cover)+' m3</td>'
+          +'<td style="padding:5px 10px;font-size:10px;font-weight:700;color:#d97706;border-bottom:1px solid #fde68a;text-align:right">'+fmt2(vol)+' L</td>'
+          +'</tr>';
+      });
+      // Ligne total prep du jour
+      html+='<tr style="background:#fef3c7">'
+        +'<td colspan="4" style="padding:6px 10px;font-size:11px;font-weight:800;color:#92400e;border-bottom:2px solid #f59e0b">TOTAL A PREPARER CE SOIR</td>'
+        +'<td style="padding:6px 10px;font-size:14px;font-weight:900;color:#b45309;border-bottom:2px solid #f59e0b;text-align:right">'+fmt2(prepTotal)+' L</td>'
         +'</tr>';
     }
+    // Lignes admin
+    if(hasAdmin){
+      day.admins.forEach(function(item){
+        var entry=item.entry,activ=entry.activity||'entretien';
+        var r=rates[activ]||rates.entretien||{dose:0.2};
+        var cover=Number(entry.coverVol||entry.vol||3.8);
+        var vol=Number(r.dose||0.2)*cover;
+        var bassin=entry.bassin||entry.bassinId||'?';
+        var j1b=new Date(entry.j1||entry.dateDebut);j1b.setHours(0,0,0,0);
+        var jLabel='';
+        if(activ==='entretien'){var diff=Math.round((item.date-j1b)/DAY);var cycOff=((diff%10)+10)%10;var idx=ADMIN_OFF.indexOf(cycOff);jLabel=' J'+(idx>=0?ADMIN_J[idx]:(cycOff+1));}
+        else if(activ==='tan'){var diff=Math.round((item.date-j1b)/DAY);var idx=TAN_ADMIN_OFF.indexOf(diff);jLabel=' J'+(idx>=0?TAN_J[idx]:(diff+1));}
+        else if(activ==='primo'){jLabel=' J1';}
+        var bg=activ==='primo'?'#f0f9ff':(activ==='entretien'?'#f0fdf4':(activ==='tan'?'#fff7ed':'#fefce8'));
+        html+='<tr style="background:'+bg+'">'
+          +'<td style="padding:5px 10px;font-size:10px;color:#0d9488;font-weight:700;border-bottom:1px solid #d1fae5">Admin soir'+jLabel+'</td>'
+          +'<td style="padding:5px 8px;font-size:10px;font-weight:600;border-bottom:1px solid #d1fae5">'+esc2(r.label||activ)+'</td>'
+          +'<td style="padding:5px 8px;font-size:10px;border-bottom:1px solid #d1fae5">'+esc2(bassin)+'</td>'
+          +'<td style="padding:5px 8px;font-size:10px;color:#6b7280;border-bottom:1px solid #d1fae5;text-align:right">'+fmt2(cover)+' m3</td>'
+          +'<td style="padding:5px 10px;font-size:11px;font-weight:800;color:#0d9488;border-bottom:1px solid #d1fae5;text-align:right">'+fmt2(vol)+' L</td>'
+          +'</tr>';
+      });
+    }
+    // Espaceur
+    html+='<tr><td colspan="5" style="height:6px;background:#f9fafb"></td></tr>';
+    return html;
   }).join('');
-  var periodLabel=fmtD(dFrom)+' - '+fmtD(dTo);
-  var w=window.open('','_blank','width=1000,height=750');
+  var periodLabel=fmtDLong(dFrom)+' au '+fmtDLong(dTo);
+  var w=window.open('','_blank','width=820,height=750');
   if(!w){alert('Autorisez les pop-ups pour exporter en PDF.');return;}
-  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Planning PWA</title>'
-    +'<style>*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}body{padding:16px;font-size:11px;color:#111}'
-    +'h1{font-size:15px;margin-bottom:3px}p.sub{font-size:10px;color:#6b7280;margin-bottom:10px}'
-    +'table{width:100%;border-collapse:collapse}th{background:#0d9488;color:#fff;padding:5px 8px;text-align:left;font-size:11px}'
-    +'td{padding:5px 7px;border-bottom:1px solid #e5e7eb}'
-    +'.legend{font-size:9px;color:#6b7280;margin-top:12px;border-top:1px solid #e5e7eb;padding-top:8px;line-height:1.8}'
-    +'@media print{button{display:none}}'
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Planning PWA - '+esc2(farmName)+'</title>'
+    +'<style>'
+    +'*{margin:0;padding:0;box-sizing:border-box}'
+    +'body{font-family:Arial,sans-serif;font-size:11px;color:#111;background:#f9fafb;padding:0}'
+    +'.page{max-width:800px;margin:0 auto;background:#fff;padding:20px 24px}'
+    +'.header{border-left:4px solid #0d9488;padding-left:12px;margin-bottom:14px}'
+    +'.header h1{font-size:17px;color:#0d9488;margin-bottom:2px}'
+    +'.header p{font-size:10px;color:#6b7280}'
+    +'.seq-box{background:#f0fdf4;border:1px solid #6ee7b7;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:10px}'
+    +'.seq-box strong{color:#0d9488}'
+    +'.seq-steps{display:flex;gap:0;margin-top:4px}'
+    +'.seq-step{flex:1;text-align:center;padding:4px 6px;background:#0d9488;color:#fff;font-size:10px;font-weight:700}'
+    +'.seq-step:first-child{border-radius:4px 0 0 4px}'
+    +'.seq-step:last-child{border-radius:0 4px 4px 0}'
+    +'.seq-step.amber{background:#d97706}'
+    +'.seq-step.gray{background:#6b7280}'
+    +'.seq-arrow{align-self:center;color:#9ca3af;font-size:10px;padding:0 2px}'
+    +'table{width:100%;border-collapse:collapse}'
+    +'th{background:#0d9488;color:#fff;padding:6px 10px;text-align:left;font-size:10px;font-weight:700}'
+    +'.legend{font-size:9px;color:#9ca3af;margin-top:14px;line-height:1.7;padding-top:8px;border-top:1px solid #e5e7eb}'
+    +'@media print{body{background:#fff}.page{padding:12px}button{display:none}}'
     +'</style></head><body>'
-    +'<h1>Planning previsionnel PWA - '+esc2(farmName)+'</h1>'
-    +'<p class="sub">Periode : <strong>'+periodLabel+'</strong> - Exporte le '+new Date().toLocaleDateString('fr-FR')
-      +' - Dose entretien : '+fmt2((rates.entretien||{dose:0.2}).dose)+' L/m3'
-      +' - Primo : '+fmt2((rates.primo||{dose:4.7}).dose)+' L/m3</p>'
-    +'<table><thead><tr>'
-    +'<th>Date activite</th><th>Type activite</th><th>Bassin concerne</th>'
-    +'<th style="text-align:right">Vol. couvert</th>'
-    +'<th style="text-align:center;color:#d1d5db">Matin</th>'
-    +'<th style="text-align:right">Vol. a verser (Soir)</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table>'
-    +'<div class="legend">'
-    +'PWA = dose unique le SOIR uniquement (colonne Matin toujours vide) | '
-    +'Sequence obligatoire : PWA T+0 → BC100+ T+1h → BC100 T+2h → Melasse T+4h minimum | '
-    +'Preparation (soir) : lancer bullage H+48 avant administration | '
-    +'Vol. prep = dose x 1.04 (+4% marge) | '
-    +'Entretien J3·J5·J7·J8·J10 — Correction TAN J12·J14'
+    +'<div class="page">'
+    +'<div class="header">'
+    +'<h1>Planning previsionnel PWA</h1>'
+    +'<p>Ferme : <strong>'+esc2(farmName)+'</strong> &nbsp;|&nbsp; Periode : <strong>'+periodLabel+'</strong> &nbsp;|&nbsp; Exporte le '+new Date().toLocaleDateString('fr-FR')+'</p>'
     +'</div>'
-    +'<br><button onclick="window.print()" style="padding:6px 18px;background:#0d9488;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">Imprimer / Sauvegarder PDF</button>'
+    +'<div class="seq-box">'
+    +'<strong>Sequence obligatoire d\'application (le soir)</strong>'
+    +'<div class="seq-steps" style="margin-top:6px">'
+    +'<div class="seq-step amber">PWA<br><span style="font-weight:400;font-size:9px">T+0</span></div>'
+    +'<div class="seq-arrow">→</div>'
+    +'<div class="seq-step">BC100+<br><span style="font-weight:400;font-size:9px">T+1h</span></div>'
+    +'<div class="seq-arrow">→</div>'
+    +'<div class="seq-step">BC100<br><span style="font-weight:400;font-size:9px">T+2h</span></div>'
+    +'<div class="seq-arrow">→</div>'
+    +'<div class="seq-step" style="background:#b45309">Melasse<br><span style="font-weight:400;font-size:9px">T+4h min.</span></div>'
+    +'</div></div>'
+    +'<table>'
+    +'<thead><tr>'
+    +'<th>Moment</th><th>Activite</th><th>Bassin</th>'
+    +'<th style="text-align:right">Vol. couvert</th>'
+    +'<th style="text-align:right">Quantite (L)</th>'
+    +'</tr></thead>'
+    +'<tbody>'+sections+'</tbody>'
+    +'</table>'
+    +'<div class="legend">'
+    +'Bullage : lancer H+48 avant administration &nbsp;|&nbsp; Quantites prep = dose x vol x 1,04 (+4% marge) &nbsp;|&nbsp; Entretien J3-J5-J7-J8-J10 &nbsp;|&nbsp; Test Maturite TAN J12-J14'
+    +'</div>'
+    +'<br><button onclick="window.print()" style="padding:8px 20px;background:#0d9488;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700">Imprimer / Sauvegarder PDF</button>'
+    +'</div>'
     +'</body></html>');
   w.document.close();
 }
