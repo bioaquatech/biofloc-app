@@ -2931,22 +2931,19 @@ async function loadFarmData(){
       });
       APP.bCount=APP.state.bassins.length+1;
     } else {
-      APP.state.bassins=Array.from({length:16},(_,i)=>({
-        name:`Bassin ${String(i+1).padStart(2,'0')}`,vol:3.8,nbInit:1000,mort:0,poids:5+i*0.3,
-        alimReel:0,temp:null,ph:null,DO:null,NH3:null,NO2:null,TAN:null,imhoff:null,probiot:null,TAC:null,basifiant:null,basifiantType:null,carb:null,carbType:null,statut:'Actif',feedId:FEED_TYPES[0]?.id||'K4',harvestDate:null
-      }));
-      APP.bCount=17;
+      APP.state.bassins=[];
+      APP.bCount=1;
     }
     if(!sSnap.empty){APP.state.suivi=sSnap.docs.map(d=>({...d.data()}));APP.state.suiviId=Math.max(0,...APP.state.suivi.map(r=>r.id||0))+1;}
     if(!fSnap.empty){fSnap.docs.forEach(d=>{const ft=FEED_TYPES.find(f=>f.id===d.id);if(ft&&d.data().batches)ft.batches=d.data().batches;});}
     if(cfgSnap.exists&&cfgSnap.data().probioStock!==undefined&&G('g-probio'))G('g-probio').value=cfgSnap.data().probioStock;
     if(window.fillPwaBassinSelect){setTimeout(fillPwaBassinSelect,100);setTimeout(fillPwaBassinSelect,800);}
     // Auto-sync ERP bassins → production if ERP has entries but Firebase is empty/default
+    // Sync ERP → production si Firebase vide et ERP a des bassins
     setTimeout(function(){
       var erpBs=typeof window.bassins==='function'?window.bassins():[];
       var prodBs=Array.isArray(APP.state.bassins)?APP.state.bassins:[];
-      var isDefault=prodBs.length===16&&prodBs.every(function(b){return /^Bassin\s+0?\d+$/.test(b.name||'')&&(b.vol===3.8||b.volumeMaxM3===3.8);});
-      if(erpBs.length>0&&(prodBs.length===0||isDefault)&&window.syncERPBassinsToProduction)syncERPBassinsToProduction(false);
+      if(erpBs.length>0&&prodBs.length===0&&window.syncERPBassinsToProduction)syncERPBassinsToProduction(false);
     },500);
   }catch(e){
     console.error('loadFarmData error:',e);
@@ -3528,7 +3525,7 @@ function sw(id){
     if(b.getAttribute('onclick')==="sw('"+id+"')")b.classList.add('active');
   });
   if(id==='t3'){renderChart();renderSuivi();if(typeof renderFCRModule==='function')renderFCRModule();}
-  if(id==='t4'){swLog(typeof APP_LOG_PANEL!=='undefined'&&APP_LOG_PANEL?APP_LOG_PANEL:'intrants');}
+  if(id==='t4'){swLog(typeof APP_LOG_PANEL!=='undefined'&&APP_LOG_PANEL?APP_LOG_PANEL:'intrants');if(window.fillPwaBassinSelect)setTimeout(fillPwaBassinSelect,200);}
   if(id==='t5')upCompta();if(id==='t6')upCons();if(id==='t7')renderRecoltes();
   if(id==='t8')renderFiche();if(id==='t9')renderIoT();
   if(id==='t10'){if(typeof renderRespAdmin==='function')renderRespAdmin();const fc=G('rsp-bkp-farmcode');if(fc)fc.textContent=APP.farmCode||'';}
@@ -4641,6 +4638,13 @@ function pwaDoseLitres(row){
 }
 function calcPWA(){
   const list=G('pwa-plan-list'),res=G('pwa-result');if(!res)return;
+  // Remplir le select bassin à chaque ouverture de l'onglet probio
+  if(window.fillPwaBassinSelect){
+    var sel=G('pwa-add-bassin');
+    if(sel&&(!sel.options.length||(sel.options.length===1&&sel.options[0].value===''))){
+      fillPwaBassinSelect();
+    }
+  }
   // Toujours lire depuis la source unique
   var plan=_pwaLoad();PWA_PLAN=plan;window.PWA_PLAN=plan;
   if(!plan.length){
@@ -8609,7 +8613,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         return {id:b.id||b.name||('B'+(i+1)),name:b.name||('Bassin '+String(i+1).padStart(2,'0')),volumeMaxM3:Number(b.volumeMaxM3||b.vol||b.volume)||12,statut:'Actif'};
       });
     }
-    return Array.from({length:16},function(_,i){return {id:'B'+(i+1),name:'Bassin '+String(i+1).padStart(2,'0'),volumeMaxM3:12,statut:'Actif'};});
+    return []; // aucun bassin par défaut
   }
   function bassinOptions(){
     return getBassinsForPwa().map(function(b){
@@ -9184,9 +9188,21 @@ function renderBassins(c){
 }
 window.resetAllBassins=function(){
   if(!confirm('⚠️ Vider TOUS les bassins (ERP + Bassins & Qualité d\'eau) ? Cette action est irréversible.'))return;
+  // 1. Vider ERP localStorage
   save('bassins_ref',[]);
+  // 2. Vider APP.state
   if(window.APP&&APP.state){APP.state.bassins=[];APP.bCount=1;}
-  if(APP.farmCode&&typeof saveBassins==='function')saveBassins();
+  // 3. Supprimer chaque document Firebase (batch.set ne supprime pas)
+  if(window.APP&&APP.farmCode&&window.farmCol){
+    farmCol('bassins').get().then(function(snap){
+      if(!snap||snap.empty)return;
+      var batch=db.batch();
+      snap.docs.forEach(function(d){batch.delete(d.ref);});
+      return batch.commit();
+    }).then(function(){
+      if(typeof buildBTable==='function')buildBTable();
+    }).catch(function(e){console.warn('Reset bassins Firebase:',e);});
+  }
   if(window.fillPwaBassinSelect)fillPwaBassinSelect();
   toast('Bassins réinitialisés. Créez vos bassins ci-dessous.','warn');
   renderParamERP('bassins');
@@ -9451,7 +9467,7 @@ function bassins(){
   if(!a.length&&window.APP&&APP.state&&Array.isArray(APP.state.bassins)){
     a=APP.state.bassins.map(function(b,i){return {id:b.id||b.name||('B'+(i+1)),name:b.name||('Bassin '+(i+1)),volumeMaxM3:n(b.volumeMaxM3||b.vol||b.volume)||12,type:'Production',statut:'Actif'};});
   }
-  if(!a.length)a=Array.from({length:16},function(_,i){return {id:'B'+(i+1),name:'Bassin '+String(i+1).padStart(2,'0'),volumeMaxM3:12,type:'Production',statut:'Actif'};});
+  // Pas de bassins par défaut — l'utilisateur crée ses propres bassins dans Paramètres ERP
   // Migration : harmoniser les anciens statuts vers le vocabulaire canonique
   var changed=false;
   a.forEach(function(b){
