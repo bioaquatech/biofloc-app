@@ -4821,8 +4821,19 @@ function exportPWAPlanningPdf(){
       cycleEvents(entry,dFrom,dTo).forEach(function(ev){allEvents.push(ev);});
     }
   });
+  // Trier prep+admin, puis injecter bullage (J-1) dérivé de chaque prep
   allEvents.sort(function(a,b){var dt=a.date-b.date;return dt!==0?dt:(a.type==='prep'?-1:1);});
   if(!allEvents.length){alert('Aucune activite dans cette periode.\nEssayez le bouton "Mois".');return;}
+  // Bullage = prep+1j — toujours distinct de l'administration du même lot
+  var bullageEvs=[];
+  allEvents.forEach(function(ev){
+    if(ev.type!=='prep')return;
+    var bullD=new Date(ev.date.getTime()+DAY);
+    bullageEvs.push({date:bullD,type:'bullage',prepDate:ev.date,adminDate:ev.adminDate,entry:ev.entry});
+  });
+  bullageEvs.forEach(function(ev){allEvents.push(ev);});
+  var typeOrder={prep:0,bullage:1,admin:2};
+  allEvents.sort(function(a,b){var dt=a.date-b.date;return dt!==0?dt:(typeOrder[a.type]-typeOrder[b.type]);});
 
   // Assign LOT numbers — one per unique (prepDateKey|adminDateKey) pair, by chronological prep order
   var lotMap={};var lotCounter=0;
@@ -4838,12 +4849,13 @@ function exportPWAPlanningPdf(){
   });
   function getLot(prepDK,adminDK){return lotMap[prepDK+'|'+adminDK]||'';}
 
-  // Group by date
+  // Group by date (preps, bullages, admins)
   var byDate={};var dateOrder=[];
   allEvents.forEach(function(item){
     var dk=dateKey(item.date);
-    if(!byDate[dk]){byDate[dk]={date:item.date,preps:[],admins:[]};dateOrder.push(dk);}
+    if(!byDate[dk]){byDate[dk]={date:item.date,preps:[],bullages:[],admins:[]};dateOrder.push(dk);}
     if(item.type==='prep')byDate[dk].preps.push(item);
+    else if(item.type==='bullage')byDate[dk].bullages.push(item);
     else byDate[dk].admins.push(item);
   });
 
@@ -4869,15 +4881,15 @@ function exportPWAPlanningPdf(){
         html+='<tr>'
           +'<td colspan="4" style="background:#92400e;color:#fff;padding:8px 10px;font-weight:700;font-size:11.5px">'
           +'<span style="display:inline-block;background:#fbbf24;color:#78350f;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:900;margin-right:8px;vertical-align:middle">'+esc2(lot)+'</span>'
-          +'PREPARATION &nbsp;·&nbsp; '+fmtD(day.date)+' soir'
+          +'BULLAGE / PREPARATION &nbsp;·&nbsp; '+fmtD(day.date)+' soir'
           +'</td>'
           +'</tr>';
         // Sub-row : arrow to admin date
         html+='<tr style="background:#fef3c7">'
           +'<td colspan="4" style="padding:5px 12px;font-size:10px;color:#78350f;border-bottom:1px solid #fde68a">'
           +'<span style="font-size:13px;margin-right:6px">&#8594;</span>'
-          +'Administration prevue : <strong>'+fmtD(grp.adminDate)+' soir</strong>'
-          +'<span style="margin-left:10px;background:#d97706;color:#fff;padding:1px 7px;border-radius:8px;font-size:9px;font-weight:700">H+'+gapH+'</span>'
+          +'Application planifiee le : <strong>'+fmtD(grp.adminDate)+' soir</strong>'
+          +'<span style="margin-left:10px;background:#d97706;color:#fff;padding:1px 7px;border-radius:8px;font-size:9px;font-weight:700">+'+gapH+'h</span>'
           +'</td>'
           +'</tr>';
         // Column labels
@@ -4912,6 +4924,52 @@ function exportPWAPlanningPdf(){
       });
     }
 
+    // ——— BULLAGE section ———
+    if(day.bullages.length>0){
+      // Group by adminDate (one lot per admin day)
+      var bullByAdmin={};var bullAdminOrder=[];
+      day.bullages.forEach(function(item){
+        var aDK=dateKey(item.adminDate);
+        if(!bullByAdmin[aDK]){bullByAdmin[aDK]={adminDate:item.adminDate,prepDate:item.prepDate,items:[]};bullAdminOrder.push(aDK);}
+        bullByAdmin[aDK].items.push(item);
+      });
+      bullAdminOrder.forEach(function(aDK){
+        var grp=bullByAdmin[aDK];
+        var lot=getLot(dateKey(grp.prepDate),aDK);
+        // Orange header
+        html+='<tr>'
+          +'<td colspan="4" style="background:#b45309;color:#fff;padding:8px 10px;font-weight:700;font-size:11.5px">'
+          +'<span style="display:inline-block;background:#fed7aa;color:#7c2d12;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:900;margin-right:8px;vertical-align:middle">'+esc2(lot)+'</span>'
+          +'BULLAGE &nbsp;·&nbsp; '+fmtD(day.date)+' soir'
+          +'</td>'
+          +'</tr>';
+        // Sub-row: activation reference
+        html+='<tr style="background:#fff7ed">'
+          +'<td colspan="4" style="padding:5px 12px;font-size:10px;color:#7c2d12;border-bottom:1px solid #fed7aa">'
+          +'<span style="font-size:13px;margin-right:6px">&#9679;</span>'
+          +'Aeration active &nbsp;|&nbsp; Prepare le : <strong>'+fmtD(grp.prepDate)+' soir</strong>'
+          +' &nbsp;&#8594;&nbsp; Application : <strong>'+fmtD(grp.adminDate)+' soir</strong>'
+          +'</td>'
+          +'</tr>';
+        // Column labels
+        html+='<tr style="background:#fff7ed">'
+          +'<td style="padding:3px 10px;font-size:9px;color:#9a3412;font-weight:700;border-bottom:1px solid #fed7aa">BASSIN</td>'
+          +'<td style="padding:3px 8px;font-size:9px;color:#9a3412;font-weight:700;border-bottom:1px solid #fed7aa">ACTIVITE</td>'
+          +'<td colspan="2" style="padding:3px 8px;font-size:9px;color:#9a3412;font-weight:700;border-bottom:1px solid #fed7aa">NOTE</td>'
+          +'</tr>';
+        grp.items.forEach(function(item){
+          var entry=item.entry,activ2=entry.activity||'entretien';
+          var r=rates[activ2]||rates.entretien||{dose:0.2};
+          var bassin=entry.bassin||entry.bassinId||'?';
+          html+='<tr style="background:#fff7ed">'
+            +'<td style="padding:5px 10px;font-size:10px;font-weight:700;border-bottom:1px solid #fed7aa">'+esc2(bassin)+'</td>'
+            +'<td style="padding:5px 8px;font-size:10px;color:#ea580c;border-bottom:1px solid #fed7aa">'+esc2(r.label||activ2)+'</td>'
+            +'<td colspan="2" style="padding:5px 8px;font-size:10px;color:#9ca3af;border-bottom:1px solid #fed7aa;font-style:italic">Aerer — ne pas administrer ce soir</td>'
+            +'</tr>';
+        });
+      });
+    }
+
     // ——— APPLICATION section ———
     if(day.admins.length>0){
       // Group by prepDate (different prep origins)
@@ -4936,7 +4994,7 @@ function exportPWAPlanningPdf(){
         html+='<tr style="background:#f0fdf4">'
           +'<td colspan="4" style="padding:5px 12px;font-size:10px;color:#0f766e;border-bottom:1px solid #bbf7d0">'
           +'<span style="font-size:13px;margin-right:6px">&#8592;</span>'
-          +'Lot prepare le : <strong>'+prepDRef+'</strong>'
+          +'Lot bulle/prepare le : <strong>'+prepDRef+'</strong>'
           +'</td>'
           +'</tr>';
         // Column labels
@@ -4972,8 +5030,77 @@ function exportPWAPlanningPdf(){
     return html;
   }).join('');
 
+  // ——— Calendrier : indexer par date les 3 types d'événements ———
+  var calByDate={};
+  allEvents.forEach(function(ev){
+    if(!ev.entry)return;
+    var dk=dateKey(ev.date);
+    if(!calByDate[dk])calByDate[dk]=[];
+    var activ2=ev.entry.activity||'entretien';
+    var bassin=ev.entry.bassin||ev.entry.bassinId||'?';
+    var lot='';
+    if(ev.type==='prep')lot=getLot(dk,dateKey(ev.adminDate));
+    else if(ev.type==='bullage')lot=getLot(dateKey(ev.prepDate),dateKey(ev.adminDate));
+    else lot=getLot(dateKey(ev.prepDate),dk);
+    calByDate[dk].push({type:ev.type,lot:lot,bassin:bassin,activ:activ2});
+  });
+
+  // Générer les mois couverts
+  function getMonthsInRange(df,dt){
+    var ms=[];var d=new Date(df.getFullYear(),df.getMonth(),1);
+    while(d<=dt){ms.push({year:d.getFullYear(),month:d.getMonth()});d.setMonth(d.getMonth()+1);}
+    return ms;
+  }
+  var CAL_DAYS=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  var CAL_MONTHS=['Janvier','Fevrier','Mars','Avril','Mai','Juin','Juillet','Aout','Septembre','Octobre','Novembre','Decembre'];
+  function buildMonthCal(year,month){
+    var html='<div class="cal-month">';
+    html+='<div class="cal-month-title">'+CAL_MONTHS[month]+' '+year+'</div>';
+    html+='<table class="cal-table"><thead><tr>';
+    CAL_DAYS.forEach(function(d,i){html+='<th class="cal-th'+(i>=5?' cal-we':'')+'">'+ d+'</th>';});
+    html+='</tr></thead><tbody>';
+    var first=new Date(year,month,1);
+    var dow=(first.getDay()+6)%7; // Monday=0
+    var cur=new Date(first);cur.setDate(1-dow);
+    var lastDay=new Date(year,month+1,0);
+    var todayDK=dateKey(new Date());
+    while(cur<=lastDay||(cur.getDay()+6)%7!==0){
+      html+='<tr>';
+      for(var d=0;d<7;d++){
+        var inM=cur.getMonth()===month&&cur.getFullYear()===year;
+        var dk2=dateKey(cur);
+        var evs=calByDate[dk2]||[];
+        var isToday=dk2===todayDK;
+        html+='<td class="cal-day'+(inM?'':' cal-out')+(isToday?' cal-today':'')+'">';
+        html+='<div class="cal-daynum'+(d>=5?' cal-we-num':'')+'">'+(inM?cur.getDate():'')+'</div>';
+        if(inM){
+          // Group by lot to avoid duplicates per lot per type
+          var seen={};
+          evs.forEach(function(ev){
+            var key=ev.type+'|'+ev.lot;
+            if(seen[key])return;seen[key]=1;
+            var bg=ev.type==='prep'?'#92400e':(ev.type==='bullage'?'#b45309':'#0f766e');
+            var label=ev.type==='prep'?'PREP':(ev.type==='bullage'?'BULL':'APPLI');
+            html+='<div class="cal-chip" style="background:'+bg+'">'
+              +'<span class="cal-chip-lbl">'+label+'</span>'
+              +'<span class="cal-chip-lot">'+esc2(ev.lot)+'</span>'
+              +'</div>';
+          });
+        }
+        html+='</td>';
+        cur.setDate(cur.getDate()+1);
+      }
+      html+='</tr>';
+      if(cur>lastDay&&(cur.getDay()+6)%7===0)break;
+    }
+    html+='</tbody></table></div>';
+    return html;
+  }
+  var months=getMonthsInRange(dFrom,dTo);
+  var calHtml=months.map(function(m){return buildMonthCal(m.year,m.month);}).join('');
+
   var periodLabel=fmtD(dFrom)+' au '+fmtD(dTo);
-  var w=window.open('','_blank','width=820,height=780');
+  var w=window.open('','_blank','width=900,height=800');
   if(!w){alert('Autorisez les pop-ups pour exporter en PDF.');return;}
   w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Planning PWA - '+esc2(farmName)+'</title>'
     +'<style>'
@@ -4990,15 +5117,45 @@ function exportPWAPlanningPdf(){
     +'.sa{color:#9ca3af;font-size:12px;flex-shrink:0;padding:0 1px}'
     +'table{width:100%;border-collapse:collapse}'
     +'.leg{font-size:9px;color:#9ca3af;margin-top:16px;line-height:1.9;padding-top:9px;border-top:1px solid #e5e7eb}'
-    +'@media print{body{background:#fff}.page{padding:14px 16px}button{display:none}}'
+    /* Calendar styles */
+    +'.cal-page{max-width:1050px;margin:0 auto;background:#fff;padding:18px 20px}'
+    +'.cal-page-hdr{border-left:5px solid #0d9488;padding-left:14px;margin-bottom:18px}'
+    +'.cal-page-hdr h2{font-size:16px;color:#0d9488;font-weight:800}'
+    +'.cal-page-hdr p{font-size:10px;color:#6b7280;margin-top:2px}'
+    +'.cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}'
+    +'.cal-legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#374151}'
+    +'.cal-legend-dot{width:12px;height:12px;border-radius:3px}'
+    +'.cal-month{margin-bottom:24px}'
+    +'.cal-month-title{font-size:13px;font-weight:800;color:#1f2937;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid #0d9488}'
+    +'.cal-table{width:100%;border-collapse:collapse;table-layout:fixed}'
+    +'.cal-th{padding:5px 3px;font-size:10px;font-weight:700;text-align:center;background:#0d9488;color:#fff;border:1px solid #0f766e}'
+    +'.cal-th.cal-we{background:#e5e7eb;color:#6b7280}'
+    +'.cal-day{vertical-align:top;padding:3px 4px;border:1px solid #e5e7eb;background:#fff;min-height:62px}'
+    +'.cal-day.cal-out{background:#f9fafb}'
+    +'.cal-day.cal-today{background:#eff6ff;border-color:#3b82f6}'
+    +'.cal-daynum{font-size:10px;font-weight:700;color:#374151;margin-bottom:2px}'
+    +'.cal-daynum.cal-we-num{color:#9ca3af}'
+    +'.cal-out .cal-daynum{color:#d1d5db}'
+    +'.cal-chip{border-radius:3px;padding:2px 4px;margin-bottom:2px;display:flex;align-items:center;gap:3px}'
+    +'.cal-chip-lbl{font-size:7.5px;font-weight:900;color:#fff;flex-shrink:0}'
+    +'.cal-chip-lot{font-size:7.5px;font-weight:700;color:rgba(255,255,255,.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    +'@media print{'
+    +'body{background:#fff}'
+    +'.page{padding:12px 14px}'
+    +'button{display:none}'
+    +'.cal-break{page-break-before:always}'
+    +'@page cal{size:A4 landscape}'
+    +'.cal-page{page:cal;padding:10px 12px;max-width:none}'
+    +'}'
     +'</style></head><body>'
+    /* ——— PAGE 1 : Planning détaillé ——— */
     +'<div class="page">'
     +'<div class="hdr">'
-    +'<h1>Planning previsionnel PWA</h1>'
+    +'<h1>Planning previsionnel PWA &mdash; Detail</h1>'
     +'<p>Ferme : <strong>'+esc2(farmName)+'</strong> &nbsp;&#183;&nbsp; Periode : <strong>'+periodLabel+'</strong> &nbsp;&#183;&nbsp; Exporte le '+new Date().toLocaleDateString('fr-FR')+'</p>'
     +'</div>'
     +'<div class="seq-box">'
-    +'<b>Sequence obligatoire d\'administration (chaque soir d\'application)</b>'
+    +'<b>Sequence d\'administration (chaque soir d\'application)</b>'
     +'<div class="seq-steps">'
     +'<div class="ss" style="background:#d97706">PWA<br><span style="font-weight:400;font-size:8.5px">T + 0</span></div>'
     +'<div class="sa">&#8594;</div>'
@@ -5010,11 +5167,24 @@ function exportPWAPlanningPdf(){
     +'</div></div>'
     +'<table><tbody>'+sections+'</tbody></table>'
     +'<div class="leg">'
-    +'<strong>PREPARATION</strong> : dose x vol. couvert x 1,04 (marge +4%) &nbsp;&#183;&nbsp; Activation ~36-48h avant administration &nbsp;&#183;&nbsp; Entretien J3·J5·J7·J8·J10 &nbsp;&#183;&nbsp; Test Maturite TAN J12·J14<br>'
-    +'<strong>SUIVI LOTS</strong> : chaque badge LOT-XXX relie la preparation a son administration — conserver ce document comme registre de traitement'
+    +'<strong>BULLAGE/PREP</strong> : dose x vol. couvert x 1,04 (+4% marge) &nbsp;&#183;&nbsp; 3 phases : PREP J-2 soir &#8594; BULLAGE J-1 soir &#8594; APPLICATION J0 soir &nbsp;&#183;&nbsp; Entretien J3·J5·J7·J8·J10 &nbsp;&#183;&nbsp; TAN J12·J14<br>'
+    +'<strong>LOTS</strong> : chaque badge LOT-XXX trace la preparation jusqu\'a l\'administration &mdash; registre de traitement'
     +'</div>'
-    +'<br><button onclick="window.print()" style="padding:8px 22px;background:#0d9488;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700">Imprimer / Sauvegarder PDF</button>'
     +'</div>'
+    /* ——— PAGE 2 : Calendrier (paysage) ——— */
+    +'<div class="cal-break cal-page">'
+    +'<div class="cal-page-hdr">'
+    +'<h2>Vue calendrier &mdash; Planning PWA</h2>'
+    +'<p>Ferme : <strong>'+esc2(farmName)+'</strong> &nbsp;&#183;&nbsp; Periode : <strong>'+periodLabel+'</strong></p>'
+    +'</div>'
+    +'<div class="cal-legend">'
+    +'<div class="cal-legend-item"><div class="cal-legend-dot" style="background:#92400e"></div>PREP &mdash; Preparation initiale J-2 soir</div>'
+    +'<div class="cal-legend-item"><div class="cal-legend-dot" style="background:#b45309"></div>BULL &mdash; Bullage / Aeration J-1 soir</div>'
+    +'<div class="cal-legend-item"><div class="cal-legend-dot" style="background:#0f766e"></div>APPLI &mdash; Administration au bassin</div>'
+    +'</div>'
+    +calHtml
+    +'</div>'
+    +'<br><button onclick="window.print()" style="margin:16px;padding:8px 22px;background:#0d9488;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700">Imprimer / Sauvegarder PDF</button>'
     +'</body></html>');
   w.document.close();
 }
