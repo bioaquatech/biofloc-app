@@ -4583,7 +4583,7 @@ async function loadAnalyseStock(){
 
 let PWA_PLAN=[];
 const PWA_RATES={
-  primo:{label:'Primo inoculation J1 mardi',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:4.7},
+  primo:{label:'Primo inoculation J1',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:4.7},
   entretien:{label:'Entretien J3 · J5 · J7 · J8 · J10',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:0.2},
   tan:{label:'Test Maturite TAN J12-J14',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:0.2},
   rotation:{label:'Systeme mature — post introduction alevins',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:0.2,vol380Fixed:0.38},
@@ -4757,11 +4757,14 @@ function exportPWAPlanningPdf(){
   var rates=window.PWA_RATES||PWA_RATES||{};
   var farmName=(window.APP&&APP.state&&APP.state.farmName)||'Ferme';
   var DAY=86400000;
-  var ADMIN_OFF=[2,4,6,7,9];
-  var PREP_OFF=[0,2,4,5,7];
+  // Offsets relatifs à la date sélectionnée = premier jour d'administration
+  // Entretien : selectedDate = J3 (premier admin)
+  var ADMIN_OFF=[0,2,4,5,7];   // J3=+0, J5=+2, J7=+4, J8=+5, J10=+7
+  var PREP_OFF=[-2,0,2,3,5];   // prép 2j avant chaque admin
   var ADMIN_J=[3,5,7,8,10];
-  var TAN_ADMIN_OFF=[11,13];
-  var TAN_PREP_OFF=[9,11];
+  // TAN : selectedDate = J12 (premier admin)
+  var TAN_ADMIN_OFF=[0,2];     // J12=+0, J14=+2
+  var TAN_PREP_OFF=[-2,0];     // prép 2j avant J12 et J14
   var TAN_J=[12,14];
   var dFrom=new Date(fromStr);dFrom.setHours(0,0,0,0);
   var dTo=new Date(toStr);dTo.setHours(23,59,59,999);
@@ -4814,7 +4817,7 @@ function exportPWAPlanningPdf(){
     var j1s=entry.j1||entry.dateDebut;if(!j1s)return;
     var j1=new Date(j1s);j1.setHours(0,0,0,0);
     if(activ==='primo'){
-      var prepD=new Date(j1.getTime()-DAY);
+      var prepD=new Date(j1.getTime()-2*DAY);
       if(prepD>=dFrom&&prepD<=dTo)allEvents.push({date:prepD,type:'prep',adminDate:j1,entry:entry});
       if(j1>=dFrom&&j1<=dTo)allEvents.push({date:j1,type:'admin',prepDate:prepD,entry:entry});
     } else {
@@ -4879,8 +4882,8 @@ function exportPWAPlanningPdf(){
         var gapH=Math.round((grp.adminDate-day.date)/3600000);
         // Header amber — lot badge + date
         html+='<tr>'
-          +'<td colspan="4" style="background:#92400e;color:#fff;padding:8px 10px;font-weight:700;font-size:11.5px">'
-          +'<span style="display:inline-block;background:#fbbf24;color:#78350f;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:900;margin-right:8px;vertical-align:middle">'+esc2(lot)+'</span>'
+          +'<td colspan="4" style="background:#ca8a04;color:#fff;padding:8px 10px;font-weight:700;font-size:11.5px">'
+          +'<span style="display:inline-block;background:#fef08a;color:#713f12;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:900;margin-right:8px;vertical-align:middle">'+esc2(lot)+'</span>'
           +'BULLAGE / PREPARATION &nbsp;·&nbsp; '+fmtD(day.date)+' soir'
           +'</td>'
           +'</tr>';
@@ -4919,7 +4922,7 @@ function exportPWAPlanningPdf(){
           +'<td colspan="3" style="padding:7px 10px;font-size:11px;font-weight:800;color:#78350f;border-bottom:3px solid #f59e0b">'
           +'TOTAL '+esc2(lot)+' A PREPARER CE SOIR'
           +'</td>'
-          +'<td style="padding:7px 10px;font-size:16px;font-weight:900;color:#b45309;text-align:right;border-bottom:3px solid #f59e0b">'+fmt2(prepTotal)+' L</td>'
+          +'<td style="padding:7px 10px;font-size:16px;font-weight:900;color:#ca8a04;text-align:right;border-bottom:3px solid #f59e0b">'+fmt2(prepTotal)+' L</td>'
           +'</tr>';
       });
     }
@@ -4938,32 +4941,32 @@ function exportPWAPlanningPdf(){
         var lot=getLot(dateKey(grp.prepDate),aDK);
         // Orange header
         html+='<tr>'
-          +'<td colspan="4" style="background:#b45309;color:#fff;padding:8px 10px;font-weight:700;font-size:11.5px">'
-          +'<span style="display:inline-block;background:#fed7aa;color:#7c2d12;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:900;margin-right:8px;vertical-align:middle">'+esc2(lot)+'</span>'
+          +'<td colspan="4" style="background:#dc2626;color:#fff;padding:8px 10px;font-weight:700;font-size:11.5px">'
+          +'<span style="display:inline-block;background:#fecaca;color:#7f1d1d;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:900;margin-right:8px;vertical-align:middle">'+esc2(lot)+'</span>'
           +'BULLAGE &nbsp;·&nbsp; '+fmtD(day.date)+' soir'
           +'</td>'
           +'</tr>';
         // Sub-row: activation reference
-        html+='<tr style="background:#fff7ed">'
-          +'<td colspan="4" style="padding:5px 12px;font-size:10px;color:#7c2d12;border-bottom:1px solid #fed7aa">'
+        html+='<tr style="background:#fff1f2">'
+          +'<td colspan="4" style="padding:5px 12px;font-size:10px;color:#7f1d1d;border-bottom:1px solid #fecaca">'
           +'<span style="font-size:13px;margin-right:6px">&#9679;</span>'
           +'Aeration active &nbsp;|&nbsp; Prepare le : <strong>'+fmtD(grp.prepDate)+' soir</strong>'
           +' &nbsp;&#8594;&nbsp; Application : <strong>'+fmtD(grp.adminDate)+' soir</strong>'
           +'</td>'
           +'</tr>';
         // Column labels
-        html+='<tr style="background:#fff7ed">'
-          +'<td style="padding:3px 10px;font-size:9px;color:#9a3412;font-weight:700;border-bottom:1px solid #fed7aa">BASSIN</td>'
-          +'<td style="padding:3px 8px;font-size:9px;color:#9a3412;font-weight:700;border-bottom:1px solid #fed7aa">ACTIVITE</td>'
-          +'<td colspan="2" style="padding:3px 8px;font-size:9px;color:#9a3412;font-weight:700;border-bottom:1px solid #fed7aa">NOTE</td>'
+        html+='<tr style="background:#fff1f2">'
+          +'<td style="padding:3px 10px;font-size:9px;color:#991b1b;font-weight:700;border-bottom:1px solid #fecaca">BASSIN</td>'
+          +'<td style="padding:3px 8px;font-size:9px;color:#991b1b;font-weight:700;border-bottom:1px solid #fecaca">ACTIVITE</td>'
+          +'<td colspan="2" style="padding:3px 8px;font-size:9px;color:#991b1b;font-weight:700;border-bottom:1px solid #fecaca">NOTE</td>'
           +'</tr>';
         grp.items.forEach(function(item){
           var entry=item.entry,activ2=entry.activity||'entretien';
           var r=rates[activ2]||rates.entretien||{dose:0.2};
           var bassin=entry.bassin||entry.bassinId||'?';
-          html+='<tr style="background:#fff7ed">'
-            +'<td style="padding:5px 10px;font-size:10px;font-weight:700;border-bottom:1px solid #fed7aa">'+esc2(bassin)+'</td>'
-            +'<td style="padding:5px 8px;font-size:10px;color:#ea580c;border-bottom:1px solid #fed7aa">'+esc2(r.label||activ2)+'</td>'
+          html+='<tr style="background:#fff1f2">'
+            +'<td style="padding:5px 10px;font-size:10px;font-weight:700;border-bottom:1px solid #fecaca">'+esc2(bassin)+'</td>'
+            +'<td style="padding:5px 8px;font-size:10px;color:#dc2626;border-bottom:1px solid #fecaca">'+esc2(r.label||activ2)+'</td>'
             +'<td colspan="2" style="padding:5px 8px;font-size:10px;color:#9ca3af;border-bottom:1px solid #fed7aa;font-style:italic">Aerer — ne pas administrer ce soir</td>'
             +'</tr>';
         });
@@ -5030,20 +5033,73 @@ function exportPWAPlanningPdf(){
     return html;
   }).join('');
 
-  // ——— Calendrier : indexer par date les 3 types d'événements ———
+  // ——— Calendrier + récap lots : indexer par date avec volumes ———
   var calByDate={};
+  function addCalItem(dk,item){
+    if(!calByDate[dk])calByDate[dk]={preps:{},bullages:{},admins:[]};
+    if(item.type==='prep'){
+      if(!calByDate[dk].preps[item.lot])calByDate[dk].preps[item.lot]={lot:item.lot,total:0};
+      calByDate[dk].preps[item.lot].total+=item.vol;
+    } else if(item.type==='bullage'){
+      if(!calByDate[dk].bullages[item.lot])calByDate[dk].bullages[item.lot]={lot:item.lot,total:0};
+      calByDate[dk].bullages[item.lot].total+=item.vol;
+    } else {
+      calByDate[dk].admins.push(item);
+    }
+  }
+  var lotSummary={};
   allEvents.forEach(function(ev){
     if(!ev.entry)return;
-    var dk=dateKey(ev.date);
-    if(!calByDate[dk])calByDate[dk]=[];
     var activ2=ev.entry.activity||'entretien';
+    var r=rates[activ2]||rates.entretien||{dose:0.2};
+    var cover=Number(ev.entry.coverVol||ev.entry.vol||3.8);
     var bassin=ev.entry.bassin||ev.entry.bassinId||'?';
-    var lot='';
-    if(ev.type==='prep')lot=getLot(dk,dateKey(ev.adminDate));
-    else if(ev.type==='bullage')lot=getLot(dateKey(ev.prepDate),dateKey(ev.adminDate));
-    else lot=getLot(dateKey(ev.prepDate),dk);
-    calByDate[dk].push({type:ev.type,lot:lot,bassin:bassin,activ:activ2});
+    var dose=Number(r.dose||0.2);
+    if(ev.type==='prep'){
+      var lot=getLot(dateKey(ev.date),dateKey(ev.adminDate));
+      var vol=dose*cover*1.04;
+      addCalItem(dateKey(ev.date),{type:'prep',lot:lot,bassin:bassin,vol:vol});
+      if(!lotSummary[lot])lotSummary[lot]={lot:lot,prepD:ev.date,bullD:new Date(ev.date.getTime()+DAY),adminD:ev.adminDate,total:0,bassins:[]};
+      lotSummary[lot].total+=vol;
+      lotSummary[lot].bassins.push(bassin);
+    } else if(ev.type==='bullage'){
+      var lot=getLot(dateKey(ev.prepDate),dateKey(ev.adminDate));
+      var vol=dose*cover*1.04;
+      addCalItem(dateKey(ev.date),{type:'bullage',lot:lot,bassin:bassin,vol:vol});
+    } else {
+      // admin: toujours ajouter même si lot inconnu (prep hors plage)
+      var lot=getLot(dateKey(ev.prepDate||new Date(0)),dateKey(ev.date));
+      var vol=dose*cover;
+      addCalItem(dateKey(ev.date),{type:'admin',lot:lot,bassin:bassin,vol:vol});
+    }
   });
+  // Table condensée récap lots
+  var fmtShort=function(d){return d.getDate()+'/'+(d.getMonth()+1);};
+  var lotSummaryArr=Object.keys(lotSummary).sort().map(function(k){return lotSummary[k];});
+  var sumRows=lotSummaryArr.map(function(s){
+    return '<tr>'
+      +'<td style="padding:4px 8px;font-size:9px;font-weight:800;color:#0d9488">'+esc2(s.lot)+'</td>'
+      +'<td style="padding:4px 8px;font-size:9px;color:#ca8a04;font-weight:700">'+fmtShort(s.prepD)+'</td>'
+      +'<td style="padding:4px 8px;font-size:9px;color:#dc2626;font-weight:700">'+fmtShort(s.bullD)+'</td>'
+      +'<td style="padding:4px 8px;font-size:9px;color:#0f766e;font-weight:700">'+fmtShort(s.adminD)+'</td>'
+      +'<td style="padding:4px 8px;font-size:9px;color:#6b7280">'+esc2(s.bassins.filter(function(b,i,a){return a.indexOf(b)===i;}).join(', '))+'</td>'
+      +'<td style="padding:4px 8px;font-size:9px;font-weight:800;color:#b45309;text-align:right">'+fmt2(s.total)+' L</td>'
+      +'</tr>';
+  }).join('');
+  var sumHtml=sumRows?('<div style="margin-bottom:14px">'
+    +'<div style="font-size:11px;font-weight:800;color:#1f2937;margin-bottom:5px;padding-bottom:4px;border-bottom:2px solid #0d9488">Recapitulatif condensé des lots — periode '+periodLabel+'</div>'
+    +'<table style="width:100%;border-collapse:collapse">'
+    +'<thead><tr style="background:#f3f4f6">'
+    +'<th style="padding:4px 8px;font-size:9px;text-align:left;border-bottom:1px solid #e5e7eb">LOT</th>'
+    +'<th style="padding:4px 8px;font-size:9px;text-align:left;border-bottom:1px solid #e5e7eb;color:#ca8a04">PREP (j/m)</th>'
+    +'<th style="padding:4px 8px;font-size:9px;text-align:left;border-bottom:1px solid #e5e7eb;color:#dc2626">BULLAGE (j/m)</th>'
+    +'<th style="padding:4px 8px;font-size:9px;text-align:left;border-bottom:1px solid #e5e7eb;color:#0f766e">APPLICATION (j/m)</th>'
+    +'<th style="padding:4px 8px;font-size:9px;text-align:left;border-bottom:1px solid #e5e7eb">BASSINS</th>'
+    +'<th style="padding:4px 8px;font-size:9px;text-align:right;border-bottom:1px solid #e5e7eb">QTE PREP</th>'
+    +'</tr></thead>'
+    +'<tbody>'+sumRows+'</tbody>'
+    +'</table></div>'):'';
+
 
   // Générer les mois couverts
   function getMonthsInRange(df,dt){
@@ -5060,7 +5116,7 @@ function exportPWAPlanningPdf(){
     CAL_DAYS.forEach(function(d,i){html+='<th class="cal-th'+(i>=5?' cal-we':'')+'">'+ d+'</th>';});
     html+='</tr></thead><tbody>';
     var first=new Date(year,month,1);
-    var dow=(first.getDay()+6)%7; // Monday=0
+    var dow=(first.getDay()+6)%7;
     var cur=new Date(first);cur.setDate(1-dow);
     var lastDay=new Date(year,month+1,0);
     var todayDK=dateKey(new Date());
@@ -5069,21 +5125,35 @@ function exportPWAPlanningPdf(){
       for(var d=0;d<7;d++){
         var inM=cur.getMonth()===month&&cur.getFullYear()===year;
         var dk2=dateKey(cur);
-        var evs=calByDate[dk2]||[];
+        var dayC=calByDate[dk2]||{preps:{},bullages:{},admins:[]};
         var isToday=dk2===todayDK;
         html+='<td class="cal-day'+(inM?'':' cal-out')+(isToday?' cal-today':'')+'">';
         html+='<div class="cal-daynum'+(d>=5?' cal-we-num':'')+'">'+(inM?cur.getDate():'')+'</div>';
         if(inM){
-          // Group by lot to avoid duplicates per lot per type
-          var seen={};
-          evs.forEach(function(ev){
-            var key=ev.type+'|'+ev.lot;
-            if(seen[key])return;seen[key]=1;
-            var bg=ev.type==='prep'?'#92400e':(ev.type==='bullage'?'#b45309':'#0f766e');
-            var label=ev.type==='prep'?'PREP':(ev.type==='bullage'?'BULL':'APPLI');
-            html+='<div class="cal-chip" style="background:'+bg+'">'
-              +'<span class="cal-chip-lbl">'+label+'</span>'
-              +'<span class="cal-chip-lot">'+esc2(ev.lot)+'</span>'
+          // PREP chips (per lot, total vol)
+          Object.keys(dayC.preps).sort().forEach(function(lot){
+            var p=dayC.preps[lot];
+            html+='<div class="cal-chip" style="background:#ca8a04">'
+              +'<span class="cal-chip-lbl">PREP</span>'
+              +'<span class="cal-chip-lot">'+esc2(p.lot)+'</span>'
+              +'<span class="cal-chip-vol">'+fmt2(p.total)+'L</span>'
+              +'</div>';
+          });
+          // BULL chips (per lot, total vol)
+          Object.keys(dayC.bullages).sort().forEach(function(lot){
+            var b=dayC.bullages[lot];
+            html+='<div class="cal-chip" style="background:#dc2626">'
+              +'<span class="cal-chip-lbl">BULL</span>'
+              +'<span class="cal-chip-lot">'+esc2(b.lot)+'</span>'
+              +'<span class="cal-chip-vol">'+fmt2(b.total)+'L</span>'
+              +'</div>';
+          });
+          // ADMIN chips (per bassin, individual vol)
+          dayC.admins.forEach(function(a){
+            html+='<div class="cal-chip" style="background:#0f766e">'
+              +'<span class="cal-chip-lbl">APPLI</span>'
+              +'<span class="cal-chip-lot">'+(a.lot?esc2(a.lot)+' · ':'')+esc2(a.bassin)+'</span>'
+              +'<span class="cal-chip-vol">'+fmt2(a.vol)+'L</span>'
               +'</div>';
           });
         }
@@ -5138,7 +5208,8 @@ function exportPWAPlanningPdf(){
     +'.cal-out .cal-daynum{color:#d1d5db}'
     +'.cal-chip{border-radius:3px;padding:2px 4px;margin-bottom:2px;display:flex;align-items:center;gap:3px}'
     +'.cal-chip-lbl{font-size:7.5px;font-weight:900;color:#fff;flex-shrink:0}'
-    +'.cal-chip-lot{font-size:7.5px;font-weight:700;color:rgba(255,255,255,.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    +'.cal-chip-lot{font-size:7.5px;font-weight:700;color:rgba(255,255,255,.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}'
+    +'.cal-chip-vol{font-size:7px;font-weight:700;color:rgba(255,255,255,.9);white-space:nowrap;flex-shrink:0}'
     +'@media print{'
     +'body{background:#fff}'
     +'.page{padding:12px 14px}'
@@ -5165,6 +5236,7 @@ function exportPWAPlanningPdf(){
     +'<div class="sa">&#8594;</div>'
     +'<div class="ss" style="background:#7c3aed">Melasse<br><span style="font-weight:400;font-size:8.5px">T + 4h min.</span></div>'
     +'</div></div>'
+    +sumHtml
     +'<table><tbody>'+sections+'</tbody></table>'
     +'<div class="leg">'
     +'<strong>BULLAGE/PREP</strong> : dose x vol. couvert x 1,04 (+4% marge) &nbsp;&#183;&nbsp; 3 phases : PREP J-2 soir &#8594; BULLAGE J-1 soir &#8594; APPLICATION J0 soir &nbsp;&#183;&nbsp; Entretien J3·J5·J7·J8·J10 &nbsp;&#183;&nbsp; TAN J12·J14<br>'
@@ -5178,8 +5250,8 @@ function exportPWAPlanningPdf(){
     +'<p>Ferme : <strong>'+esc2(farmName)+'</strong> &nbsp;&#183;&nbsp; Periode : <strong>'+periodLabel+'</strong></p>'
     +'</div>'
     +'<div class="cal-legend">'
-    +'<div class="cal-legend-item"><div class="cal-legend-dot" style="background:#92400e"></div>PREP &mdash; Preparation initiale J-2 soir</div>'
-    +'<div class="cal-legend-item"><div class="cal-legend-dot" style="background:#b45309"></div>BULL &mdash; Bullage / Aeration J-1 soir</div>'
+    +'<div class="cal-legend-item"><div class="cal-legend-dot" style="background:#ca8a04"></div>PREP &mdash; Preparation initiale J-2 soir</div>'
+    +'<div class="cal-legend-item"><div class="cal-legend-dot" style="background:#dc2626"></div>BULL &mdash; Bullage / Aeration J-1 soir</div>'
     +'<div class="cal-legend-item"><div class="cal-legend-dot" style="background:#0f766e"></div>APPLI &mdash; Administration au bassin</div>'
     +'</div>'
     +calHtml
