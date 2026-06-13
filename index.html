@@ -1319,7 +1319,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem">
           <div style="font-size:13px;font-weight:700;color:var(--t1)">🔄 Historique des mouvements de stock</div>
           <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-            <button class="sbtn" onclick="exportMovementsCSV()" style="font-size:11px;background:var(--acc2)">📥 Exporter CSV</button>
+            <button class="sbtn" onclick="exportMovementsXLSX()" style="font-size:11px;background:var(--acc2)">📥 Exporter Excel</button>
           </div>
         </div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.7rem">
@@ -1334,7 +1334,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
           <input type="date" id="mov-filter-from" class="si" style="font-size:11px" onchange="renderMovementsHistory()">
           <span style="font-size:10px;color:var(--t3)">→</span>
           <input type="date" id="mov-filter-to" class="si" style="font-size:11px" onchange="renderMovementsHistory()">
-          <input type="text" id="mov-filter-bassin" class="si" placeholder="Bassin…" style="font-size:11px;width:90px" oninput="renderMovementsHistory()">
+          <select id="mov-filter-bassin" class="si" style="font-size:11px" onchange="renderMovementsHistory()"><option value="">Tous bassins</option></select>
           <button class="sbtn" onclick="document.getElementById('mov-filter-type').value='';document.getElementById('mov-filter-intrant').value='';document.getElementById('mov-filter-from').value='';document.getElementById('mov-filter-to').value='';document.getElementById('mov-filter-bassin').value='';renderMovementsHistory()" style="font-size:10px;background:var(--inp)">✕ Reset</button>
         </div>
         <div id="mov-count" style="font-size:10px;color:var(--t3);margin-bottom:.4rem"></div>
@@ -2026,11 +2026,26 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 <div id="saisie-rapide-modal" class="modal-overlay hidden" style="align-items:flex-start;padding-top:2rem">
   <div class="modal-box" style="max-width:900px;width:98vw">
     <div class="modal-title">⚡ Saisie rapide — tous les bassins actifs</div>
-    <div style="font-size:10px;color:var(--t3);margin-bottom:.7rem">Saisissez rapidement les données de tous les bassins. Cliquez sur "Tout enregistrer" pour sauvegarder en une seule fois.</div>
+    <div id="sr-legend" style="font-size:9px;color:var(--t3);margin-bottom:.5rem;display:flex;flex-wrap:wrap;gap:.5rem"></div>
+    <div style="font-size:10px;color:var(--t3);margin-bottom:.5rem">Les champs optionnels affichent la <em>dernière valeur connue</em> en gris — elle ne sera <strong>pas portée en avant</strong> si vous laissez le champ vide (= non mesuré ce jour).</div>
     <div class="tw" style="max-height:60vh;overflow-y:auto">
-      <table style="font-size:11px;width:100%">
+      <table style="font-size:10px;width:100%;min-width:1100px">
         <thead><tr>
-          <th>Bassin</th><th>Alim réel (kg)</th><th>Alim Morts</th><th>Temp °C</th><th>pH</th><th>DO</th><th>NH₃</th><th>TAN</th><th>Mélasse (mL)</th>
+          <th>Bassin</th>
+          <th>Morts</th>
+          <th>Poids (g)</th>
+          <th title="Aliment réel servi">Alim réel (kg)</th>
+          <th title="Température eau">Temp °C</th>
+          <th>pH</th>
+          <th title="Oxygène dissous">DO</th>
+          <th title="Ammoniac">NH₃</th>
+          <th title="Nitrites">NO₂</th>
+          <th title="Azote ammoniacal total">TAN</th>
+          <th title="TAC — alcalinité">TAC</th>
+          <th title="Cône Imhoff 30 min">Imhoff</th>
+          <th title="Probiotiques (mL)">Probiot (mL)</th>
+          <th title="Mélasse calculée C:N — modifiable">Mélasse (mL)</th>
+          <th title="Basifiant utilisé (g)">Basifiant (g)</th>
         </tr></thead>
         <tbody id="saisie-rapide-tbody"></tbody>
       </table>
@@ -4290,13 +4305,21 @@ function renderMovementsHistory(){
   const fIntrant=sel?.value||'';
   const fFrom=G('mov-filter-from')?.value||'';
   const fTo=G('mov-filter-to')?.value||'';
-  const fBassin=(G('mov-filter-bassin')?.value||'').toLowerCase();
+  const fBassin=G('mov-filter-bassin')?.value||'';
+  // Populate bassin select from current bassins list
+  const bsel=G('mov-filter-bassin');
+  if(bsel){
+    const prev=bsel.value;
+    while(bsel.options.length>1)bsel.remove(1);
+    (APP.state.bassins||[]).forEach(b=>{const o=document.createElement('option');o.value=b.name||'';o.textContent=b.name||'';bsel.appendChild(o);});
+    if(prev)bsel.value=prev;
+  }
   let movs=[...(APP_STOCK_MOVEMENTS||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(fType)movs=movs.filter(m=>m.type===fType);
   if(fIntrant)movs=movs.filter(m=>m.intrantId===fIntrant);
   if(fFrom)movs=movs.filter(m=>m.date>=fFrom);
   if(fTo)movs=movs.filter(m=>m.date<=fTo);
-  if(fBassin)movs=movs.filter(m=>(m.bassin||'').toLowerCase().includes(fBassin));
+  if(fBassin)movs=movs.filter(m=>(m.bassin||'')===fBassin);
   const cntEl=G('mov-count');if(cntEl)cntEl.textContent=movs.length+' mouvement(s) affiché(s)';
   const intrantName=id=>{const it=APP_INTRANTS.find(x=>x.id===id);return it?it.name:id;};
   tbody.innerHTML=movs.map(m=>`<tr>
@@ -4311,14 +4334,12 @@ function renderMovementsHistory(){
   </tr>`).join('');
 }
 
-function exportMovementsCSV(){
+function exportMovementsXLSX(){
   const movs=[...(APP_STOCK_MOVEMENTS||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const intrantName=id=>{const it=APP_INTRANTS.find(x=>x.id===id);return it?it.name:id;};
   const rows=[['Date','Type','Intrant','Quantité','Unité','Bassin','Source','Enregistré par']];
   movs.forEach(m=>rows.push([m.date||'',m.type||'',intrantName(m.intrantId),m.quantity||0,m.unit||'',m.bassin||'',m.source||'',m.who||'']));
-  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
-  a.download='mouvements_stock_'+(APP.farmCode||'ferme')+'_'+today()+'.csv';a.click();
+  downloadXLSX([{name:'Mouvements',rows:rows}],'mouvements_stock_'+(APP.farmCode||'ferme')+'_'+today()+'.xlsx');
 }
 
 // ── FEATURE 10: IMPORT CSV STOCK ─────────────────────────────────────
@@ -4386,24 +4407,48 @@ async function importCSVStock(){
 }
 
 // ── FEATURE 5: SAISIE RAPIDE MULTI-BASSINS ──────────────────────────
+// Tous les champs sont pré-remplis avec les valeurs courantes du bassin
+// (= ce qui est déjà en Firestore pour aujourd'hui).
+// → Modifier = correction → sauvegarde la nouvelle valeur
+// → Laisser tel quel = aucun changement
+// → Effacer explicitement = null (mesure supprimée)
+// Seul cas particulier : alimReel et mort sont à 0 si le champ est vide.
 function openSaisieRapide(){
   const tbody=G('saisie-rapide-tbody');if(!tbody)return;
   const bassins=APP.state.bassins.filter(b=>b.statut==='Actif');
   if(!bassins.length){showToast('Aucun bassin actif','warn');return;}
-  tbody.innerHTML=bassins.map((b,i)=>{
+  const v=(val)=>val!==null&&val!==undefined?val:'';
+  tbody.innerHTML=bassins.map((b)=>{
     const idx=APP.state.bassins.indexOf(b);
+    // Champ obligatoire (toujours présent) — pré-rempli, 0 si vide à la save
+    const obl=(field,step,w,extra='')=>
+      `<input type="number" class="ci" value="${v(b[field])}" step="${step}" style="width:${w}px" data-field="${field}" data-mode="required"${extra} placeholder="0">`;
+    // Champ optionnel — pré-rempli si valeur existe, null si effacé
+    const opt=(field,step,w,extra='')=>
+      `<input type="number" class="ci${b[field]!=null?' ':' opt'}" value="${v(b[field])}" step="${step}" style="width:${w}px" data-field="${field}" data-mode="optional"${extra} placeholder="—" title="Effacer = supprimer la mesure du jour">`;
     return `<tr data-idx="${idx}">
-      <td style="font-weight:700;color:var(--acc);padding:4px 6px">${b.name}</td>
-      <td><input type="number" class="ci" value="${b.alimReel??''}" step="0.001" style="width:70px" data-field="alimReel" oninput="srAutoCN(this,${idx})"></td>
-      <td><input type="number" class="ci" value="${b.mort??''}" style="width:50px" data-field="mort"></td>
-      <td><input type="number" class="ci opt" value="${b.temp??''}" step="0.1" style="width:52px" data-field="temp" placeholder="—"></td>
-      <td><input type="number" class="ci opt" value="${b.ph??''}" step="0.01" style="width:50px" data-field="ph" placeholder="—"></td>
-      <td><input type="number" class="ci opt" value="${b.DO??''}" step="0.1" style="width:50px" data-field="DO" placeholder="—"></td>
-      <td><input type="number" class="ci opt" value="${b.NH3??''}" step="0.01" style="width:52px" data-field="NH3" placeholder="—"></td>
-      <td><input type="number" class="ci opt" value="${b.TAN??''}" step="0.01" style="width:52px" data-field="TAN" placeholder="—" oninput="srAutoCN(this,${idx})"></td>
-      <td><input type="number" class="ci opt" id="sr-carb-${idx}" value="${b.carb??''}" step="1" style="width:60px" data-field="carb" placeholder="auto"></td>
+      <td style="font-weight:700;color:var(--acc);padding:3px 5px;white-space:nowrap">${b.name}</td>
+      <td>${obl('mort','1','45')}</td>
+      <td>${opt('poids','0.1','55')}</td>
+      <td>${obl('alimReel','0.001','65',' oninput="srAutoCN(this,'+idx+')"')}</td>
+      <td>${opt('temp','0.1','48')}</td>
+      <td>${opt('ph','0.01','46')}</td>
+      <td>${opt('DO','0.1','46')}</td>
+      <td>${opt('NH3','0.01','48')}</td>
+      <td>${opt('NO2','0.01','48')}</td>
+      <td>${opt('TAN','0.01','48',' oninput="srAutoCN(this,'+idx+')"')}</td>
+      <td>${opt('TAC','1','48')}</td>
+      <td>${opt('imhoff','0.5','48')}</td>
+      <td>${opt('probiot','1','55')}</td>
+      <td><input type="number" class="ci${b.carb!=null?' ':' opt'}" id="sr-carb-${idx}" value="${v(b.carb)}" step="1" style="width:58px" data-field="carb" data-mode="optional" placeholder="—" title="Auto C:N calculé — effacer = null"></td>
+      <td>${opt('basifiant','0.1','52')}</td>
     </tr>`;
   }).join('');
+  const leg=G('sr-legend');
+  if(leg)leg.innerHTML='<strong style="color:var(--t2)">Règle :</strong> les valeurs sont pré-remplies avec les données du jour. '
+    +'<strong style="color:var(--acc)">Modifier</strong> = correction (écrase). '
+    +'<strong style="color:var(--t1)">Laisser tel quel</strong> = inchangé. '
+    +'<strong style="color:var(--dng)">Effacer</strong> = supprime la mesure du jour (null).';
   G('saisie-rapide-modal').classList.remove('hidden');
 }
 
@@ -4434,15 +4479,15 @@ async function saveSaisieRapide(){
     const idx=parseInt(row.dataset.idx);
     if(isNaN(idx))continue;
     const b=APP.state.bassins[idx];if(!b)continue;
-    const get=(field)=>{const inp=row.querySelector('[data-field="'+field+'"]');return inp?inp.value===''?null:+inp.value:null;};
-    b.alimReel=get('alimReel')??b.alimReel;
-    b.mort=get('mort')??b.mort;
-    if(get('temp')!==null)b.temp=get('temp');
-    if(get('ph')!==null)b.ph=get('ph');
-    if(get('DO')!==null)b.DO=get('DO');
-    if(get('NH3')!==null)b.NH3=get('NH3');
-    if(get('TAN')!==null)b.TAN=get('TAN');
-    if(get('carb')!==null)b.carb=get('carb');
+    const getInp=(field)=>row.querySelector('[data-field="'+field+'"]');
+    const readVal=(field)=>{const inp=getInp(field);return inp?(inp.value===''?null:+inp.value):null;};
+    const isRequired=(field)=>getInp(field)?.dataset.mode==='required';
+    // required (alimReel, mort) → 0 si vide
+    // optional (tout le reste)  → null si vide (effacement explicite = supprimer la mesure)
+    ['alimReel','mort','poids','temp','ph','DO','NH3','NO2','TAN','TAC','imhoff','probiot','carb','basifiant'].forEach(field=>{
+      const v=readVal(field);
+      b[field]=isRequired(field)?(v??0):v;
+    });
     try{await saveBassinRow(idx);saved++;}catch(e){console.warn('SR save:',e);}
   }
   showToast(`✅ ${saved} bassin(s) enregistré(s)`,'ok');
