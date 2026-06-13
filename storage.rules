@@ -1,0 +1,88 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ─── Helper functions ──────────────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function isSuperAdmin() {
+      return isAuth() && request.auth.token.role in ['SuperAdmin', 'superadmin', 'Super Admin'];
+    }
+
+    function isAdminRole() {
+      return isAuth() && request.auth.token.role in [
+        'Administrateur', 'SuperAdmin', 'superadmin', 'Super Admin'
+      ];
+    }
+
+    function isResponsableRole() {
+      return isAuth() && request.auth.token.role in [
+        'Responsable', 'Responsable ferme',
+        'Administrateur', 'SuperAdmin', 'superadmin', 'Super Admin'
+      ];
+    }
+
+    function userFarm() {
+      return request.auth.token.farmCode;
+    }
+
+    function isFarmMember(farmCode) {
+      return isAuth() && (isSuperAdmin() || userFarm() == farmCode);
+    }
+
+    function isFarmManager(farmCode) {
+      return isAuth() && (isSuperAdmin() || (isResponsableRole() && userFarm() == farmCode));
+    }
+
+    // ─── logos/{farmCode}/logo.* ───────────────────────────────────────────
+    // Farm logos: readable by farm members, writable only by managers/admins
+
+    match /logos/{farmCode}/{filename} {
+      // Any farm member (or superadmin) can read the logo
+      allow read: if isFarmMember(farmCode);
+
+      // Only managers, admins, or superadmin can upload/replace a logo
+      allow write: if isFarmManager(farmCode)
+        && filename.matches('logo\\.(png|jpg|jpeg|gif|webp|svg)')
+        && request.resource.size < 2 * 1024 * 1024   // max 2 MB
+        && request.resource.contentType.matches('image/.*');
+
+      allow delete: if isFarmManager(farmCode);
+    }
+
+    // ─── backups/{farmCode}/{filename} ────────────────────────────────────
+    // Optional: if you store backup files in Storage
+
+    match /backups/{farmCode}/{filename} {
+      allow read: if isFarmMember(farmCode);
+      allow create: if isFarmMember(farmCode)
+        && request.resource.size < 10 * 1024 * 1024;  // max 10 MB
+      allow delete: if isFarmManager(farmCode);
+      allow update: if false;  // backups are immutable once written
+    }
+
+    // ─── exports/{farmCode}/{filename} ────────────────────────────────────
+    // Excel / PDF exports generated server-side
+
+    match /exports/{farmCode}/{filename} {
+      allow read: if isFarmMember(farmCode);
+      allow write: if isFarmManager(farmCode)
+        && request.resource.size < 20 * 1024 * 1024;  // max 20 MB
+      allow delete: if isFarmManager(farmCode);
+    }
+
+    // ─── Default: deny everything else ────────────────────────────────────
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
