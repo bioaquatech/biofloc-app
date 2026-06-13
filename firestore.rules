@@ -1,0 +1,185 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper functions ───────────────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(uid())).data;
+    }
+
+    function userRole() {
+      return userDoc().role;
+    }
+
+    function userFarm() {
+      return userDoc().farmCode;
+    }
+
+    function isSuperAdmin() {
+      return isAuth() && userRole() in ['SuperAdmin', 'superadmin', 'Super Admin'];
+    }
+
+    function isAdmin() {
+      return isAuth() && userRole() in ['Administrateur', 'SuperAdmin', 'superadmin', 'Super Admin'];
+    }
+
+    function isResponsable() {
+      return isAuth() && userRole() in [
+        'Responsable', 'Responsable ferme',
+        'Administrateur', 'SuperAdmin', 'superadmin', 'Super Admin'
+      ];
+    }
+
+    function isFarmMember(farmId) {
+      return isAuth() && (isSuperAdmin() || userFarm() == farmId);
+    }
+
+    function isFarmManager(farmId) {
+      return isAuth() && (isSuperAdmin() || (isResponsable() && userFarm() == farmId));
+    }
+
+    function isFarmAdmin(farmId) {
+      return isAuth() && (isSuperAdmin() || (isAdmin() && userFarm() == farmId));
+    }
+
+    // ─── users/{uid} ────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      // Any authenticated user can read their own document
+      allow read: if isAuth() && (uid() == userId || isSuperAdmin());
+
+      // Only superadmin can create/update/delete user documents
+      allow create, update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ─── farms/{farmCode} ───────────────────────────────────────────────────
+
+    match /farms/{farmCode} {
+      // Any farm member can read the farm root document
+      allow read: if isFarmMember(farmCode);
+
+      // Only responsable+ or superadmin can update farm info
+      allow update: if isFarmManager(farmCode);
+
+      // Only superadmin can create or delete farms
+      allow create, delete: if isSuperAdmin();
+
+      // ── bassins ─────────────────────────────────────────────────────────
+      match /bassins/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── suivi (daily tracking) ───────────────────────────────────────────
+      match /suivi/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── feed records ────────────────────────────────────────────────────
+      match /feed/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── daily logs ──────────────────────────────────────────────────────
+      match /daily/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── stock entries ───────────────────────────────────────────────────
+      match /stock_entries/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── stock movements ─────────────────────────────────────────────────
+      match /stock_movements/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── intrants ────────────────────────────────────────────────────────
+      match /intrants/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── charges ─────────────────────────────────────────────────────────
+      match /charges/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── sensors ─────────────────────────────────────────────────────────
+      match /sensors/{doc} {
+        allow read: if isFarmMember(farmCode);
+        // Sensor writes: allow members (IoT devices use farm-scoped tokens)
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── config (includes ERP sync document) ─────────────────────────────
+      match /config/{doc} {
+        allow read: if isFarmMember(farmCode);
+        // ERP sync and config updates: farm members can write their own config
+        allow write: if isFarmMember(farmCode);
+      }
+
+      // ── backups ─────────────────────────────────────────────────────────
+      match /backups/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow create: if isFarmMember(farmCode);
+        // Only managers can delete backups
+        allow delete: if isFarmManager(farmCode);
+        allow update: if isFarmManager(farmCode);
+      }
+
+      // ── Catch-all for any future subcollections ──────────────────────────
+      match /{subcollection}/{doc} {
+        allow read: if isFarmMember(farmCode);
+        allow write: if isFarmMember(farmCode);
+      }
+    }
+
+    // ─── superadmin/* ────────────────────────────────────────────────────────
+
+    match /superadmin/{doc} {
+      // Admins can read superadmin settings; only superadmin can write
+      allow read: if isAdmin();
+      allow write: if isSuperAdmin();
+
+      match /{subcollection}/{subdoc} {
+        allow read: if isAdmin();
+        allow write: if isSuperAdmin();
+      }
+    }
+
+    // ─── audit/{logId} ──────────────────────────────────────────────────────
+    // Append-only: create is allowed for authenticated users,
+    // update and delete are NEVER allowed (immutable audit trail).
+
+    match /audit/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuth();
+      allow update, delete: if false;
+    }
+
+    // ─── Default: deny everything else ───────────────────────────────────────
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
