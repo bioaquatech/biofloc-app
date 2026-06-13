@@ -1010,7 +1010,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
           </div>
           <div id="date-mode-badge" style="display:none;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;background:rgba(245,166,35,.15);color:var(--warn);border:1px solid rgba(245,166,35,.3)">📅 Mode historique</div>
         </div>
-        <button class="abtn" onclick="addBassin()" id="btn-add-bassin">➕ Ajouter bassin</button>
+        <button class="sbtn" onclick="if(confirm('Synchroniser ERP → Bassins & Qualité d\'eau (conserve les données de monitoring) ?'))syncERPBassinsToProduction(false)" style="font-size:11px;background:var(--acc2)">🔄 Sync → Qualité d\'eau</button>
         <button class="sbtn" onclick="openSaisieRapide()" style="background:rgba(167,139,250,.15);border-color:var(--purp);color:var(--purp);font-size:11px">⚡ Saisie rapide multi-bassins</button>
       </div>
 
@@ -5272,7 +5272,9 @@ function exportPWAPlanningPdf(){
   var plan=_pwaLoad();
   if(!plan||!plan.length){alert('Aucune activite planifiee.');return;}
   var rates=window.PWA_RATES||PWA_RATES||{};
-  var farmName=(window.APP&&APP.state&&APP.state.farmName)||'Ferme';
+  var farmName=(window.APP&&(APP.farmName||APP.farmCode))||'Ferme';
+  var logoUrl=(window.APP&&APP.state&&APP.state.logoUrl)||'';
+  var logoHtml=logoUrl?'<img src="'+logoUrl+'" style="height:44px;width:auto;object-fit:contain;margin-right:10px">':'';
   var DAY=86400000;
   // Offsets relatifs à la date sélectionnée = premier jour d'administration
   // Entretien : selectedDate = J3 (premier admin) — NON RÉCURRENT
@@ -5744,10 +5746,11 @@ function exportPWAPlanningPdf(){
     /* Page de couverture : en-tête + récap + légende */
     +'<div class="cover">'
     +'<div class="hdr">'
-    +'<div class="hdr-left">'
-    +'<h1>Planning previsionnel PWA</h1>'
+    +'<div class="hdr-left" style="display:flex;align-items:center">'
+    +logoHtml
+    +'<div><h1>Planning previsionnel PWA</h1>'
     +'<p>Ferme : <strong>'+esc2(farmName)+'</strong> &nbsp;&#183;&nbsp; Periode : <strong>'+periodLabel+'</strong> &nbsp;&#183;&nbsp; Exporte le '+new Date().toLocaleDateString('fr-FR')+'</p>'
-    +'</div>'
+    +'</div></div>'
     +'<div class="seq-inline">'
     +'<div class="si" style="background:#ca8a04">PREP<br><span style="font-weight:400;font-size:7.5px">J-2</span></div>'
     +'<div class="sa">&#8594;</div>'
@@ -5786,7 +5789,9 @@ function exportPWAPdf(){
   if(typeof window.exportPWAWeekPdf==='function'){window.exportPWAWeekPdf();return;}
   var plan=window.PWA_PLAN||PWA_PLAN;
   if(!plan||!plan.length){alert('Aucune activité à exporter.');return;}
-  var farmName=(window.APP&&APP.state&&APP.state.farmName)||'Ferme';
+  var farmName=(window.APP&&(APP.farmName||APP.farmCode))||'Ferme';
+  var logoUrl=(window.APP&&APP.state&&APP.state.logoUrl)||'';
+  var logoHtml2=logoUrl?'<img src="'+logoUrl+'" style="height:44px;width:auto;object-fit:contain;margin-right:10px">':'<span style="font-size:28px;margin-right:8px">🐟</span>';
   var dateExport=new Date().toLocaleDateString('fr-FR');
   var rows=plan.map(function(row){
     var rates=window.PWA_RATES||PWA_RATES||{};
@@ -5818,8 +5823,7 @@ function exportPWAPdf(){
   var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Planning PWA – '+farmName+'</title>'
     +'<style>body{font-family:sans-serif;font-size:12px;color:#111;padding:24px}h1{font-size:16px;margin-bottom:4px}h2{font-size:13px;color:#0d9488;margin:16px 0 6px}table{width:100%;border-collapse:collapse}th{background:#0d9488;color:#fff;padding:6px 8px;text-align:left}td{vertical-align:top}.total{background:#f0fdf4;padding:12px;border-radius:6px;margin-top:12px;display:flex;gap:24px}.tot-val{font-size:20px;font-weight:800}.note{font-size:10px;color:#6b7280;margin-top:8px}@media print{button{display:none}}</style>'
     +'</head><body>'
-    +'<h1>📋 Planning de préparation PWA</h1>'
-    +'<div style="color:#6b7280;margin-bottom:12px">Ferme : <b>'+farmName+'</b> · Exporté le '+dateExport+'</div>'
+    +'<div style="display:flex;align-items:center;border-bottom:2px solid #0d9488;padding-bottom:10px;margin-bottom:14px">'+logoHtml2+'<div><h1 style="font-size:15px;color:#0d9488;margin-bottom:2px">'+farmName+' — Planning de préparation PWA</h1><p style="font-size:10px;color:#6b7280">Exporté le '+dateExport+'</p></div></div>'
     +'<h2>Activités planifiées</h2>'
     +'<table><thead><tr><th>Date début</th><th>Activité</th><th>Moment</th><th>Bassins</th><th>Volume</th><th>Dose PWA</th></tr></thead><tbody>'+rows+'</tbody></table>'
     +'<div class="total"><div><div style="font-size:10px;color:#6b7280">Total activités</div><div class="tot-val" style="color:#0d9488">'+base.toFixed(2)+' L</div></div>'
