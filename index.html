@@ -1371,6 +1371,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         <button class="tb active" id="ct-tab-saisie" onclick="swCompta('saisie')" style="font-size:11px">✅ Validation achats</button>
         <button class="tb" id="ct-tab-charges" onclick="swCompta('charges')" style="font-size:11px">📋 Charges exploitation</button>
         <button class="tb" id="ct-tab-synthese" onclick="swCompta('synthese')" style="font-size:11px">📊 Tableau financier</button>
+        <button class="tb" id="ct-tab-coutcycle" onclick="swCompta('coutcycle')" style="font-size:11px">💰 Coût/Cycle</button>
       </div>
 
       <!-- Sous-onglet 1 : Prix & CUMP -->
@@ -1432,6 +1433,19 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         </div>
 
         <div class="card" id="charges-detail" style="margin-top:.6rem"></div>
+      </div>
+
+      <!-- Sous-onglet 4 : Coût par cycle -->
+      <div id="ct-coutcycle" style="display:none">
+        <div class="card" style="border-color:rgba(0,201,167,.25)">
+          <div class="ctitle"><span class="dot" style="background:var(--acc)"></span>Coût de revient par cycle de production</div>
+          <div style="font-size:11px;color:var(--t2);line-height:1.8">Calcul complet : intrants consommés (CUMP × quantités), charges d'exploitation rattachées au cycle, et amortissements proratés sur la durée du cycle. Le coût/kg est calculé sur la biomasse récoltée (cycles clôturés) ou la biomasse actuelle (cycle actif).</div>
+        </div>
+        <div id="cout-cycle-content" style="margin-top:.5rem"></div>
+        <div style="margin-top:.5rem;display:flex;gap:.5rem;justify-content:flex-end" class="no-print">
+          <button onclick="exportCoutCycleXLSX()" style="background:var(--acc2);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer">📊 Exporter Excel (.xlsx)</button>
+          <button onclick="exportCoutCyclePDF()" style="background:var(--dng);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer">📄 PDF</button>
+        </div>
       </div>
 
       <!-- Sous-onglet 3 : Synthèse -->
@@ -7294,13 +7308,16 @@ let COMPTA_PRIX={}; // {entryId: prix total XOF}
 function saveComptaPrixDebounced(){debounce('compta_prix',()=>farmCol('config').doc('compta').set({prix:COMPTA_PRIX},{merge:true}).catch(console.error),600);}
 
 function swCompta(tab){
-  ['saisie','charges','synthese'].forEach(t=>{
+  ['saisie','charges','synthese','coutcycle','invest','vente'].forEach(t=>{
     const el=G('ct-'+t);if(el)el.style.display=t===tab?'block':'none';
     const btn=G('ct-tab-'+t);if(btn)btn.classList.toggle('active',t===tab);
   });
   if(tab==='saisie')renderComptaPrix();
   if(tab==='charges')calcCharges();
   if(tab==='synthese')upComptaSynthese();
+  if(tab==='coutcycle')renderCoutCycle();
+  if(tab==='invest'&&typeof window.renderInvest==='function')window.renderInvest();
+  if(tab==='vente'&&typeof window.renderSalesCompta==='function')window.renderSalesCompta();
 }
 
 function renderComptaPrix(){
@@ -7522,6 +7539,139 @@ async function upComptaSynthese(){
 // Compatibilité : upCompta appelé depuis sw()
 function upCompta(){swCompta('saisie');}
 
+// ═══════════════════════════════════════════════
+// COÛT DE REVIENT PAR CYCLE
+// ═══════════════════════════════════════════════
+
+function _lsLoad(key){try{return JSON.parse(localStorage.getItem('ichtus_'+key)||'[]');}catch(e){return[];}}
+
+function calcCycleCostPerKg(cycle){
+  // Support deux formats de cycle : v12 {nom,debut,fin} et ERP {name,code,start,end}
+  var cycleNom=cycle.nom||cycle.name||cycle.code||cycle.id||'';
+  var debut=cycle.debut||cycle.start||'',fin=cycle.fin||cycle.end||'';
+  var now=(new Date()).toISOString().slice(0,10);
+  var dateDebut=debut||now, dateFin=(fin&&fin<now)?fin:now;
+
+  // Durée cycle en mois
+  var d1=new Date(dateDebut), d2=new Date(dateFin);
+  var dureeMois=Math.max(0.5, (d2-d1)/(1000*60*60*24*30.44));
+
+  // 1. Intrants consommés (mouvements de sortie dans la période)
+  var intrantsCost=0;
+  var mouvs=window.APP_STOCK_MOVEMENTS||[];
+  mouvs.forEach(function(m){
+    if(m.type!=='sortie')return;
+    var d=m.date||'';
+    if(d<dateDebut||d>dateFin)return;
+    var cump=0;
+    if(typeof window.getCUMP==='function')cump=window.getCUMP(m.intrantId)||0;
+    if(!cump&&window.APP_INTRANTS){var it=(window.APP_INTRANTS||[]).find(function(i){return i.id===m.intrantId;});cump=it?Number(it.prixUnitaire||it.prix||0):0;}
+    intrantsCost+=cump*(Number(m.quantity)||0);
+  });
+
+  // 2. Charges d'exploitation rattachées au cycle
+  var chargesCost=0;
+  (window.APP_CHARGES||[]).forEach(function(c){
+    if((c.cycle||'')===cycleNom)chargesCost+=Number(c.amountXOF||c.amount||0);
+  });
+
+  // 3. Amortissements proratés — clé ichtus_investments
+  var amortCost=0;
+  var invList=_lsLoad('investments');
+  invList.forEach(function(inv){
+    var montant=Number(inv.amount||0), resid=Number(inv.residual||0), ans=Number(inv.years||1)||1;
+    amortCost+=((montant-resid)/(ans*12))*dureeMois;
+  });
+
+  // 4. Biomasse : récoltes du cycle (clôturé) ou biomasse actuelle (actif)
+  var biomasse=0, source='';
+  var harvList=_lsLoad('harvests');
+  var cycleHarvests=harvList.filter(function(h){return (h.cycleName||h.cycle||'')===cycleNom||(h.cycleId||'')===cycle.id;});
+  if(cycleHarvests.length){
+    biomasse=cycleHarvests.reduce(function(s,h){return s+Number(h.kg||h.biomass||0);},0);
+    source='Récoltes';
+  } else if(cycle.statut==='Actif'&&window.APP&&window.APP.state&&Array.isArray(window.APP.state.bassins)){
+    window.APP.state.bassins.forEach(function(b){
+      if(typeof window.calcBassin==='function'){var r=window.calcBassin(b);biomasse+=Number(r.biomasse||0);}
+      else biomasse+=Number(b.biomasse||b.biomassKg||0);
+    });
+    source='Biomasse actuelle';
+  }
+
+  var total=intrantsCost+chargesCost+amortCost;
+  var coutKg=biomasse>0?total/biomasse:0;
+  return {intrants:intrantsCost,charges:chargesCost,amort:amortCost,total:total,biomasse:biomasse,coutKg:coutKg,dureeMois:dureeMois,source:source};
+}
+
+window.renderCoutCycle=function(){
+  var el=G('cout-cycle-content'); if(!el)return;
+  var cycleList=_lsLoad('cycles');
+  if(!cycleList.length){
+    el.innerHTML='<div style="color:var(--t3);text-align:center;padding:2rem">Aucun cycle créé.<br>Créez des cycles dans ⚙️ Paramètres ERP → Cycles.</div>';
+    return;
+  }
+  function xof(v){return Number(v||0).toLocaleString('fr-FR')+' XOF';}
+  function fmt(v,d){return Number(v||0).toFixed(d||0).replace('.',',');}
+  var rows=cycleList.map(function(cy){return Object.assign({},cy,calcCycleCostPerKg(cy));});
+  var html='<div class="tw"><table><thead><tr>'
+    +'<th>Cycle</th><th>Statut</th><th>Durée</th><th>Intrants (CUMP)</th><th>Charges</th><th>Amortissements</th>'
+    +'<th>Total coût</th><th>Biomasse kg</th><th>Coût/kg</th><th>Source biomasse</th>'
+    +'</tr></thead><tbody>';
+  rows.forEach(function(r){
+    var cKg=r.coutKg;
+    var displayNom=r.nom||r.name||r.code||r.id||'?';
+    html+='<tr>'
+      +'<td class="cn" style="font-weight:700">'+displayNom+'</td>'
+      +'<td><span class="badge '+(r.statut==='Actif'?'b-ok':'b-warn')+'">'+r.statut+'</span></td>'
+      +'<td style="text-align:right">'+fmt(r.dureeMois,1)+' mois</td>'
+      +'<td style="text-align:right">'+xof(Math.round(r.intrants))+'</td>'
+      +'<td style="text-align:right">'+xof(Math.round(r.charges))+'</td>'
+      +'<td style="text-align:right">'+xof(Math.round(r.amort))+'</td>'
+      +'<td style="text-align:right;font-weight:700;color:var(--warn)">'+xof(Math.round(r.total))+'</td>'
+      +'<td style="text-align:right">'+fmt(r.biomasse,1)+' kg</td>'
+      +'<td style="text-align:right;font-weight:800;font-size:13px;color:'+(cKg>0?'var(--acc)':'var(--t3)')+'">'+( cKg>0?xof(Math.round(cKg)):'—')+'</td>'
+      +'<td style="font-size:10px;color:var(--t3)">'+r.source+'</td>'
+      +'</tr>';
+  });
+  html+='</tbody></table></div>';
+  // Totaux
+  var tTotal=rows.reduce(function(s,r){return s+r.total;},0);
+  var tBio=rows.reduce(function(s,r){return s+r.biomasse;},0);
+  html+='<div class="mgrid" style="margin-top:.6rem">'
+    +'<div class="met warn"><div class="mlbl">Coût total tous cycles</div><div class="mval">'+xof(Math.round(tTotal))+'</div></div>'
+    +'<div class="met ok"><div class="mlbl">Biomasse totale</div><div class="mval">'+fmt(tBio,1)+' kg</div></div>'
+    +'<div class="met"><div class="mlbl">Coût moyen pondéré/kg</div><div class="mval">'+(tBio>0?xof(Math.round(tTotal/tBio)):'—')+'</div></div>'
+    +'</div>';
+  el.innerHTML=html;
+};
+
+window.exportCoutCycleXLSX=function(){
+  var cycleList=_lsLoad('cycles');
+  var rows=cycleList.map(function(cy){return Object.assign({},cy,calcCycleCostPerKg(cy));});
+  var data=[['Cycle','Statut','Durée (mois)','Intrants CUMP (XOF)','Charges (XOF)','Amortissements (XOF)','Total coût (XOF)','Biomasse (kg)','Coût/kg (XOF)','Source biomasse']];
+  rows.forEach(function(r){
+    var nom=r.nom||r.name||r.code||r.id||'?';
+    data.push([nom,r.statut,parseFloat(r.dureeMois.toFixed(1)),Math.round(r.intrants),Math.round(r.charges),Math.round(r.amort),Math.round(r.total),parseFloat(r.biomasse.toFixed(1)),r.coutKg>0?Math.round(r.coutKg):'',r.source]);
+  });
+  if(typeof downloadXLSX==='function')downloadXLSX([{name:'Coût par cycle',data:data}],'cout-revient-cycle');
+};
+
+window.exportCoutCyclePDF=function(){
+  var cycleList=_lsLoad('cycles');
+  var rows=cycleList.map(function(cy){return Object.assign({},cy,calcCycleCostPerKg(cy));});
+  function xof(v){return Number(v||0).toLocaleString('fr-FR')+' XOF';}
+  var html='<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:11px">'
+    +'<thead style="background:#0a1628;color:#fff"><tr><th>Cycle</th><th>Statut</th><th>Durée</th><th>Intrants</th><th>Charges</th><th>Amort.</th><th>Total</th><th>Biomasse kg</th><th>Coût/kg</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    var nom=r.nom||r.name||r.code||r.id||'?';
+    html+='<tr><td><b>'+nom+'</b></td><td>'+r.statut+'</td><td>'+r.dureeMois.toFixed(1)+' mois</td>'
+      +'<td>'+xof(Math.round(r.intrants))+'</td><td>'+xof(Math.round(r.charges))+'</td><td>'+xof(Math.round(r.amort))+'</td>'
+      +'<td><b>'+xof(Math.round(r.total))+'</b></td><td>'+r.biomasse.toFixed(1)+' kg</td>'
+      +'<td style="font-weight:800;color:'+(r.coutKg>0?'#00c9a7':'#888')+'">'+(r.coutKg>0?xof(Math.round(r.coutKg)):'—')+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  if(typeof openPDF==='function')openPDF(html,'Coût de revient par cycle');
+};
 
 // ═══════════════════════════════════════════════
 // CONSULTATION
@@ -9643,7 +9793,7 @@ window.saveChargeFromForm=async function(){
  if(window.showToast) showToast('✅ Charge enregistrée','acc'); else alert('Charge enregistrée');
  resetChargeForm(); renderChargesPanelV9(); if(window.refreshAnalyseERP)refreshAnalyseERP();
 };
-window.fillCycleSelect=function(selected){const sel=G('chg-cycle');if(!sel)return;const prev=selected!==undefined?selected:sel.value;sel.innerHTML='<option value="">— Aucun cycle —</option>';try{const cs=JSON.parse(localStorage.getItem('cycles')||'[]');cs.forEach(function(c){const o=document.createElement('option');o.value=c.nom||c.id;o.textContent=(c.nom||c.id)+(c.statut==='Actif'?' ✓':'');sel.appendChild(o);});}catch(e){}if(prev)sel.value=prev;};
+window.fillCycleSelect=function(selected){const sel=G('chg-cycle');if(!sel)return;const prev=selected!==undefined?selected:sel.value;sel.innerHTML='<option value="">— Aucun cycle —</option>';try{const cs=JSON.parse(localStorage.getItem('ichtus_cycles')||'[]');cs.forEach(function(c){const o=document.createElement('option');o.value=c.nom||c.id;o.textContent=(c.nom||c.id)+(c.statut==='Actif'?' ✓':'');sel.appendChild(o);});}catch(e){}if(prev)sel.value=prev;};
 window.resetChargeForm=function(){['chg-id','chg-label','chg-amount','chg-supplier','chg-invoice','chg-proof','chg-comment','chg-affect-detail'].forEach(id=>setVal(id,'')); setVal('chg-date',today()); setVal('chg-type','Variable'); setVal('chg-currency','XOF'); setVal('chg-rate','1'); setVal('chg-qty','1'); setVal('chg-unit','forfait'); updateChargeXOF(); fillCycleSelect('');};
 window.editChargeV9=function(id){const c=(window.APP_CHARGES||[]).find(x=>x.id===id); if(!c)return; setVal('chg-id',c.id); setVal('chg-date',c.date); fillCycleSelect(c.cycle); setVal('chg-category',c.category); updateChargeSubcats(); setVal('chg-subcategory',c.subcategory); setVal('chg-label',c.label||c.name); setVal('chg-type',c.type||'Variable'); setVal('chg-amount',c.amount); setVal('chg-currency',c.currency||'XOF'); setVal('chg-rate',c.exchangeRate||1); setVal('chg-qty',c.quantity||1); setVal('chg-unit',c.unit||'forfait'); setVal('chg-affectation',c.affectation||'Ferme entière'); setVal('chg-affect-detail',c.affectationDetail); setVal('chg-supplier',c.supplier); setVal('chg-invoice',c.invoice); setVal('chg-proof',c.proof); setVal('chg-comment',c.comment); updateChargeXOF(); const card=G('charge-form-card'); if(card)card.scrollIntoView({behavior:'smooth',block:'start'});};
 window.deleteChargeV9=async function(id){ if(!canDelete()){alert('Suppression réservée au SuperAdmin.');return;} if(!confirm('Supprimer cette charge ?'))return; try{if(window.farmCol)await farmCol('charges').doc(id).delete();}catch(e){console.warn(e);} window.APP_CHARGES=(APP_CHARGES||[]).filter(x=>x.id!==id); renderChargesPanelV9();};
@@ -9656,7 +9806,7 @@ window.renderChargesPanelV9=function(){
  const total=rows.reduce((s,c)=>s+(Number(c.amountXOF)||((Number(c.amount)||0)*(Number(c.exchangeRate)||1))),0); const fixed=rows.filter(c=>c.type==='Fixe').reduce((s,c)=>s+(Number(c.amountXOF)||0),0); const variable=rows.filter(c=>c.type!=='Fixe').reduce((s,c)=>s+(Number(c.amountXOF)||0),0);
  const bycat={}; rows.forEach(c=>{bycat[c.category||'Divers']=(bycat[c.category||'Divers']||0)+(Number(c.amountXOF)||0);});
  el.innerHTML=`<div class="ctitle"><span class="dot"></span>Historique, validation et statistiques des charges</div>
- <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem"><label style="font-size:10px;color:var(--t3)">Du</label><input class="di2" id="charges-from-v9" type="date" value="${esc(from)}" onchange="renderChargesPanelV9()"><label style="font-size:10px;color:var(--t3)">au</label><input class="di2" id="charges-to-v9" type="date" value="${esc(to)}" onchange="renderChargesPanelV9()"><select id="charges-cycle-v9" class="di2" style="font-size:11px" onchange="renderChargesPanelV9()"><option value="">Tous cycles</option>${(()=>{try{return JSON.parse(localStorage.getItem('cycles')||'[]').map(c=>`<option value="${esc(c.nom||c.id)}" ${cycleF===(c.nom||c.id)?'selected':''}>${esc(c.nom||c.id)}</option>`).join('');}catch(e){return '';}})()}</select><button class="sbtn" style="font-size:10px;padding:3px 8px" onclick="setVal('charges-from-v9','');setVal('charges-to-v9','');setVal('charges-cycle-v9','');renderChargesPanelV9()">✕</button><span class="badge b-ok">${rows.length} lignes</span></div>
+ <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem"><label style="font-size:10px;color:var(--t3)">Du</label><input class="di2" id="charges-from-v9" type="date" value="${esc(from)}" onchange="renderChargesPanelV9()"><label style="font-size:10px;color:var(--t3)">au</label><input class="di2" id="charges-to-v9" type="date" value="${esc(to)}" onchange="renderChargesPanelV9()"><select id="charges-cycle-v9" class="di2" style="font-size:11px" onchange="renderChargesPanelV9()"><option value="">Tous cycles</option>${(()=>{try{return JSON.parse(localStorage.getItem('ichtus_cycles')||'[]').map(c=>`<option value="${esc(c.nom||c.id)}" ${cycleF===(c.nom||c.id)?'selected':''}>${esc(c.nom||c.id)}</option>`).join('');}catch(e){return '';}})()}</select><button class="sbtn" style="font-size:10px;padding:3px 8px" onclick="setVal('charges-from-v9','');setVal('charges-to-v9','');setVal('charges-cycle-v9','');renderChargesPanelV9()">✕</button><span class="badge b-ok">${rows.length} lignes</span></div>
  <div class="mgrid"><div class="met ok"><div class="mlbl">Total période</div><div class="mval" style="font-size:15px">${money(total)}</div></div><div class="met"><div class="mlbl">Charges fixes</div><div class="mval" style="font-size:15px">${money(fixed)}</div></div><div class="met warn"><div class="mlbl">Charges variables</div><div class="mval" style="font-size:15px">${money(variable)}</div></div></div>
  <div style="display:flex;gap:.35rem;flex-wrap:wrap;margin:.45rem 0">${Object.entries(bycat).map(([k,v])=>`<span class="badge b-purp">${esc(k)} : ${money(v)}</span>`).join('')}</div>
  <div class="tw"><table><thead><tr><th>Date</th><th>Cycle</th><th>Catégorie</th><th>Désignation</th><th>Type</th><th>Qté</th><th>Unité</th><th>Montant</th><th>Devise</th><th>XOF</th><th>Affectation</th><th>Statut</th><th>Actions</th></tr></thead><tbody>${rows.map(c=>`<tr><td>${esc(c.date)}</td><td>${esc(c.cycle||'—')}</td><td>${esc(c.category||'')}</td><td class="cn">${esc(c.label||c.name||'')}</td><td>${esc(c.type||'')}</td><td class="cf">${Number(c.quantity||0).toLocaleString('fr-FR')}</td><td>${esc(c.unit||'')}</td><td class="cf">${Number(c.amount||0).toLocaleString('fr-FR')}</td><td>${esc(c.currency||'XOF')}</td><td class="cf" style="color:var(--acc);font-weight:800">${money(Number(c.amountXOF)||0)}</td><td>${esc(c.affectation||'')}</td><td><span class="badge ${c.status==='Validée'?'b-ok':c.status==='Rejetée'?'b-dng':'b-warn'}">${esc(c.status||'Brouillon')}</span></td><td>${canWrite()?`<button class="ebtn" onclick="editChargeV9('${esc(c.id)}')">✏️</button>`:''}${canValidate()?` <button class="abtn" style="padding:2px 6px;font-size:10px" onclick="validateChargeV9('${esc(c.id)}','Validée')">✓</button> <button class="dbtn" onclick="validateChargeV9('${esc(c.id)}','Rejetée')">↯</button>`:''}${canDelete()?` <button class="dbtn" onclick="deleteChargeV9('${esc(c.id)}')">🗑</button>`:''}</td></tr>`).join('')||'<tr><td colspan="13" style="padding:1rem;color:var(--t3)">Aucune charge enregistrée.</td></tr>'}</tbody></table></div>`;
