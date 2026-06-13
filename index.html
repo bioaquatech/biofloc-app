@@ -332,6 +332,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
     <button class="tb" onclick="swAdmin('ta2')">👥 Utilisateurs</button>
     <button class="tb" onclick="swAdmin('ta3')">⚙️ Paramètres</button>
     <button class="tb" onclick="swAdmin('ta4')" style="border-color:rgba(0,201,167,.3);color:var(--acc)">📋 Journal</button>
+    <button class="tb" onclick="swAdmin('ta5')" style="border-color:rgba(167,139,250,.3);color:var(--purp)">🌱 ERP Fermes</button>
   </div>
   <div class="main">
 
@@ -528,6 +529,18 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
           <tbody id="adm-journal-tbody"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- TA5: ERP PAR FERME -->
+    <div id="ta5" class="pane">
+      <div class="card" style="border-color:rgba(167,139,250,.25)">
+        <div class="ctitle"><span class="dot" style="background:var(--purp)"></span>Données ERP par ferme — synchronisées en temps réel</div>
+        <div style="font-size:11px;color:var(--t2);line-height:1.8">Cycles, investissements, récoltes et ventes de chaque ferme, stockés dans Firestore. Mis à jour automatiquement à chaque modification.</div>
+      </div>
+      <div id="ta5-erp-content" style="margin-top:.5rem">
+        <div style="color:var(--t3);text-align:center;padding:2rem;font-size:12px">Cliquez sur une ferme ci-dessous pour voir ses données ERP.</div>
+      </div>
+      <div style="margin-top:.5rem" id="ta5-farm-btns"></div>
     </div>
 
   </div>
@@ -1487,9 +1500,10 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 
     <!-- T7 RÉCOLTES -->
     <div id="t7" class="pane">
-      <div id="farm-backup-bar" style="display:flex;justify-content:flex-end;gap:.5rem;margin-bottom:.7rem" class="no-print">
+      <div id="farm-backup-bar" style="display:flex;justify-content:flex-end;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap" class="no-print">
         <button class="sbtn" style="background:var(--acc2);display:flex;align-items:center;gap:5px" onclick="downloadBackupFarm()">⬇️ Sauvegarder</button>
-        <button class="sbtn" style="background:var(--purp);display:flex;align-items:center;gap:5px" onclick="G('restore-file-farm').click()">⬆️ Restaurer</button>
+        <button class="sbtn" style="background:var(--purp);display:flex;align-items:center;gap:5px" onclick="G('restore-file-farm').click()">⬆️ Restaurer fichier</button>
+        <button class="sbtn" style="background:rgba(167,139,250,.3);border:1px solid var(--purp);color:var(--purp);display:flex;align-items:center;gap:5px" onclick="restoreFromAutoSave()">🕐 Restaurer sauvegarde auto</button>
         <input type="file" id="restore-file-farm" accept=".json" style="display:none" onchange="restoreBackupFarm(this)">
       </div>
       <div class="mgrid" id="rec-metrics"></div>
@@ -2885,6 +2899,8 @@ async function showFarmApp(){
     checkNotifications();
   }
   const cd=G('config-date');if(cd)cd.value=today();
+  // Charger données ERP depuis Firestore puis sauvegarde auto
+  loadERPFromFirestore().then(()=>setTimeout(autoSaveFarm,2000)).catch(()=>setTimeout(autoSaveFarm,2000));
   // Check backup reminder (first login of the day)
   checkBackupReminder();
   // Log connexion dans journal
@@ -3188,6 +3204,75 @@ async function loadAdminDashboard(){
   hideLoader();
 }
 
+// ═══════════════════════════════════════════════
+// ADMIN — VUE ERP PAR FERME
+// ═══════════════════════════════════════════════
+window.renderAdminERPFarms=function(){
+  var farms=window._farms||[];
+  var esc2=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var btns=G('ta5-farm-btns');
+  if(btns)btns.innerHTML='<div style="display:flex;gap:.5rem;flex-wrap:wrap">'+farms.map(function(f){
+    var fc=f.code||f.id;
+    return '<button class="sbtn" style="font-size:11px" onclick="loadFarmERP(\''+fc+'\',\''+esc2(f.name||fc)+'\')">'+esc2(f.name||fc)+'</button>';
+  }).join('')+'</div>';
+  if(farms.length===1)loadFarmERP(farms[0].code||farms[0].id,farms[0].name||farms[0].id);
+};
+
+window.loadFarmERP=async function(farmCode,farmName){
+  var esc2=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var el=G('ta5-erp-content');if(!el)return;
+  el.innerHTML='<div style="color:var(--t3);text-align:center;padding:1.5rem">⏳ Chargement ERP de '+esc2(farmName)+'…</div>';
+  try{
+    var snap=await db.collection('farms').doc(farmCode).collection('config').doc('erp').get();
+    if(!snap.exists){el.innerHTML='<div style="color:var(--t3);text-align:center;padding:1.5rem">Aucune donnée ERP synchronisée pour cette ferme.<br><small>La ferme doit se connecter une fois pour initialiser la sync.</small></div>';return;}
+    var d=snap.data();
+    var cycles=d.cycles||[];
+    var invs=d.investments||[];
+    var harvs=d.harvests||[];
+    var sales=d.sales||[];
+    var clients=d.clients||[];
+    function money(v){return Number(v||0).toLocaleString('fr-FR')+' XOF';}
+    function tbl(headers,rows){return '<div class="tw"><table><thead><tr>'+headers.map(function(h){return '<th>'+h+'</th>';}).join('')+'</tr></thead><tbody>'+rows+'</tbody></table></div>';}
+    var html='<div class="card" style="border-color:rgba(167,139,250,.25)"><div class="ctitle"><span class="dot" style="background:var(--purp)"></span>ERP — '+esc2(farmName)+'</div></div>';
+    // Métriques rapides
+    var totalInvest=invs.reduce(function(s,i){return s+Number(i.amount||0);},0);
+    var totalHarv=harvs.reduce(function(s,h){return s+Number(h.kg||h.biomass||0);},0);
+    var totalCA=sales.reduce(function(s,sv){return s+Number(sv.kg||0)*Number(sv.price||sv.prixKg||0);},0);
+    html+='<div class="mgrid" style="margin-bottom:.6rem">'
+      +'<div class="met ok"><div class="mlbl">Cycles</div><div class="mval">'+cycles.length+'</div></div>'
+      +'<div class="met"><div class="mlbl">Investissements</div><div class="mval">'+money(totalInvest)+'</div></div>'
+      +'<div class="met ok"><div class="mlbl">Récolté total</div><div class="mval">'+totalHarv.toFixed(1)+' kg</div></div>'
+      +'<div class="met"><div class="mlbl">CA total</div><div class="mval">'+money(totalCA)+'</div></div>'
+      +'</div>';
+    // Cycles
+    if(cycles.length){
+      html+='<div class="card"><div class="ctitle"><span class="dot"></span>Cycles de production</div>';
+      html+=tbl(['Nom','Statut','Début','Fin'],cycles.map(function(c){
+        return '<tr><td class="cn"><b>'+(c.nom||c.name||c.code||'')+'</b></td><td><span class="badge '+(c.statut==='Actif'?'b-ok':'b-warn')+'">'+c.statut+'</span></td><td>'+(c.debut||c.start||'')+'</td><td>'+(c.fin||c.end||'—')+'</td></tr>';
+      }).join(''));
+      html+='</div>';
+    }
+    // Investissements
+    if(invs.length){
+      html+='<div class="card"><div class="ctitle"><span class="dot"></span>Investissements & amortissements</div>';
+      html+=tbl(['Désignation','Catégorie','Montant','Durée','Amort./mois'],invs.map(function(i){
+        var am=((Number(i.amount||0)-Number(i.residual||0))/(Number(i.years||1)*12));
+        return '<tr><td class="cn">'+esc2(i.name||'')+'</td><td>'+esc2(i.cat||'')+'</td><td>'+money(i.amount)+'</td><td>'+i.years+' ans</td><td style="color:var(--warn)">'+money(Math.round(am))+'</td></tr>';
+      }).join(''));
+      html+='</div>';
+    }
+    // Récoltes
+    if(harvs.length){
+      html+='<div class="card"><div class="ctitle"><span class="dot"></span>Récoltes</div>';
+      html+=tbl(['Date','Cycle','Bassin','Type','Biomasse kg'],harvs.slice(0,20).map(function(h){
+        return '<tr><td>'+(h.date||'')+'</td><td>'+(h.cycleName||h.cycle||'')+'</td><td>'+(h.bassinName||h.bassin||'')+'</td><td>'+(h.type||'')+'</td><td class="cn"><b>'+Number(h.kg||h.biomass||0).toFixed(1)+'</b></td></tr>';
+      }).join(''));
+      html+='</div>';
+    }
+    el.innerHTML=html;
+  }catch(e){el.innerHTML='<div style="color:var(--dng);padding:1rem">❌ Erreur : '+e.message+'</div>';}
+};
+
 function updateAdminStats(){
   G('adm-stat-farms').textContent=(window._farms||[]).length;
   G('adm-stat-users').textContent=(window._users||[]).length;
@@ -3476,8 +3561,9 @@ function swAdmin(id){
   document.querySelectorAll('#screen-admin .pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('#screen-admin .tb').forEach(b=>b.classList.remove('active'));
   G(id).classList.add('active');
-  ['ta0','ta1','ta2','ta3','ta4'].forEach((t,i)=>{if(t===id)document.querySelectorAll('#screen-admin .tb')[i]?.classList.add('active');});
+  ['ta0','ta1','ta2','ta3','ta4','ta5'].forEach((t,i)=>{if(t===id)document.querySelectorAll('#screen-admin .tb')[i]?.classList.add('active');});
   if(id==='ta4')renderAdminJournal();
+  if(id==='ta5')renderAdminERPFarms();
 }
 
 // ═══════════════════════════════════════════════
@@ -7540,6 +7626,72 @@ async function upComptaSynthese(){
 function upCompta(){swCompta('saisie');}
 
 // ═══════════════════════════════════════════════
+// ERP FIRESTORE SYNC — Synchronisation temps réel
+// Toutes les clés ichtus_* sont mirrorées dans
+// farms/{farmCode}/config/erp sur Firestore.
+// ═══════════════════════════════════════════════
+
+var _erpSyncTimer=null;
+var _erpSyncPaused=false; // true pendant le chargement depuis Firestore
+
+function _erpDebounceSync(){
+  if(_erpSyncPaused)return;
+  clearTimeout(_erpSyncTimer);
+  _erpSyncTimer=setTimeout(_erpSyncToFirestore,1500);
+}
+
+async function _erpSyncToFirestore(){
+  if(!window.APP||!APP.farmCode||!window.db)return;
+  var data={};
+  // Snapshot stable des clés (évite les modifications pendant l'itération)
+  var keys=[];
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k)keys.push(k);}
+  keys.forEach(function(k){
+    if(k.startsWith('ichtus_')&&!k.includes('autosave')&&!k.includes('last_farmCode')&&!k.includes('lastBackup')){
+      try{data[k.slice(7)]=JSON.parse(localStorage.getItem(k));}
+      catch(e){data[k.slice(7)]=localStorage.getItem(k);}
+    }
+  });
+  try{
+    // Remplacement complet pour refléter exactement le localStorage (pas merge)
+    await db.collection('farms').doc(APP.farmCode).collection('config').doc('erp').set(data);
+  }catch(e){console.warn('ERP→Firestore sync:',e);}
+}
+
+window.loadERPFromFirestore=async function(){
+  if(!window.APP||!APP.farmCode||!window.db)return;
+  _erpSyncPaused=true;
+  try{
+    var snap=await db.collection('farms').doc(APP.farmCode).collection('config').doc('erp').get();
+    if(snap.exists){
+      var data=snap.data();
+      Object.entries(data).forEach(function(entry){
+        var k=entry[0],v=entry[1];
+        if(!k||k.includes('autosave')||k.includes('lastBackup'))return;
+        try{localStorage.setItem('ichtus_'+k,JSON.stringify(v));}catch(e){}
+      });
+      if(window.showToast)showToast('☁️ Données ERP synchronisées depuis le cloud','acc');
+      // Rafraîchir les vues qui dépendent des données ERP
+      try{if(window.fillCycleSelect)fillCycleSelect();}catch(e){}
+      try{if(window.renderChargesPanelV9)renderChargesPanelV9();}catch(e){}
+      try{if(window.renderCoutCycle){var cc=document.getElementById('ct-coutcycle');if(cc&&cc.style.display!=='none')renderCoutCycle();}}catch(e){}
+    }
+  }catch(e){console.warn('Firestore→ERP load:',e);}
+  finally{_erpSyncPaused=false;}
+};
+
+// Intercepter localStorage.setItem pour les clés ichtus_* → sync Firestore automatique
+(function(){
+  var _orig=localStorage.setItem.bind(localStorage);
+  localStorage.setItem=function(key,value){
+    _orig(key,value);
+    if(key&&key.startsWith('ichtus_')&&!key.includes('autosave')&&!key.includes('lastBackup')&&!key.includes('lastReminder')){
+      _erpDebounceSync();
+    }
+  };
+})();
+
+// ═══════════════════════════════════════════════
 // COÛT DE REVIENT PAR CYCLE
 // ═══════════════════════════════════════════════
 
@@ -7835,6 +7987,101 @@ function upAll(){
 // ═══════════════════════════════════════════════
 // RAPPEL SAUVEGARDE — première connexion du jour
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// SAUVEGARDE ERP — collecte toutes les clés ichtus_* du localStorage
+// ═══════════════════════════════════════════════
+function collectERPData(){
+  const erp={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith('ichtus_')){
+      try{erp[k]=JSON.parse(localStorage.getItem(k));}catch(e){erp[k]=localStorage.getItem(k);}
+    }
+  }
+  return erp;
+}
+
+function restoreERPData(erp){
+  if(!erp||typeof erp!=='object')return;
+  Object.entries(erp).forEach(([k,v])=>{
+    try{localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));}catch(e){}
+  });
+}
+
+// Sauvegarde automatique silencieuse à chaque connexion
+// Stocke dans localStorage (clé: ichtus_autosave_{farmCode}) + garde les 3 dernières
+async function autoSaveFarm(){
+  if(!APP.farmCode)return;
+  try{
+    const col=(c)=>db.collection('farms').doc(APP.farmCode).collection(c);
+    const [bS,sS,fS,dS,stS,mvS,inS,chS]=await Promise.all([
+      col('bassins').get(),col('suivi').get(),col('feed').get(),col('daily').get(),
+      col('stock_entries').get().catch(()=>({docs:[]})),
+      col('stock_movements').get().catch(()=>({docs:[]})),
+      col('intrants').get().catch(()=>({docs:[]})),
+      col('charges').get().catch(()=>({docs:[]})),
+    ]);
+    const snapshot={
+      version:'2.0',date:new Date().toISOString(),
+      farmCode:APP.farmCode,farmName:APP.farmName||APP.farmCode,
+      savedBy:(APP.user?.name||'Auto'),
+      // Firestore
+      bassins:bS.docs.map(d=>d.data()),
+      suivi:sS.docs.map(d=>d.data()),
+      feed:fS.docs.map(d=>({id:d.id,...d.data()})),
+      daily:(()=>{const o={};dS.docs.forEach(d=>{o[d.id]=d.data();});return o;})(),
+      stock_entries:stS.docs.map(d=>({id:d.id,...d.data()})),
+      stock_movements:mvS.docs.map(d=>({id:d.id,...d.data()})),
+      intrants:inS.docs.map(d=>({id:d.id,...d.data()})),
+      charges:chS.docs.map(d=>({id:d.id,...d.data()})),
+      // ERP localStorage
+      erp:collectERPData()
+    };
+    // Garder les 3 dernières sauvegardes
+    const histKey=`ichtus_autosave_history_${APP.farmCode}`;
+    let hist=[];
+    try{hist=JSON.parse(localStorage.getItem(histKey)||'[]');}catch(e){}
+    hist.unshift({date:snapshot.date,data:snapshot});
+    if(hist.length>3)hist=hist.slice(0,3);
+    localStorage.setItem(histKey,JSON.stringify(hist));
+    if(window.showToast)showToast('💾 Sauvegarde automatique effectuée','acc');
+  }catch(e){console.warn('autoSaveFarm:',e);}
+}
+
+// Restaure depuis la dernière sauvegarde automatique
+window.restoreFromAutoSave=async function(){
+  if(!APP.farmCode)return;
+  const histKey=`ichtus_autosave_history_${APP.farmCode}`;
+  let hist=[];
+  try{hist=JSON.parse(localStorage.getItem(histKey)||'[]');}catch(e){}
+  if(!hist.length){alert('Aucune sauvegarde automatique disponible.');return;}
+  const choices=hist.map((h,i)=>`${i+1}. ${new Date(h.date).toLocaleString('fr-FR')} (sauvegardé par ${h.data.savedBy||'Auto'})`).join('\n');
+  const idx=prompt(`Choisissez la sauvegarde à restaurer (1-${hist.length}):\n\n${choices}`);
+  if(!idx)return;
+  const n=parseInt(idx)-1;
+  if(n<0||n>=hist.length){alert('Numéro invalide.');return;}
+  const snapshot=hist[n].data;
+  if(!confirm(`⚠️ Restaurer la sauvegarde du ${new Date(snapshot.date).toLocaleString('fr-FR')} ? Les données actuelles seront remplacées.`))return;
+  showLoader('Restauration en cours…');
+  try{
+    const col=(c)=>db.collection('farms').doc(APP.farmCode).collection(c);
+    const batch=db.batch();
+    (snapshot.bassins||[]).forEach((b,i)=>batch.set(col('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i}));
+    (snapshot.suivi||[]).forEach(s=>batch.set(col('suivi').doc(String(s.id)),s));
+    (snapshot.feed||[]).forEach(f=>{const{id,...r}=f;batch.set(col('feed').doc(id||'K1'),r);});
+    (snapshot.stock_entries||[]).forEach(e=>{const{id,...r}=e;if(id)batch.set(col('stock_entries').doc(id),r);});
+    (snapshot.stock_movements||[]).forEach(m=>{const{id,...r}=m;if(id)batch.set(col('stock_movements').doc(id),r);});
+    (snapshot.intrants||[]).forEach(it=>{const{id,...r}=it;if(id)batch.set(col('intrants').doc(id),r);});
+    (snapshot.charges||[]).forEach(c=>{const{id,...r}=c;if(id)batch.set(col('charges').doc(id),r);});
+    await batch.commit();
+    if(snapshot.erp)restoreERPData(snapshot.erp);
+    await logAudit('sauvegarde','Restauration auto-save','Sauvegarde du '+snapshot.date+' restaurée');
+    alert('✅ Restauration terminée ! La page va se recharger.');
+    location.reload();
+  }catch(e){alert('❌ Erreur : '+e.message);}
+  hideLoader();
+};
+
 function checkBackupReminder(){
   const role=APP.user?.role||'Opérateur';
   const canBackup=APP.user?.canBackup||false;
@@ -7938,20 +8185,31 @@ async function downloadBackupFarm(){
   showLoader('Préparation de la sauvegarde…');
   try{
     const backup={
-      version:'1.0',date:new Date().toISOString(),
+      version:'2.0',date:new Date().toISOString(),
       exportedBy:APP.user?.name||'Utilisateur',
       farmCode:APP.farmCode,farmName:APP.farmName||APP.farmCode,
-      bassins:[],suivi:[],feed:[],daily:{}
+      bassins:[],suivi:[],feed:[],daily:{},
+      stock_entries:[],stock_movements:[],intrants:[],charges:[],
+      erp:{}
     };
     const col=(c)=>db.collection('farms').doc(APP.farmCode).collection(c);
-    const [bS,sS,fS,dS]=await Promise.all([
-      col('bassins').get(),col('suivi').get(),col('feed').get(),col('daily').get()
+    const [bS,sS,fS,dS,stS,mvS,inS,chS]=await Promise.all([
+      col('bassins').get(),col('suivi').get(),col('feed').get(),col('daily').get(),
+      col('stock_entries').get().catch(()=>({docs:[]})),
+      col('stock_movements').get().catch(()=>({docs:[]})),
+      col('intrants').get().catch(()=>({docs:[]})),
+      col('charges').get().catch(()=>({docs:[]})),
     ]);
     backup.bassins=bS.docs.map(d=>d.data());
     backup.suivi=sS.docs.map(d=>d.data());
     backup.feed=fS.docs.map(d=>({id:d.id,...d.data()}));
     dS.docs.forEach(d=>{backup.daily[d.id]=d.data();});
-    await logAudit('sauvegarde','Sauvegarde ferme téléchargée',`${APP.farmCode} — ${backup.bassins.length} bassins, ${backup.suivi.length} pesées`);
+    backup.stock_entries=stS.docs.map(d=>({id:d.id,...d.data()}));
+    backup.stock_movements=mvS.docs.map(d=>({id:d.id,...d.data()}));
+    backup.intrants=inS.docs.map(d=>({id:d.id,...d.data()}));
+    backup.charges=chS.docs.map(d=>({id:d.id,...d.data()}));
+    backup.erp=collectERPData();
+    await logAudit('sauvegarde','Sauvegarde ferme téléchargée',`${APP.farmCode} — ${backup.bassins.length} bassins, ${backup.suivi.length} pesées, ERP inclus`);
     downloadJSON(backup,`biofloc_${APP.farmCode}_${today()}.json`);
   }catch(e){alert('❌ Erreur : '+e.message);}
   hideLoader();
@@ -7984,9 +8242,15 @@ async function restoreBackupFarm(input){
       const{id,...rest}=f;
       batch.set(col('feed').doc(id||f.id||'K1'),rest);
     });
+    (backup.stock_entries||[]).forEach(e=>{const{id,...r}=e;if(id)batch.set(col('stock_entries').doc(id),r);});
+    (backup.stock_movements||[]).forEach(m=>{const{id,...r}=m;if(id)batch.set(col('stock_movements').doc(id),r);});
+    (backup.intrants||[]).forEach(it=>{const{id,...r}=it;if(id)batch.set(col('intrants').doc(id),r);});
+    (backup.charges||[]).forEach(c=>{const{id,...r}=c;if(id)batch.set(col('charges').doc(id),r);});
     await batch.commit();
+    if(backup.erp)restoreERPData(backup.erp);
     await logAudit('sauvegarde','Restauration effectuée',`Fichier: ${file.name} — ${APP.farmCode}`);
-    alert('✅ Restauration terminée ! Rechargez la page pour voir les données mises à jour.');
+    alert('✅ Restauration terminée ! La page va se recharger.');
+    location.reload();
   }catch(e){alert('❌ Erreur de restauration : '+e.message);}
   hideLoader();input.value='';
 }
