@@ -1162,6 +1162,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         <button class="tb" id="lt-probio" onclick="swLog('probio')" style="font-size:11px">🧫 Probiotiques</button>
         <button class="tb" id="lt-mouvements" onclick="swLog('mouvements')" style="font-size:11px">🔄 Historique mouvements</button>
         <button class="tb" id="lt-rapportstock" onclick="swLog('rapportstock')" style="font-size:11px">📊 Rapport hebdo</button>
+        <button class="tb" id="lt-previsionnel" onclick="swLog('previsionnel')" style="font-size:11px">📈 Prévisionnel</button>
       </div>
 
       <!-- Panneau Intrants -->
@@ -1372,6 +1373,21 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
         </div>
         <div id="rapport-hebdo-content" style="font-size:11px;color:var(--t2)">
           <p style="text-align:center;padding:2rem;color:var(--t3)">Sélectionnez une date de début de semaine puis cliquez sur Générer.</p>
+        </div>
+      </div>
+
+      <!-- Panneau Prévisionnel stock -->
+      <div id="lp-previsionnel" class="log-pane" style="display:none">
+        <div class="card" style="border-color:rgba(0,201,167,.25);margin-bottom:.75rem">
+          <div class="ctitle"><span class="dot" style="background:var(--acc)"></span>📈 Stock prévisionnel — fin de cycle</div>
+          <div style="font-size:11px;color:var(--t2);line-height:1.8">Basé sur les consommations réelles saisies à ce jour, extrapolées jusqu'à la récolte selon les ratios du dossier technique ICHTUS v8. Les bassins actifs sont pris en compte individuellement.</div>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;align-items:center">
+          <button class="sbtn" onclick="renderPrevisionnel()" style="background:var(--acc)">🔄 Calculer</button>
+          <span style="font-size:10px;color:var(--t3)" id="prev-last-calc"></span>
+        </div>
+        <div id="prev-content" style="font-size:11px;color:var(--t2)">
+          <p style="text-align:center;padding:2rem;color:var(--t3)">Cliquez sur Calculer pour générer le prévisionnel.</p>
         </div>
       </div>
 
@@ -4380,6 +4396,7 @@ function swLog(panel){
     const el=G('rapport-week-start');
     if(el&&!el.value){const d=new Date();d.setDate(d.getDate()-d.getDay()+1);el.value=d.toISOString().slice(0,10);}
   }
+  if(panel==='previsionnel')renderPrevisionnel();
 }
 
 // ── FEATURE 7: HISTORIQUE MOUVEMENTS ────────────────────────────────
@@ -4586,6 +4603,229 @@ async function saveSaisieRapide(){
   showToast(`✅ ${saved} bassin(s) enregistré(s)`,'ok');
   G('saisie-rapide-modal').classList.add('hidden');
   upConfigCalcs();
+}
+
+// ── MODULE PRÉVISIONNEL STOCK ───────────────────────────────────────────
+function renderPrevisionnel(){
+  var el=G('prev-content');if(!el)return;
+  var lastEl=G('prev-last-calc');
+  if(lastEl)lastEl.textContent='Calculé le '+new Date().toLocaleString('fr-FR');
+
+  // Bassins actifs
+  var bassins=[];
+  try{
+    if(window.APP&&APP.state&&Array.isArray(APP.state.bassins))
+      bassins=APP.state.bassins.filter(function(b){return b.statut==='Actif';});
+  }catch(e){}
+
+  if(!bassins.length){
+    el.innerHTML='<p style="text-align:center;padding:2rem;color:var(--t3)">Aucun bassin actif trouvé. Vérifiez que des bassins sont en statut Actif dans Production.</p>';
+    return;
+  }
+
+  var intrants=window.APP_INTRANTS||[];
+  var mouvements=window.APP_STOCK_MOVEMENTS||[];
+  var today=new Date().toISOString().slice(0,10);
+  var gmq=2.9;
+  try{if(window.SPECIES_PARAMS&&SPECIES_PARAMS.gmqCible)gmq=Number(SPECIES_PARAMS.gmqCible)||2.9;}catch(e){}
+
+  // Catégoriser intrants par mots-clés sur nom OU catégorie
+  function findIds(keywords){
+    return intrants.filter(function(i){
+      var n=((i.name||i.nom||'')+(i.categorie||i.category||'')).toLowerCase();
+      return keywords.some(function(k){return n.includes(k);});
+    }).map(function(i){return i.id;});
+  }
+  var idsAliment=findIds(['aliment','feed','koudijs','9008','flottant','granul']);
+  var idsPWA=findIds(['pwa','probio','bc100','lacto','microbi']);
+  var idsMelasse=findIds(['mélasse','melasse','molasse','canne']);
+  var idsPFA=findIds(['pfa','probiotic feed','feed additive']);
+
+  // Stock disponible (entrées − sorties dans mouvements Firestore)
+  // Bug fix: si aucun intrant trouvé dans la catégorie → retourner 0, pas la somme de tout le stock
+  function stockDispo(ids){
+    if(!ids||!ids.length)return 0;
+    var e=0,s=0;
+    mouvements.forEach(function(m){
+      if(!ids.includes(m.intrantId))return;
+      var q=Number(m.quantity||0);
+      if(m.type==='entree'||m.type==='entrée')e+=q;
+      else if(m.type==='sortie')s+=q;
+    });
+    return Math.max(0,e-s);
+  }
+
+  // Calcul par bassin
+  var rows=[];
+  var totConso={aliment:0,pwa:0,pfa:0};
+  var totPrev={aliment:0,pwa:0,pfa:0};
+
+  bassins.forEach(function(b){
+    // Date démarrage : essayer tous les champs possibles
+    var debut=b.dateDebut||b.startDate||b.debut||b.dateStart||today;
+    var d1=new Date(debut);
+    if(isNaN(d1.getTime()))d1=new Date(today);
+    var d2=new Date(today);
+    var joursEcoules=Math.max(0,Math.round((d2-d1)/(1000*60*60*24)));
+    var semaineActuelle=Math.min(22,Math.floor(joursEcoules/7)+1);
+    var semainesRestantes=Math.max(0,22-semaineActuelle);
+    var volBassin=Number(b.volume||b.vol||b.volumeBassin||3.8);
+    if(!volBassin||isNaN(volBassin))volBassin=3.8;
+
+    // Paramètres poisson
+    var alevins=Number(b.alevins||b.nbAlevins||b.nombreAlevins||570);
+    var survie=Number(b.survie||b.tauxSurvie||b.survivalRate||0.90);
+    // Survie en % ou décimal
+    if(survie>1)survie=survie/100;
+    // Poids moyen actuel saisi par l'opérateur, sinon estimé par GMQ
+    var poidsSaisi=Number(b.poidsMoyen||b.poids||0);
+    var poidsDepart=5; // g
+    var poidsActuel=poidsSaisi>0?poidsSaisi:(poidsDepart+gmq*joursEcoules);
+    var poidsFinalEstime=poidsDepart+gmq*(22*7); // ~452g à S22
+
+    var biomasseActuelle=(alevins*survie*poidsActuel)/1000; // kg
+    var biomasseRecolte=(alevins*survie*poidsFinalEstime)/1000; // kg
+
+    // Gain biomasse consommé et restant
+    var gainConso=Math.max(0,biomasseActuelle-(alevins*survie*poidsDepart/1000));
+    var gainRestant=Math.max(0,biomasseRecolte-biomasseActuelle);
+
+    // Aliment (FCR=1.3)
+    var alimConso=gainConso*1.3;
+    var alimPrev=gainRestant*1.3;
+
+    // PWA — calcul par phase précis
+    // Phase init (J1–J14) : primo(1) + entretien J3,J5,J7,J8,J10(5) + TAN J12,J14(2) = 8 apps
+    // Rotation mature (J14–fin) : 2×/semaine × vol bassin dose fixe 0.38L si vol=3.8m³
+    var doseRot=Math.abs(volBassin-3.8)<0.01?0.38:(0.2*volBassin);
+    var pwaConso=0,pwaPrev=0;
+
+    // PWA phase init : J1(primo) + J3,J5,J7,J8,J10(entretien) + J12,J14(TAN) = 8 applications
+    var joursInitRef=[3,5,7,8,10,12,14]; // 7 apps après le primo
+    var entretienFaits=0;
+    joursInitRef.forEach(function(j){if(joursEcoules>=j)entretienFaits++;});
+    var entretienRestants=Math.max(0,7-entretienFaits);
+
+    // PWA init consommé
+    if(joursEcoules>=1)pwaConso+=4.7*volBassin; // primo J1
+    pwaConso+=entretienFaits*0.2*volBassin;     // entretien+TAN faits
+
+    // PWA init restant
+    if(joursEcoules<1)pwaPrev+=4.7*volBassin;   // primo pas encore fait
+    pwaPrev+=entretienRestants*0.2*volBassin;    // entretien+TAN restants
+
+    // Rotation mature : commence à J14, soit environ semaine 3
+    // semRotFaites = semaines complètes de rotation effectuées
+    var joursDepuisRot=Math.max(0,joursEcoules-14);
+    var semRotFaites=Math.floor(joursDepuisRot/7);
+    // semRotRestantes = semaines de rotation restantes jusqu'à fin cycle (J154)
+    var joursRestantsTotal=Math.max(0,(22*7)-joursEcoules);
+    var joursRestantsRot=Math.max(0,joursRestantsTotal-(joursEcoules<14?14-joursEcoules:0));
+    var semRotRestantes=Math.floor(joursRestantsRot/7);
+    pwaConso+=semRotFaites*2*doseRot;
+    pwaPrev+=semRotRestantes*2*doseRot;
+
+    // PFA : 30 ml/kg aliment
+    var pfaConso=alimConso*0.030;
+    var pfaPrev=alimPrev*0.030;
+
+    totConso.aliment+=alimConso;
+    totConso.pwa+=pwaConso;
+    totConso.pfa+=pfaConso;
+    totPrev.aliment+=alimPrev;
+    totPrev.pwa+=pwaPrev;
+    totPrev.pfa+=pfaPrev;
+
+    rows.push({
+      nom:b.nom||b.name||b.id||'?',
+      semaineActuelle:semaineActuelle,
+      semainesRestantes:semainesRestantes,
+      poidsActuel:poidsActuel,
+      biomasseActuelle:biomasseActuelle,
+      alimConso:alimConso,alimPrev:alimPrev,
+      pwaConso:pwaConso,pwaPrev:pwaPrev,
+      pfaConso:pfaConso,pfaPrev:pfaPrev
+    });
+  });
+
+  var stockAlim=stockDispo(idsAliment);
+  var stockPWA=stockDispo(idsPWA);
+  var stockPFA=stockDispo(idsPFA);
+  var stockMelasse=stockDispo(idsMelasse);
+
+  function ecartColor(e){return e>=0?'var(--acc)':'var(--dng)';}
+  function ecartIcon(e){return e>=0?'✅':'⚠️';}
+  function fmt2(v){return (v==null||isNaN(v))?'—':v.toFixed(1);}
+
+  // Tableau récapitulatif
+  var lignes=[
+    {label:'🐟 Aliment',conso:totConso.aliment,prev:totPrev.aliment,stock:stockAlim,unite:'kg'},
+    {label:'💧 PWA',conso:totConso.pwa,prev:totPrev.pwa,stock:stockPWA,unite:'L'},
+    {label:'🧪 PFA',conso:totConso.pfa,prev:totPrev.pfa,stock:stockPFA,unite:'L'},
+    {label:'🍯 Mélasse',conso:null,prev:null,stock:stockMelasse,unite:'L',variable:true}
+  ];
+
+  var html='<div class="card" style="margin-bottom:.75rem">'
+    +'<div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Récapitulatif — '+bassins.length+' bassin(s) actif(s)</div>'
+    +'<div class="tw"><table style="width:100%;font-size:11px"><thead><tr>'
+    +'<th style="text-align:left">Intrant</th>'
+    +'<th style="text-align:right">Consommé estimé</th>'
+    +'<th style="text-align:right;color:var(--warn)">Prévu restant</th>'
+    +'<th style="text-align:right">Stock actuel</th>'
+    +'<th style="text-align:right">Écart</th>'
+    +'<th style="text-align:center">Statut</th>'
+    +'</tr></thead><tbody>';
+
+  lignes.forEach(function(l){
+    var ecart=l.variable?null:(l.stock-l.prev);
+    var ecartTxt=l.variable?'Variable':(ecart>=0?'+':'')+fmt2(ecart)+' '+l.unite;
+    html+='<tr>'
+      +'<td style="font-weight:700;color:var(--t1);padding:4px 6px">'+l.label+'</td>'
+      +'<td style="text-align:right;color:var(--t2);padding:4px 6px">'+(l.variable?'—':fmt2(l.conso)+' '+l.unite)+'</td>'
+      +'<td style="text-align:right;color:var(--warn);font-weight:700;padding:4px 6px">'+(l.variable?'Conditionnel TAN/C:N':fmt2(l.prev)+' '+l.unite)+'</td>'
+      +'<td style="text-align:right;font-weight:700;padding:4px 6px">'+fmt2(l.stock)+' '+l.unite+'</td>'
+      +'<td style="text-align:right;font-weight:700;color:'+(l.variable?'var(--t3)':ecartColor(ecart))+';padding:4px 6px">'+ecartTxt+'</td>'
+      +'<td style="text-align:center;padding:4px 6px">'+(l.variable?'📊':ecartIcon(ecart))+'</td>'
+      +'</tr>';
+  });
+
+  html+='</tbody></table></div>'
+    +'<div style="font-size:9px;color:var(--t3);margin-top:.5rem">Estimations : FCR=1,3 · GMQ='+gmq+' g/j · Survie=90% · Valeurs indicatives — ajuster selon le monitoring réel.</div>'
+    +'</div>';
+
+  // Détail par bassin
+  html+='<div class="card"><div class="ctitle"><span class="dot"></span>Détail par bassin actif</div>'
+    +'<div class="tw" style="overflow-x:auto"><table style="width:100%;font-size:10px;min-width:700px"><thead><tr style="background:var(--panel)">'
+    +'<th style="text-align:left;padding:4px 6px">Bassin</th>'
+    +'<th style="padding:4px 6px">S. actuelle</th>'
+    +'<th style="padding:4px 6px">Restant</th>'
+    +'<th style="padding:4px 6px">Poids moy.</th>'
+    +'<th style="text-align:right;padding:4px 6px">Alim conso.</th>'
+    +'<th style="text-align:right;color:var(--warn);padding:4px 6px">Alim restant</th>'
+    +'<th style="text-align:right;padding:4px 6px">PWA conso.</th>'
+    +'<th style="text-align:right;color:var(--warn);padding:4px 6px">PWA restant</th>'
+    +'<th style="text-align:right;padding:4px 6px">PFA conso.</th>'
+    +'<th style="text-align:right;color:var(--warn);padding:4px 6px">PFA restant</th>'
+    +'</tr></thead><tbody>';
+
+  rows.forEach(function(r,i){
+    var bg=i%2===0?'':'background:var(--panel)';
+    html+='<tr style="'+bg+'">'
+      +'<td style="font-weight:700;color:var(--t1);padding:4px 6px">'+r.nom+'</td>'
+      +'<td style="text-align:center;padding:4px 6px">S'+r.semaineActuelle+'/22</td>'
+      +'<td style="text-align:center;color:var(--warn);font-weight:700;padding:4px 6px">'+r.semainesRestantes+' sem</td>'
+      +'<td style="text-align:center;padding:4px 6px">'+fmt2(r.poidsActuel)+' g</td>'
+      +'<td style="text-align:right;padding:4px 6px">'+fmt2(r.alimConso)+' kg</td>'
+      +'<td style="text-align:right;color:var(--warn);font-weight:700;padding:4px 6px">'+fmt2(r.alimPrev)+' kg</td>'
+      +'<td style="text-align:right;padding:4px 6px">'+fmt2(r.pwaConso)+' L</td>'
+      +'<td style="text-align:right;color:var(--warn);font-weight:700;padding:4px 6px">'+fmt2(r.pwaPrev)+' L</td>'
+      +'<td style="text-align:right;padding:4px 6px">'+fmt2(r.pfaConso)+' L</td>'
+      +'<td style="text-align:right;color:var(--warn);font-weight:700;padding:4px 6px">'+fmt2(r.pfaPrev)+' L</td>'
+      +'</tr>';
+  });
+
+  html+='</tbody></table></div></div>';
+  el.innerHTML=html;
 }
 
 // ── FEATURE 3: RAPPORT HEBDOMADAIRE ──────────────────────────────────
