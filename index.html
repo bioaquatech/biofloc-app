@@ -12543,15 +12543,20 @@ async function syncAllData(){
   var modal=gFn('sync-all-modal');
   if(!modal){alert('Erreur: modal sync introuvable');return;}
   var G=gFn;
-  var isFarm=!!(window.APP&&APP.farmCode);
+  // Detect context: farm screen visible OR farmCode set
+  var farmScreen=document.getElementById('screen-farm');
+  var isFarm=!!(window.APP&&APP.farmCode)||(farmScreen&&!farmScreen.classList.contains('hidden'));
 
-  // Reset modal
-  G('sync-modal-steps').innerHTML='';
-  G('sync-modal-title').textContent='Synchronisation en cours…';
-  G('sync-modal-icon').textContent='🔄';
-  G('sync-modal-time').textContent='';
-  G('sync-stock-alerts').style.display='none';
-  G('sync-close-btn').style.display='none';
+  // Reset modal — safe null checks
+  var _steps=G('sync-modal-steps'),_title=G('sync-modal-title'),_icon=G('sync-modal-icon'),
+      _time=G('sync-modal-time'),_stock=G('sync-stock-alerts'),_close=G('sync-close-btn');
+  if(_steps)_steps.innerHTML='';
+  var farmLabel=(window.APP&&(APP.farmName||APP.farmCode))||'';
+  if(_title)_title.textContent='Synchronisation'+(farmLabel?' — '+farmLabel:'')+'…';
+  if(_icon)_icon.textContent='🔄';
+  if(_time)_time.textContent='';
+  if(_stock)_stock.style.display='none';
+  if(_close)_close.style.display='none';
   modal.classList.remove('hidden');
 
   // Animate sync button
@@ -12562,12 +12567,22 @@ async function syncAllData(){
   var errors=0;
 
   if(!isFarm){
-    // Admin: sync admin stats only
+    // Admin dashboard: sync admin stats
     syncStep('admin','Données administrateur','pending');
     try{
-      if(typeof loadAdminStats==='function')await loadAdminStats();
+      // Reload admin journal and ERP farms view if currently visible
+      if(typeof renderAdminJournal==='function')renderAdminJournal();
       syncStep('admin','Données administrateur','ok');
     }catch(e){syncStep('admin','Données administrateur','err');errors++;}
+    // Indicate farm data requires farm access
+    syncStep('farminfo','Données ferme (bassins, ERP)','skip');
+    var infoEl=document.getElementById('step-farminfo');
+    if(infoEl){
+      var hint=document.createElement('div');
+      hint.style.cssText='font-size:10px;color:var(--t3);margin-top:3px;padding-left:24px';
+      hint.textContent='👉 Accédez à une ferme via "ERP Fermes" pour synchroniser ses données bassins et qualité eau.';
+      infoEl.after(hint);
+    }
   } else {
     // Farm: sync all farm data
     syncStep('bassins','Bassins & paramètres eau','pending');
@@ -12623,14 +12638,14 @@ async function syncAllData(){
   }
 
   var elapsed=((Date.now()-t0)/1000).toFixed(1);
-  G('sync-modal-time').textContent='Synchronisé en '+elapsed+'s — '+new Date().toLocaleString('fr-FR');
+  if(_time)_time.textContent='Synchronisé en '+elapsed+'s — '+new Date().toLocaleString('fr-FR');
 
   if(errors===0){
-    G('sync-modal-icon').textContent='✅';
-    G('sync-modal-title').textContent='Synchronisation terminée';
+    if(_icon)_icon.textContent='✅';
+    if(_title)_title.textContent='Synchronisation terminée';
   } else {
-    G('sync-modal-icon').textContent='⚠️';
-    G('sync-modal-title').textContent='Synchronisation partielle ('+errors+' erreur'+(errors>1?'s':'')+')';
+    if(_icon)_icon.textContent='⚠️';
+    if(_title)_title.textContent='Synchronisation partielle ('+errors+' erreur'+(errors>1?'s':'')+')';
   }
 
   // Restore sync button
@@ -12659,10 +12674,10 @@ async function syncAllData(){
           +'<span style="font-size:10px;font-weight:700;background:rgba(239,68,68,.15);color:var(--dng);padding:2px 7px;border-radius:10px">BAS</span>'
         +'</div>';
       });
-      G('sync-stock-list').innerHTML=html;
-      G('sync-stock-alerts').style.display='block';
+      var sl=G('sync-stock-list');if(sl)sl.innerHTML=html;
+      if(_stock)_stock.style.display='block';
     }
-    G('sync-close-btn').style.display='block';
+    if(_close)_close.style.display='block';
   }, 400);
   }catch(e){
     console.error('[syncAllData]',e);
