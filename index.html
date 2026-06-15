@@ -12525,12 +12525,12 @@ function syncStep(id, label, status){
   // status: 'pending' | 'ok' | 'err' | 'skip'
   var colors={'pending':'#00D4B4','ok':'#10B981','err':'#EF4444','skip':'#6B9BB8'};
   var icons={'pending':'⏳','ok':'✅','err':'❌','skip':'—'};
-  var el=G('step-'+id);
+  var el=document.getElementById('step-'+id);
   if(!el){
     el=document.createElement('div');
     el.id='step-'+id;
     el.style.cssText='display:flex;align-items:center;gap:10px;background:var(--inp);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;font-size:12px';
-    var steps=G('sync-modal-steps');if(steps)steps.appendChild(el);
+    var steps=document.getElementById('sync-modal-steps');if(steps)steps.appendChild(el);
   }
   el.innerHTML='<span style="font-size:14px">'+icons[status]+'</span>'
     +'<span style="flex:1;color:var(--t1)">'+label+'</span>'
@@ -12538,8 +12538,12 @@ function syncStep(id, label, status){
 }
 
 async function syncAllData(){
-  var modal=G('sync-all-modal');if(!modal)return;
-  var isFarm=!!APP.farmCode;
+  try{
+  var gFn=window.G||function(id){return document.getElementById(id);};
+  var modal=gFn('sync-all-modal');
+  if(!modal){alert('Erreur: modal sync introuvable');return;}
+  var G=gFn;
+  var isFarm=!!(window.APP&&APP.farmCode);
 
   // Reset modal
   G('sync-modal-steps').innerHTML='';
@@ -12660,10 +12664,15 @@ async function syncAllData(){
     }
     G('sync-close-btn').style.display='block';
   }, 400);
+  }catch(e){
+    console.error('[syncAllData]',e);
+    alert('Erreur synchronisation: '+e.message);
+  }
 }
 
 function closeSyncModal(){
-  G('sync-all-modal').classList.add('hidden');
+  var el=document.getElementById('sync-all-modal');
+  if(el)el.classList.add('hidden');
 }
 
 // Remplacer l'ancienne bannière bassins par le nouveau système au login
