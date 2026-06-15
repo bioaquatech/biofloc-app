@@ -14,13 +14,35 @@
 <link rel="stylesheet" href="design.css">
 <style>
 :root{
-  --bg:#020b14;--panel:#04111f;--card:#061828;--inp:#05131f;--hov:#0a1e2e;
-  --acc:#00d4b4;--acc2:#00aaff;--warn:#ffb347;--dng:#ff4d6d;--purp:#9b8fff;--gold:#ffd670;
-  --t1:#c8eeff;--t2:#5a9fc0;--t3:#2d5f7a;--b1:#0d2a3d;--b2:#10304a;
-  --font:'Segoe UI',system-ui,sans-serif;--mono:'Courier New',monospace;
+  /* ── Fond & surfaces ── */
+  --bg:#F0F4F8;
+  --panel:#0A1929;
+  --card:#FFFFFF;
+  --inp:#F7FAFC;
+  --hov:#E8F0F8;
+
+  /* ── Couleurs principales ── */
+  --acc:#0077B6;
+  --acc2:#00B4D8;
+  --warn:#E76F51;
+  --dng:#D62828;
+  --purp:#5C7A99;
+  --gold:#F4A261;
+
+  /* ── Textes ── */
+  --t1:#1A2B42;
+  --t2:#5C7A99;
+  --t3:#8FA8C0;
+
+  /* ── Bordures ── */
+  --b1:#DDE3EC;
+  --b2:#B0BEC5;
+
+  --font:'Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono','Courier New',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:13px}
+html{font-size:15px}
 body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden}
 .hidden{display:none!important}
 /* ── BOOT ── */
@@ -33,7 +55,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 .boot-logo{font-size:20px;font-weight:800;color:var(--acc);text-align:center;letter-spacing:1px;margin-bottom:.2rem}
 .boot-sub{font-size:10px;color:var(--t2);text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem}
-.boot-platform{font-size:12px;font-weight:700;color:var(--t1);text-align:center;padding:.45rem 1rem;background:rgba(0,201,167,.08);border:1px solid rgba(0,201,167,.18);border-radius:20px;margin-bottom:1.4rem;min-height:30px;overflow:hidden;position:relative}
+.boot-platform{font-size:12px;font-weight:700;color:var(--t1);text-align:center;padding:.45rem 1rem;background:rgba(0,119,182,.08);border:1px solid rgba(0,119,182,.18);border-radius:20px;margin-bottom:1.4rem;min-height:30px;overflow:hidden;position:relative}
 .boot-platform.light-msg{font-weight:600;letter-spacing:.2px;color:var(--acc);white-space:nowrap}
 .boot-platform.light-msg::before{content:'📢 ';opacity:.8}
 .boot-clock{font-size:26px;font-weight:800;font-family:var(--mono);color:var(--acc);text-align:center;letter-spacing:3px}
@@ -42,16 +64,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100
 .boot-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
 .boot-inp{width:100%;background:var(--inp);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-size:13px;padding:.55rem .85rem;outline:none;margin-bottom:.85rem;font-family:var(--font);transition:border .15s}
 .boot-inp:focus{border-color:var(--acc)}
-.boot-btn{width:100%;background:var(--acc);color:#04101e;border:none;border-radius:8px;padding:.7rem;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:opacity .15s}
+.boot-btn{width:100%;background:var(--acc);color:#FFFFFF;border:none;border-radius:8px;padding:.7rem;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:opacity .15s}
 .boot-btn:hover{opacity:.87}
-.boot-err{background:rgba(255,61,87,.1);border:1px solid var(--dng);border-radius:6px;color:var(--dng);font-size:10px;padding:.4rem .7rem;text-align:center;margin-top:.6rem;display:none}
+.boot-err{background:rgba(214,40,40,.08);border:1px solid var(--dng);border-radius:6px;color:var(--dng);font-size:10px;padding:.4rem .7rem;text-align:center;margin-top:.6rem;display:none}
 .boot-err.show{display:block}
 .boot-links{display:flex;justify-content:space-between;margin-top:1.2rem;gap:.5rem}
 .boot-link{font-size:10px;color:var(--t2);cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:4px;padding:.3rem .5rem;border-radius:6px;transition:color .15s;background:none;border:none}
 .boot-link:hover{color:var(--acc)}
 .boot-footer{position:relative;z-index:1;margin-top:1.2rem;font-size:9px;color:var(--t3);text-align:center}
 /* Admin login modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(4,16,30,.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay{position:fixed;inset:0;background:rgba(10,25,41,.82);z-index:9000;display:flex;align-items:center;justify-content:center;padding:1rem}
 .modal-box{background:var(--card);border:1px solid var(--b2);border-radius:12px;padding:1.8rem;width:100%;max-width:360px;animation:fadeUp .3s ease}
 .modal-title{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:1.2rem;text-align:center}
 /* ── TOPBAR ── */
@@ -61,7 +83,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100
 .stats{display:flex;gap:1.2rem;margin-left:auto}
 .stat{font-size:10px;color:var(--t2)}
 .stat strong{color:var(--t1);font-size:12px;display:block}
-.session-badge{font-size:10px;padding:2px 9px;border-radius:10px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.25);color:var(--acc);font-family:var(--mono);font-weight:700}
+.session-badge{font-size:10px;padding:2px 9px;border-radius:10px;background:rgba(0,119,182,.1);border:1px solid rgba(0,119,182,.25);color:var(--acc);font-family:var(--mono);font-weight:700}
 .session-badge.warn{background:rgba(245,166,35,.15);border-color:var(--warn);color:var(--warn)}
 .logout-btn{background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t2);font-size:10px;padding:4px 10px;cursor:pointer;white-space:nowrap;transition:all .15s}
 .logout-btn:hover{border-color:var(--dng);color:var(--dng)}
@@ -93,36 +115,36 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100
 .tw::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 .tw::-webkit-scrollbar-thumb:hover{background:var(--acc2)}
 table{width:100%;border-collapse:collapse;font-size:11px}
-thead th{background:#091f35;color:var(--t2);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.7px;padding:7px 8px;border-bottom:1px solid var(--b1);white-space:nowrap;text-align:center}
+thead th{background:#0A1929;color:#8FA8C0;font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.7px;padding:7px 8px;border-bottom:1px solid var(--b1);white-space:nowrap;text-align:center}
 tbody tr{border-bottom:1px solid var(--b1);transition:background .1s}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:var(--hov)}
 tbody td{padding:5px 7px;text-align:center;vertical-align:middle}
 /* ── INPUTS ── */
-input.ci{background:rgba(0,201,167,.08);border:1px solid rgba(0,201,167,.22);border-radius:4px;color:var(--acc);font-family:var(--mono);font-size:11px;width:62px;padding:3px 4px;text-align:center;outline:none;transition:border .15s}
-input.ci:focus{border-color:var(--acc);background:rgba(0,201,167,.15)}
+input.ci{background:rgba(0,119,182,.08);border:1px solid rgba(0,119,182,.22);border-radius:4px;color:var(--acc);font-family:var(--mono);font-size:11px;width:62px;padding:3px 4px;text-align:center;outline:none;transition:border .15s}
+input.ci:focus{border-color:var(--acc);background:rgba(0,119,182,.15)}
 input.ci.wi{border-color:var(--warn)!important;color:var(--warn)!important}
 input.ci.di{border-color:var(--dng)!important;color:var(--dng)!important}
-input.ci.opt{border-color:rgba(0,201,167,.1);background:rgba(0,201,167,.03)}
+input.ci.opt{border-color:rgba(0,119,182,.1);background:rgba(0,119,182,.03)}
 .cf{color:var(--t2);font-family:var(--mono);font-size:11px}
 .cn{color:var(--t1);font-weight:600;font-size:10px;text-align:left;white-space:nowrap}
 /* ── BADGES ── */
 .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700}
-.b-ok{background:rgba(0,201,167,.12);color:var(--acc)}
-.b-warn{background:rgba(245,166,35,.12);color:var(--warn)}
-.b-dng{background:rgba(255,61,87,.15);color:var(--dng)}
-.b-purp{background:rgba(167,139,250,.15);color:var(--purp)}
+.b-ok{background:rgba(0,119,182,.12);color:var(--acc)}
+.b-warn{background:rgba(231,111,81,.12);color:var(--warn)}
+.b-dng{background:rgba(214,40,40,.12);color:var(--dng)}
+.b-purp{background:rgba(92,122,153,.15);color:var(--purp)}
 .b-gold{background:rgba(251,191,36,.15);color:var(--gold)}
-.fcr-ok{background:rgba(0,201,167,.15);color:var(--acc);padding:2px 7px;border-radius:9px;font-weight:700}
-.fcr-bad{background:rgba(255,61,87,.2);color:var(--dng);padding:2px 7px;border-radius:9px;font-weight:700}
+.fcr-ok{background:rgba(0,119,182,.15);color:var(--acc);padding:2px 7px;border-radius:9px;font-weight:700}
+.fcr-bad{background:rgba(214,40,40,.15);color:var(--dng);padding:2px 7px;border-radius:9px;font-weight:700}
 /* ── MISC ── */
-select.si{background:var(--inp);border:1px solid rgba(0,201,167,.35);border-radius:6px;color:var(--acc);font-size:12px;font-weight:600;padding:5px 10px;outline:none;cursor:pointer}
-input[type=date].di2{background:var(--inp);border:1px solid rgba(0,201,167,.35);border-radius:6px;color:var(--acc);font-size:12px;font-weight:600;padding:5px 10px;outline:none;cursor:pointer;font-family:var(--font)}
-input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1) saturate(3) hue-rotate(130deg);cursor:pointer}
+select.si{background:var(--inp);border:1px solid rgba(0,119,182,.35);border-radius:6px;color:var(--acc);font-size:12px;font-weight:600;padding:5px 10px;outline:none;cursor:pointer}
+input[type=date].di2{background:var(--inp);border:1px solid rgba(0,119,182,.35);border-radius:6px;color:var(--acc);font-size:12px;font-weight:600;padding:5px 10px;outline:none;cursor:pointer;font-family:var(--font)}
+input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1) saturate(2) hue-rotate(180deg);cursor:pointer}
 .gi{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.35rem .65rem}
 .gi label{font-size:10px;color:var(--t2);white-space:nowrap}
 .gi input{background:var(--inp);border:1px solid var(--b2);border-radius:4px;color:var(--acc);font-size:12px;font-weight:700;font-family:var(--mono);width:70px;padding:2px 5px;text-align:center;outline:none}
-.sbtn{background:var(--acc);color:#04101e;border:none;border-radius:6px;padding:6px 13px;font-size:11px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.sbtn{background:var(--acc);color:#FFFFFF;border:none;border-radius:6px;padding:6px 13px;font-size:11px;font-weight:700;cursor:pointer;transition:opacity .15s}
 .sbtn:hover{opacity:.85}
 .abtn{background:var(--acc2);color:#fff;border:none;border-radius:6px;padding:6px 13px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 .abtn:hover{opacity:.85}
@@ -140,7 +162,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 .cf-cat{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;width:100px;flex-shrink:0}
 .cf-lbl{font-size:11px;color:var(--t2);flex:1}
 .cf-val{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--t1);min-width:80px;text-align:right}
-.err-block{background:rgba(255,61,87,.1);border:1px solid var(--dng);border-radius:8px;padding:1.5rem;text-align:center;color:var(--dng);font-size:14px;font-weight:700;margin-bottom:.9rem}
+.err-block{background:rgba(214,40,40,.08);border:1px solid var(--dng);border-radius:8px;padding:1.5rem;text-align:center;color:var(--dng);font-size:14px;font-weight:700;margin-bottom:.9rem}
 /* ── ADMIN SPECIFIC ── */
 .farm-card{background:var(--card);border:1px solid var(--b1);border-radius:8px;padding:1rem;transition:border .15s;cursor:pointer}
 .farm-card:hover{border-color:var(--acc)}
@@ -163,11 +185,11 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 .feed-card:hover{border-color:var(--b2)}
 .feed-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:.6rem;border-bottom:1px solid var(--b1)}
 .feed-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.4px}
-.feed-stage-pill{font-size:9px;color:var(--t3);background:rgba(255,255,255,.04);border:1px solid var(--b1);border-radius:10px;padding:2px 7px;margin-top:3px;display:inline-block}
-.cump-block{display:flex;align-items:flex-end;gap:.6rem;padding:.45rem .6rem;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:8px}
+.feed-stage-pill{font-size:9px;color:var(--t3);background:rgba(0,0,0,.04);border:1px solid var(--b1);border-radius:10px;padding:2px 7px;margin-top:3px;display:inline-block}
+.cump-block{display:flex;align-items:flex-end;gap:.6rem;padding:.45rem .6rem;background:rgba(244,162,97,.08);border:1px solid rgba(251,191,36,.15);border-radius:8px}
 .cump-val{font-size:20px;font-weight:800;font-family:var(--mono);color:var(--gold);line-height:1}
 .cump-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;line-height:1.4;padding-bottom:2px}
-.stock-bar-wrap{height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;margin-top:2px}
+.stock-bar-wrap{height:5px;background:rgba(0,0,0,.07);border-radius:3px;overflow:hidden;margin-top:2px}
 .stock-bar-fill{height:100%;border-radius:3px;transition:width .4s}
 .batch-section-title{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
 .batch-list{display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;padding-right:2px}
@@ -191,7 +213,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(1) sepia(1
 .rsp-pane{display:block}
 .rsp-pane.hidden{display:none!important}
 /* ── LOADER ── */
-#loader{position:fixed;inset:0;background:rgba(4,16,30,.88);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1rem}
+#loader{position:fixed;inset:0;background:rgba(10,25,41,.88);z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1rem}
 #loader.show{display:flex}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner{width:38px;height:38px;border:3px solid var(--b2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
@@ -416,7 +438,7 @@ tbody tr:hover{background:#EEF5FF!important;}
       <button class="boot-link" onclick="openThemeModal()" style="color:var(--t3)">🎨 Thème</button>
     </div>
   </div>
-  <div class="boot-footer">Système protégé — accès réservé au personnel autorisé &nbsp;·&nbsp; <button onclick="openThemeModal()" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:10px">🎨 Thème</button></div>
+  <div class="boot-footer">Système protégé — accès réservé au personnel autorisé</div>
 </div>
 
 <!-- Admin login modal -->
@@ -723,7 +745,7 @@ tbody tr:hover{background:#EEF5FF!important;}
       <div class="stat"><span>Récoltés</span><strong id="s-recolte" style="color:var(--purp)">—</strong></div>
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto">
-      <button id="btn-back-admin" onclick="showScreen('screen-admin')" style="display:none;background:var(--gold);color:#04101e;border:none;border-radius:6px;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer">← Dashboard Admin</button>
+      <button id="btn-back-admin" onclick="showScreen('screen-admin')" style="display:none;background:var(--gold);color:#1A2B42;border:none;border-radius:6px;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer">← Dashboard Admin</button>
       <div id="species-badge" onclick="openSpeciesModal()" title="Cliquer pour changer d'espèce"
         style="cursor:pointer;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(0,201,167,.12);border:1px solid rgba(0,201,167,.3);color:var(--acc);white-space:nowrap">🐟 Tilapia</div>
       <div id="user-badge" class="badge b-ok" style="font-size:9px"></div>
@@ -779,14 +801,14 @@ tbody tr:hover{background:#EEF5FF!important;}
           <div class="card">
             <div class="ctitle"><span class="dot"></span>Procédures journalières</div>
             <div style="display:flex;gap:12px;padding:.65rem 0;border-bottom:1px solid var(--b1)">
-              <div style="min-width:28px;height:28px;border-radius:50%;background:rgba(0,201,167,.15);color:var(--acc);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+              <div style="min-width:28px;height:28px;border-radius:50%;background:rgba(0,119,182,.15);color:var(--acc);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:3px">Chaque matin — avant le tour des bassins</div>
                 <div style="font-size:11px;color:var(--t2);line-height:1.8">Rendez-vous dans l'onglet <em>🖨️ Fiche Collecte</em> et imprimez le tableau. Cette fiche vous accompagne sur le terrain pour noter à la main les mesures de chaque bassin.</div>
               </div>
             </div>
             <div style="display:flex;gap:12px;padding:.65rem 0;border-bottom:1px solid var(--b1)">
-              <div style="min-width:28px;height:28px;border-radius:50%;background:rgba(0,201,167,.15);color:var(--acc);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+              <div style="min-width:28px;height:28px;border-radius:50%;background:rgba(0,119,182,.15);color:var(--acc);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:3px">Après le tour — saisie dans Config Bassins</div>
                 <div style="font-size:11px;color:var(--t2);line-height:1.8">Reportez pour chaque bassin : l'<strong style="color:var(--acc)">aliment réellement servi (kg)</strong>, et si mesurés : température, pH, DO, NH₃. Cliquez sur <strong style="color:var(--acc)">💾 Enregistrer</strong> par ligne.</div>
@@ -937,13 +959,13 @@ tbody tr:hover{background:#EEF5FF!important;}
               <div style="font-size:13px;font-weight:700;color:var(--gold)">Plan de rationnement — Koudijs AKF adapté Biofloc</div>
               <div style="font-size:10px;color:var(--t2)">Tilapia Oreochromis niloticus · Lomé 28–30°C · Réduction Biofloc −20% (floc optimal 25–40 ml/L)</div>
             </div>
-            <button class="sbtn" style="margin-left:auto;background:var(--gold);color:#04101e;font-size:10px" onclick="sw('t12')">Voir tableaux complets →</button>
+            <button class="sbtn" style="margin-left:auto;background:var(--gold);color:#1A2B42;font-size:10px" onclick="sw('t12')">Voir tableaux complets →</button>
           </div>
 
           <!-- Règle Imhoff résumée -->
           <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.5rem">📏 Volume Imhoff — Actions rapides</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.4rem;margin-bottom:.85rem">
-            <div style="padding:.5rem .65rem;border-radius:8px;background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.25)">
+            <div style="padding:.5rem .65rem;border-radius:8px;background:rgba(214,40,40,.08);border:1px solid rgba(255,61,87,.25)">
               <div style="font-size:10px;font-weight:700;color:var(--dng)">&lt; 10 ml/L</div>
               <div style="font-size:9px;color:var(--t2);line-height:1.6">Floc insuffisant — ration pleine + mélasse max, pas de vidange</div>
             </div>
@@ -951,7 +973,7 @@ tbody tr:hover{background:#EEF5FF!important;}
               <div style="font-size:10px;font-weight:700;color:var(--warn)">10–25 ml/L</div>
               <div style="font-size:9px;color:var(--t2);line-height:1.6">Floc en développement — réduction −10 à −20%, surveiller NH₃</div>
             </div>
-            <div style="padding:.5rem .65rem;border-radius:8px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.25)">
+            <div style="padding:.5rem .65rem;border-radius:8px;background:rgba(0,119,182,.1);border:1px solid rgba(0,119,182,.25)">
               <div style="font-size:10px;font-weight:700;color:var(--acc)">25–40 ml/L ✅ OPTIMAL</div>
               <div style="font-size:9px;color:var(--t2);line-height:1.6">Réduction −20% (régime nominal) — vidange 10% tous les 10 jours</div>
             </div>
@@ -959,7 +981,7 @@ tbody tr:hover{background:#EEF5FF!important;}
               <div style="font-size:10px;font-weight:700;color:var(--warn)">40–50 ml/L</div>
               <div style="font-size:9px;color:var(--t2);line-height:1.6">Floc dense — réduction −25%, vidange 15% dès que possible</div>
             </div>
-            <div style="padding:.5rem .65rem;border-radius:8px;background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.25)">
+            <div style="padding:.5rem .65rem;border-radius:8px;background:rgba(214,40,40,.08);border:1px solid rgba(255,61,87,.25)">
               <div style="font-size:10px;font-weight:700;color:var(--dng)">&gt; 50 ml/L 🚨</div>
               <div style="font-size:9px;color:var(--t2);line-height:1.6">ALERTE — arrêt mélasse 48h, vidange 15% urgente, surveiller DO/heure</div>
             </div>
@@ -969,23 +991,23 @@ tbody tr:hover{background:#EEF5FF!important;}
           <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.5rem">⚡ 5 règles opérationnelles</div>
           <div style="display:flex;flex-direction:column;gap:.35rem">
             <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px">
-              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,201,167,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</span>
+              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,119,182,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</span>
               <span style="color:var(--t2)"><strong style="color:var(--t1)">Avant chaque repas — mesurer DO.</strong> ≥5 ppm → ration normale · 3–5 ppm → −50% + aération · &lt;3 ppm → pas de nourriture.</span>
             </div>
             <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px">
-              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,201,167,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</span>
+              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,119,182,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</span>
               <span style="color:var(--t2)"><strong style="color:var(--t1)">Pic post-nourrissage.</strong> Mesurer DO 1h après le repas. Si &lt;5 ppm → −20% ration suivante ou fractionner.</span>
             </div>
             <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px">
-              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,201,167,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</span>
+              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,119,182,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</span>
               <span style="color:var(--t2)"><strong style="color:var(--t1)">Mélasse — ratio C/N évolue sur le cycle.</strong> S0–S4 C/N 15:1 (floc immature) · S4–S16 C/N 10:1 (floc mature, nitrifiantes actives) · S16–S22 C/N 15:1 (charge TAN max, grande biomasse) · <em>Phase 2 (TAN ≥1 mg/L) : ajustement basé sur TAN × volume — voir onglet 🍽️ Rationnement.</em></span>
             </div>
             <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px">
-              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,201,167,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</span>
+              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,119,182,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</span>
               <span style="color:var(--t2)"><strong style="color:var(--t1)">Pesée toutes les 2 semaines.</strong> Peser 50–100 poissons, recalculer biomasse, relire le tableau et ajuster la ration dès le lendemain.</span>
             </div>
             <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px">
-              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,201,167,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">5</span>
+              <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,119,182,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">5</span>
               <span style="color:var(--t2)"><strong style="color:var(--t1)">Seuils d'arrêt.</strong> Temp &gt;32°C ou &lt;22°C / NH₃ &gt;0.5 mg/L / NO₂ &gt;1 mg/L / pH &lt;6 ou &gt;9 → réduire ou arrêter alimentation.</span>
             </div>
           </div>
@@ -1053,7 +1075,7 @@ tbody tr:hover{background:#EEF5FF!important;}
               <tr>
                 <td style="font-weight:700;color:var(--dng)">TAN &gt;1.0 🚨</td>
                 <td style="background:rgba(255,61,87,.06);font-size:10px"><strong style="color:var(--dng)">Nitrosomonas en crise</strong><br>Arrêt alim + vidange 15% + mélasse urgence + Nitroso.</td>
-                <td style="background:rgba(255,61,87,.1);font-size:10px"><strong style="color:var(--dng)">Crise grave</strong><br>Arrêt alim + vidange 20% + NaCl 5 g/L + BC 100 + eau mature</td>
+                <td style="background:rgba(214,40,40,.08);font-size:10px"><strong style="color:var(--dng)">Crise grave</strong><br>Arrêt alim + vidange 20% + NaCl 5 g/L + BC 100 + eau mature</td>
                 <td style="background:rgba(255,61,87,.15);font-size:10px"><strong style="color:var(--dng)">🚨 EFFONDREMENT TOTAL</strong><br>O₂ pur + vidange max + BC 100 dose choc · Urgence absolue</td>
               </tr>
             </tbody>
@@ -1157,8 +1179,8 @@ tbody tr:hover{background:#EEF5FF!important;}
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem">
           <div style="font-size:10px;font-weight:700;color:var(--t2)">📋 Sélectionnez les bassins à analyser :</div>
           <div style="display:flex;gap:.4rem">
-            <button onclick="selectAllBassins(true)" style="font-size:9px;background:rgba(0,201,167,.15);color:var(--acc);border:1px solid rgba(0,201,167,.3);border-radius:4px;padding:2px 8px;cursor:pointer">Tout sélectionner</button>
-            <button onclick="selectAllBassins(false)" style="font-size:9px;background:rgba(255,61,87,.1);color:var(--dng);border:1px solid rgba(255,61,87,.2);border-radius:4px;padding:2px 8px;cursor:pointer">Tout désélectionner</button>
+            <button onclick="selectAllBassins(true)" style="font-size:9px;background:rgba(0,119,182,.15);color:var(--acc);border:1px solid rgba(0,201,167,.3);border-radius:4px;padding:2px 8px;cursor:pointer">Tout sélectionner</button>
+            <button onclick="selectAllBassins(false)" style="font-size:9px;background:rgba(214,40,40,.08);color:var(--dng);border:1px solid rgba(255,61,87,.2);border-radius:4px;padding:2px 8px;cursor:pointer">Tout désélectionner</button>
           </div>
         </div>
         <div id="bassin-checkboxes" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem"></div>
@@ -2236,7 +2258,7 @@ tbody tr:hover{background:#EEF5FF!important;}
     </div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem;flex-wrap:wrap">
       <button class="sbtn" onclick="G('saisie-rapide-modal').classList.add('hidden')" style="background:var(--inp)">Fermer</button>
-      <button class="sbtn" onclick="saveSaisieRapide()" style="background:var(--acc);color:#04101e;font-weight:700">💾 Tout enregistrer</button>
+      <button class="sbtn" onclick="saveSaisieRapide()" style="background:var(--acc);color:#FFFFFF;font-weight:700">💾 Tout enregistrer</button>
     </div>
   </div>
 </div>
@@ -2597,7 +2619,7 @@ const SPECIES_PROFILES=[
     nom:'Tilapia',
     nomSci:'Oreochromis niloticus',
     icon:'🐟',
-    color:'#00c9a7',
+    color:'#0077B6',
     // Paramètres de croissance
     gmqCible:2.9,       // g/jour — cible croissance
     poidsDepart:5,      // g — poids de départ pour courbe cible
@@ -4003,14 +4025,14 @@ async function openBassinStats(bassinName){
       data:{
         labels:['DO OK','DO Alerte','TAN OK','TAN Alerte'],
         datasets:[{data:[donutData.doOk,donutData.doAlerte,donutData.tanOk,donutData.tanAlerte],
-          backgroundColor:['#00c9a7','#ff4d6d','#3d8ef5','#f59e0b'],
+          backgroundColor:['#0077B6','#D62828','#00B4D8','#F4A261'],
           borderWidth:0}]
       },
       options:{responsive:false,plugins:{legend:{display:false}}}
     });
     const leg=G('bstats-donut-legend');
     if(leg)leg.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
-      ${[['#00c9a7','DO OK',donutData.doOk],['#ff4d6d','DO ⚠️',donutData.doAlerte],
+      ${[['#0077B6','DO OK',donutData.doOk],['#D62828','DO ⚠️',donutData.doAlerte],
          ['#3d8ef5','TAN OK',donutData.tanOk],['#f59e0b','TAN ⚠️',donutData.tanAlerte]]
       .map(([c,l,v])=>`<div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c};margin-right:3px"></span>${l}: <strong>${v}</strong></div>`)
       .join('')}</div>`;
@@ -4026,7 +4048,7 @@ async function openBassinStats(bassinName){
       data:{
         labels,
         datasets:[
-          {label:'DO (ppm)',data:records.map(r=>r.DO??null),borderColor:'#00c9a7',backgroundColor:'rgba(0,201,167,.1)',tension:.3,fill:true,spanGaps:true,pointRadius:3},
+          {label:'DO (ppm)',data:records.map(r=>r.DO??null),borderColor:'#0077B6',backgroundColor:'rgba(0,119,182,.1)',tension:.3,fill:true,spanGaps:true,pointRadius:3},
           {label:'TAN (mg/L)',data:records.map(r=>r.TAN??null),borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.1)',tension:.3,fill:false,spanGaps:true,pointRadius:3},
           {label:'pH',data:records.map(r=>r.ph??null),borderColor:'#a78bfa',backgroundColor:'transparent',tension:.3,fill:false,spanGaps:true,pointRadius:3,hidden:true},
           {label:'Poids (g)',data:records.map(r=>r.poids??null),borderColor:'#ffd670',backgroundColor:'transparent',tension:.3,fill:false,spanGaps:true,pointRadius:3,yAxisID:'y2',hidden:false},
@@ -7080,7 +7102,7 @@ async function saveBassinRow(i){
 
 function showToast(msg, type='acc'){
   const toast=document.createElement('div');
-  const color=type==='acc'?'#00d4b4':type==='dng'?'#ff4d6d':type==='warn'?'#ffb347':'#00aaff';
+  const color=type==='acc'?'#0077B6':type==='dng'?'#D62828':type==='warn'?'#E76F51':'#00B4D8';
   toast.style.cssText=`position:fixed;bottom:24px;right:24px;background:${color};color:#fff;padding:10px 18px;border-radius:10px;font-size:12px;font-weight:700;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.3);transition:opacity .4s;max-width:300px`;
   toast.textContent=msg;
   document.body.appendChild(toast);
@@ -7134,7 +7156,7 @@ function showNotifModal(notifs){
         ${d.temp!=null?`<span style="font-size:10px;background:rgba(61,142,245,.1);padding:2px 7px;border-radius:8px;color:var(--acc2)">Temp: ${d.temp}°C</span>`:''}
         ${d.ph!=null?`<span style="font-size:10px;background:rgba(61,142,245,.1);padding:2px 7px;border-radius:8px;color:var(--acc2)">pH: ${d.ph}</span>`:''}
         ${d.DO!=null?`<span style="font-size:10px;background:rgba(61,142,245,.1);padding:2px 7px;border-radius:8px;color:var(--acc2)">DO: ${d.DO}</span>`:''}
-        ${d.NH3!=null?`<span style="font-size:10px;background:rgba(255,61,87,.1);padding:2px 7px;border-radius:8px;color:var(--dng)">NH₃: ${d.NH3}</span>`:''}
+        ${d.NH3!=null?`<span style="font-size:10px;background:rgba(214,40,40,.08);padding:2px 7px;border-radius:8px;color:var(--dng)">NH₃: ${d.NH3}</span>`:''}
         ${d.poids!=null?`<span style="font-size:10px;background:rgba(251,191,36,.1);padding:2px 7px;border-radius:8px;color:var(--gold)">Poids: ${d.poids}g</span>`:''}
       </div>
     </div>`;
@@ -7298,7 +7320,7 @@ function buildBTable(){
       </td>
 
       <td style="white-space:nowrap">
-        <button onclick="saveBassinRow(${i})" style="background:var(--acc);color:#04101e;border:none;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;font-weight:700;margin-right:2px" title="Enregistrer">💾</button>
+        <button onclick="saveBassinRow(${i})" style="background:var(--acc);color:#FFFFFF;border:none;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;font-weight:700;margin-right:2px" title="Enregistrer">💾</button>
         ${canDelete?`<button class="dbtn" onclick="removeBassin(${i})" title="Supprimer">🗑</button>`:`<button style="background:none;border:1px solid var(--b2);border-radius:4px;padding:3px 6px;font-size:10px;cursor:not-allowed;opacity:.4" title="Suppression réservée au Responsable">🔒</button>`}
       </td>`;
     tb.appendChild(tr);
@@ -7730,7 +7752,7 @@ let gc=null;
 function renderChart(){
   const canvas=G('gc');if(!canvas)return;if(gc){gc.destroy();gc=null;}
   const fb=G('chart-b')?.value||'';
-  const cols=['#00c9a7','#3d8ef5','#f5a623','#ff6b8a','#a78bfa','#34d399'];
+  const cols=['#0077B6','#00B4D8','#F4A261','#E76F51','#5C7A99','#2D6A4F'];
   const ds=[];
   const maxD=Math.max(...APP.state.suivi.map(r=>{const br=APP.state.suivi.filter(s=>s.bassin===r.bassin);const fd=br.sort((a,b)=>a.date.localeCompare(b.date))[0]?.date;return fd?(new Date(r.date)-new Date(fd))/(86400000):0;}),30);
   ds.push({label:'Cible +${sp().gmqCible}g/j',data:Array.from({length:Math.ceil(maxD)+1},(_,i)=>({x:i,y:sp().poidsDepart+sp().gmqCible*i})),borderColor:'#f5a623',backgroundColor:'transparent',pointRadius:0,showLine:true,borderDash:[5,4],borderWidth:1.5,tension:0});
@@ -8236,7 +8258,7 @@ window.exportCoutCyclePDF=function(){
     html+='<tr><td><b>'+nom+'</b></td><td>'+r.statut+'</td><td>'+r.dureeMois.toFixed(1)+' mois</td>'
       +'<td>'+xof(Math.round(r.intrants))+'</td><td>'+xof(Math.round(r.charges))+'</td><td>'+xof(Math.round(r.amort))+'</td>'
       +'<td><b>'+xof(Math.round(r.total))+'</b></td><td>'+r.biomasse.toFixed(1)+' kg</td>'
-      +'<td style="font-weight:800;color:'+(r.coutKg>0?'#00c9a7':'#888')+'">'+(r.coutKg>0?xof(Math.round(r.coutKg)):'—')+'</td></tr>';
+      +'<td style="font-weight:800;color:'+(r.coutKg>0?'#0077B6':'#888')+'">'+(r.coutKg>0?xof(Math.round(r.coutKg)):'—')+'</td></tr>';
   });
   html+='</tbody></table>';
   if(typeof openPDF==='function')openPDF(html,'Coût de revient par cycle');
@@ -9315,7 +9337,7 @@ function renderSpeciesGrid(){
       <div style="font-size:22px;margin-bottom:3px">${s.icon}</div>
       <div style="font-size:11px;font-weight:700;color:${isActive?s.color:'var(--t1)'}">${s.nom}</div>
       <div style="font-size:9px;color:var(--t3);font-style:italic;margin-top:1px">${s.nomSci||'Personnalisé'}</div>
-      ${isActive?`<div style="font-size:8px;background:${s.color};color:#04101e;border-radius:8px;padding:1px 6px;margin-top:4px;font-weight:700">ACTIF</div>`:''}
+      ${isActive?`<div style="font-size:8px;background:${s.color};color:#FFFFFF;border-radius:8px;padding:1px 6px;margin-top:4px;font-weight:700">ACTIF</div>`:''}
     </div>`;
   }).join('');
 }
@@ -9711,7 +9733,7 @@ const THEMES={
     vars:{
       '--bg':'#020b14','--panel':'#04111f','--card':'#061828','--inp':'#05131f','--hov':'#0a1e2e',
       '--t1':'#c8eeff','--t2':'#5a9fc0','--t3':'#2d5f7a','--b1':'#0d2a3d','--b2':'#10304a',
-      '--acc':'#00d4b4','--acc2':'#00aaff','--warn':'#ffb347','--dng':'#ff4d6d','--purp':'#9b8fff','--gold':'#ffd670'
+      '--acc':'#0077B6','--acc2':'#00B4D8','--warn':'#E76F51','--dng':'#D62828','--purp':'#5C7A99','--gold':'#F4A261'
     }
   },
   lagon:{
@@ -10821,8 +10843,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         +'</tr>';
     }).join('');
     // En-têtes colonnes jours
-    var dayHeaders='<th style="white-space:nowrap;padding:4px 5px;background:var(--acc);color:#04101e;font-size:10px">Bassin</th>'
-      +'<th style="padding:4px 5px;background:var(--acc);color:#04101e;font-size:10px">m³</th>';
+    var dayHeaders='<th style="white-space:nowrap;padding:4px 5px;background:var(--acc);color:#FFFFFF;font-size:10px">Bassin</th>'
+      +'<th style="padding:4px 5px;background:var(--acc);color:#FFFFFF;font-size:10px">m³</th>';
     for(var dd=1;dd<=daysInMonth;dd++){
       var dobj=new Date(year,month,dd);
       var isToday=dateKey(dobj)===dateKey(new Date());
@@ -11001,7 +11023,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
           var borderCol=isExpired?'var(--dng)':pending?'rgba(245,166,35,.45)':expireSoon?'var(--warn)':'rgba(0,212,180,.25)';
           var expCol=isExpired?'var(--dng)':expireSoon?'var(--warn)':'var(--t3)';
           var validBtns=pending
-            ?(canValidate?'<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#04101e;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">✅ Valider</button><span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
+            ?(canValidate?'<button data-validate="'+e.id+'" style="font-size:9px;background:var(--acc);color:#FFFFFF;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">✅ Valider</button><span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
             :'<span style="font-size:9px;color:var(--acc);font-weight:700">🔒 Validée · '+(e.validatedBy||'OK')+'</span><span style="font-size:9px;color:var(--t3)">Correction par inventaire</span>';
           var editBtn=(pending&&(canValidate||e.createdBy===(APP.user&&APP.user.name)))?'<button data-edit="'+e.id+'" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✏️ Modifier</button>':'';
           var deletBtn=(pending&&canDeleteUnvalidated())?'<button data-delete="'+e.id+'" style="font-size:9px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑 Supprimer</button>':'';
@@ -11593,7 +11615,7 @@ window.renderSalePricesPanel=function(){
   var legend='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin:.55rem 0">'
     +'<div style="background:rgba(255,61,87,.08);border:1px solid rgba(255,61,87,.2);border-radius:6px;padding:.4rem .6rem"><div style="font-size:9px;font-weight:700;color:var(--dng);text-transform:uppercase;letter-spacing:.5px">Prix minimum</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Plancher non négociable. En dessous, la vente est bloquée ou doit être validée par le Responsable.</div></div>'
     +'<div style="background:rgba(0,212,180,.06);border:1px solid rgba(0,212,180,.2);border-radius:6px;padding:.4rem .6rem"><div style="font-size:9px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.5px">Prix conseillé</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Prix standard du marché local. Appliqué automatiquement dans le formulaire de vente.</div></div>'
-    +'<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:.4rem .6rem"><div style="font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">Prix premium</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Pour clients fidèles, restaurants ou commandes grossiste. Indicatif seulement.</div></div>'
+    +'<div style="background:rgba(244,162,97,.08);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:.4rem .6rem"><div style="font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">Prix premium</div><div style="font-size:10px;color:var(--t2);margin-top:2px">Pour clients fidèles, restaurants ou commandes grossiste. Indicatif seulement.</div></div>'
     +'</div>';
   var adminBar=can
     ?'<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.4rem 0">'
@@ -11860,7 +11882,7 @@ window.renderRentabilite=function(){
         +'<div style="font-size:9px;color:var(--t3);margin-top:2px">CA à atteindre pour couvrir les charges fixes</div>'
         +(ca>0&&seuil>0?'<div style="font-size:10px;margin-top:4px;color:'+(ca>=seuil?'var(--acc)':'var(--warn)')+'">CA actuel '+(ca>=seuil?'✅ dépasse':'⚠ n\'atteint pas')+' le seuil</div>':'')
       +'</div>'
-      +'<div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:.6rem">'
+      +'<div style="background:rgba(244,162,97,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:.6rem">'
         +'<div style="font-size:9px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">ROI investissements</div>'
         +'<div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+pct(roi)+'</div>'
         +'<div style="font-size:9px;color:var(--t3);margin-top:2px">Résultat brut ÷ investissements totaux ('+money(invTotal)+')</div>'
@@ -12341,7 +12363,7 @@ function openFarmSwitcherModal(){
   const modal=G('farm-switcher-modal');
   if(!modal){
     const m=document.createElement('div');m.id='farm-switcher-modal';m.className='modal-overlay';
-    m.style.cssText='position:fixed;inset:0;background:rgba(4,16,30,.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:1rem';
+    m.style.cssText='position:fixed;inset:0;background:rgba(10,25,41,.82);z-index:9000;display:flex;align-items:center;justify-content:center;padding:1rem';
     m.innerHTML=`<div class="modal-box" style="max-width:360px">
       <div class="modal-title">🏠 Changer de ferme</div>
       <div style="font-size:10px;color:var(--t3);margin-bottom:.7rem">Ferme actuelle: <strong style="color:var(--acc)">${APP.farmCode||'—'}</strong></div>
