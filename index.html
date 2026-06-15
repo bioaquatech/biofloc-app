@@ -543,6 +543,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     </div>
     <div id="adm-session-badge" class="session-badge" style="margin-left:.5rem">—</div>
     <button onclick="openThemeModal()" title="Changer de thème" style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t2);font-size:13px;padding:3px 7px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--acc)'" onmouseout="this.style.borderColor='var(--b2)'">🎨</button>
+    <button onclick="syncAllData()" title="Synchroniser" style="background:rgba(0,212,180,.15);border:1px solid rgba(0,212,180,.4);border-radius:6px;color:#00D4B4;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer;margin-left:.3rem">🔄 Synchroniser</button>
     <button class="logout-btn" onclick="doLogout()" style="margin-left:.5rem">⏻ Déconnexion</button>
   </div>
   <div class="tabnav">
@@ -826,7 +827,9 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
       <div id="sync-dot" title="Sync Firebase" style="width:7px;height:7px;border-radius:50%;background:var(--acc);transition:background .3s"></div>
       <button onclick="requestNotifPermission()" title="Activer les notifications" id="notif-btn" style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t2);font-size:13px;padding:3px 7px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--warn)'" onmouseout="this.style.borderColor='var(--b2)'">🔔</button>
       <button onclick="openFarmSwitcherModal()" title="Changer de ferme" style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t2);font-size:10px;padding:3px 7px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--acc2)'" onmouseout="this.style.borderColor='var(--b2)'">🏠</button>
-      <button onclick="showSyncBassinsModal()" title="Synchroniser les données" style="background:rgba(0,212,180,.15);border:1px solid rgba(0,212,180,.4);border-radius:6px;color:#00D4B4;font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(0,212,180,.25)'" onmouseout="this.style.background='rgba(0,212,180,.15)'">🔄 Sync</button>
+      <button id="btn-sync-all" onclick="syncAllData()" title="Synchroniser toutes les données de la ferme" style="background:rgba(0,212,180,.15);border:1px solid rgba(0,212,180,.4);border-radius:6px;color:#00D4B4;font-size:11px;font-weight:700;padding:5px 13px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px">
+        <span id="sync-icon">🔄</span> <span id="sync-label">Synchroniser</span>
+      </button>
       <button class="logout-btn" onclick="doLogout()">⏻ Déconnexion</button>
     </div>
   </div>
@@ -2858,16 +2861,16 @@ let FEED_TYPES=JSON.parse(JSON.stringify(FEED_TYPES_DEFAULT));
 // K1 Starter <0.5mm  : 233 GHS/10kg = 1 212 XOF/kg — sac 10kg
 // K2 Starter 0.5-0.8mm: 233 GHS/10kg = 1 212 XOF/kg — sac 10kg
 // K3 Starter 0.8-1.2mm: 233 GHS/10kg = 1 212 XOF/kg — sac 10kg
-// K4 Grower 2mm       : 271 GHS/20kg =   705 XOF/kg — sac 20kg
+// K4 Floating 2mm 32%CP : 627 XOF/kg — sac 20kg (dossier v9.2)
 // K5 Grower 3mm       : 241 GHS/20kg =   627 XOF/kg — sac 20kg
 // K6 Grower 4mm→4.5mm : 219 GHS/20kg =   569 XOF/kg — sac 20kg
 // Tarifs Koudijs AKF (Ghana – taux 52 XOF/GHS – Janvier 2026)
 // K1–K3 Starter 40%CP : 233 GHS/10kg → 1 212 XOF/kg · sac 10kg
-// K4–K4b Grower 32%CP 2mm : 271 GHS/20kg → 705 XOF/kg · sac 20kg
+// K4–K4b Floating 32%CP 2mm : 627 XOF/kg · sac 20kg (dossier v9.2)
 // K5–K5b Grower 32%CP 3mm : 241 GHS/20kg → 627 XOF/kg · sac 20kg
 // K6–K6b Grower 32%CP 4.5mm : 219 GHS/20kg → 569 XOF/kg · sac 20kg
 FEED_TYPES[0].batches=[{id:1,qty:20,price:627}];    // K4  Floating 2mm  — sac 20kg
-FEED_TYPES[1].batches=[{id:1,qty:20,price:627}];    // K4b Floating 2mm  — sac 20kg
+FEED_TYPES[1].batches=[{id:1,qty:20,price:627}];    // K4b Floating 2mm 32%CP — sac 20kg
 FEED_TYPES[2].batches=[{id:1,qty:20,price:627}];    // K5  Floating 3mm  — sac 20kg
 FEED_TYPES[3].batches=[{id:1,qty:20,price:627}];    // K5b Floating 3mm  — sac 20kg
 FEED_TYPES[4].batches=[{id:1,qty:20,price:569}];    // K6  Floating 4.5mm — sac 20kg
@@ -4461,25 +4464,6 @@ function exportAnalysePDF(){
     </div>
     <div id="pdf-content">${content}</div>
 
-<!-- ═══ ALERTE SYNC BASSINS ═══ -->
-<div id="sync-bassins-modal" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#010810,#031018);border-bottom:2px solid #00ffcc;box-shadow:0 4px 24px rgba(0,255,204,.2);padding:0;animation:slideDown .35s ease">
-  <style>@keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}</style>
-  <div style="max-width:900px;margin:0 auto;padding:14px 20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div>
-        <span style="font-size:14px;font-weight:800;color:#00ffcc">🔄 Synchronisation & Vérification des Bassins</span>
-        <span style="font-size:11px;color:#40c0b0;margin-left:10px">Connexion détectée — vérifiez vos bassins actifs</span>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button onclick="syncForceReload()" style="background:rgba(0,255,204,.15);border:1px solid #00ffcc;border-radius:6px;color:#00ffcc;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer">🌐 Forcer sync Firebase</button>
-        <button onclick="syncBassinsDeleteAll()" style="background:rgba(255,51,102,.15);border:1px solid #ff3366;border-radius:6px;color:#ff3366;font-size:11px;font-weight:700;padding:5px 12px;cursor:pointer">🗑️ Tout effacer</button>
-        <button onclick="syncBassinsConfirm()" style="background:#00ffcc;border:none;border-radius:6px;color:#010810;font-size:11px;font-weight:800;padding:5px 14px;cursor:pointer">✅ Confirmer</button>
-      </div>
-    </div>
-    <div id="sync-bassins-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-    <div style="font-size:10px;color:#1a7060;margin-top:8px">⚡ Les données sont automatiquement synchronisées en temps réel avec Firebase. Ce contrôle permet de détecter les doublons ou bassins fantômes.</div>
-  </div>
-</div>
 </body></html>`);
   printWin.document.close();
   setTimeout(()=>{ try{ printWin.print(); }catch(e){} },300);
@@ -12535,6 +12519,180 @@ function syncForceReload(){
   if(typeof setupFarmListeners==='function')setupFarmListeners();
 }
 
+
+// ═══ SYNCHRONISATION COMPLÈTE UNIFIÉE ═══
+function syncStep(id, label, status){
+  // status: 'pending' | 'ok' | 'err' | 'skip'
+  var colors={'pending':'#00D4B4','ok':'#10B981','err':'#EF4444','skip':'#6B9BB8'};
+  var icons={'pending':'⏳','ok':'✅','err':'❌','skip':'—'};
+  var el=G('step-'+id);
+  if(!el){
+    el=document.createElement('div');
+    el.id='step-'+id;
+    el.style.cssText='display:flex;align-items:center;gap:10px;background:var(--inp);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;font-size:12px';
+    var steps=G('sync-modal-steps');if(steps)steps.appendChild(el);
+  }
+  el.innerHTML='<span style="font-size:14px">'+icons[status]+'</span>'
+    +'<span style="flex:1;color:var(--t1)">'+label+'</span>'
+    +'<span style="font-size:11px;font-weight:700;color:'+colors[status]+'">'+status.toUpperCase()+'</span>';
+}
+
+async function syncAllData(){
+  var modal=G('sync-all-modal');if(!modal)return;
+  var isFarm=!!APP.farmCode;
+
+  // Reset modal
+  G('sync-modal-steps').innerHTML='';
+  G('sync-modal-title').textContent='Synchronisation en cours…';
+  G('sync-modal-icon').textContent='🔄';
+  G('sync-modal-time').textContent='';
+  G('sync-stock-alerts').style.display='none';
+  G('sync-close-btn').style.display='none';
+  modal.classList.remove('hidden');
+
+  // Animate sync button
+  var btn=G('btn-sync-all');
+  if(btn){btn.style.opacity='.6';btn.style.pointerEvents='none';}
+
+  var t0=Date.now();
+  var errors=0;
+
+  if(!isFarm){
+    // Admin: sync admin stats only
+    syncStep('admin','Données administrateur','pending');
+    try{
+      if(typeof loadAdminStats==='function')await loadAdminStats();
+      syncStep('admin','Données administrateur','ok');
+    }catch(e){syncStep('admin','Données administrateur','err');errors++;}
+  } else {
+    // Farm: sync all farm data
+    syncStep('bassins','Bassins & paramètres eau','pending');
+    syncStep('suivi','Journal de suivi quotidien','pending');
+    syncStep('erp','Données ERP (charges, stock, cycles)','pending');
+    syncStep('feed','Aliments & stocks','pending');
+    syncStep('intrants','Intrants & mouvements','pending');
+
+    // Bassins + suivi
+    try{
+      var snap=await farmCol('bassins').get();
+      if(snap&&!snap.empty){
+        var nb=snap.docs.map(function(d){var x={...d.data()};delete x._order;return x;});
+        APP.state.bassins=nb;APP.bCount=nb.length+1;
+        buildBTable();popSelects();upAll();
+      }
+      syncStep('bassins','Bassins & paramètres eau','ok');
+    }catch(e){syncStep('bassins','Bassins & paramètres eau','err');errors++;}
+
+    try{
+      var sv=await farmCol('suivi').get();
+      if(sv&&!sv.empty){
+        APP.state.suivi=sv.docs.map(function(d){return {...d.data()};}).sort(function(a,b){return a.date>b.date?1:-1;});
+        APP.state.suiviId=Math.max(0,...APP.state.suivi.map(function(r){return r.id||0;}))+1;
+      }
+      syncStep('suivi','Journal de suivi quotidien','ok');
+    }catch(e){syncStep('suivi','Journal de suivi quotidien','err');errors++;}
+
+    // ERP
+    try{
+      if(typeof loadERPFromFirestore==='function')await loadERPFromFirestore();
+      syncStep('erp','Données ERP (charges, stock, cycles)','ok');
+    }catch(e){syncStep('erp','Données ERP (charges, stock, cycles)','err');errors++;}
+
+    // Feed
+    try{
+      var fsnap=await farmCol('feed').get();
+      if(fsnap&&!fsnap.empty){
+        fsnap.docs.forEach(function(d){
+          var ft=FEED_TYPES.find(function(f){return f.id===d.id;});
+          if(ft&&d.data().batches)ft.batches=d.data().batches;
+        });
+        if(G('t2')?.classList.contains('active'))renderFeed();
+      }
+      syncStep('feed','Aliments & stocks','ok');
+    }catch(e){syncStep('feed','Aliments & stocks','err');errors++;}
+
+    // Intrants
+    try{
+      if(typeof loadIntrants==='function')await loadIntrants();
+      syncStep('intrants','Intrants & mouvements','ok');
+    }catch(e){syncStep('intrants','Intrants & mouvements','err');errors++;}
+  }
+
+  var elapsed=((Date.now()-t0)/1000).toFixed(1);
+  G('sync-modal-time').textContent='Synchronisé en '+elapsed+'s — '+new Date().toLocaleString('fr-FR');
+
+  if(errors===0){
+    G('sync-modal-icon').textContent='✅';
+    G('sync-modal-title').textContent='Synchronisation terminée';
+  } else {
+    G('sync-modal-icon').textContent='⚠️';
+    G('sync-modal-title').textContent='Synchronisation partielle ('+errors+' erreur'+(errors>1?'s':'')+')';
+  }
+
+  // Restore sync button
+  if(btn){btn.style.opacity='';btn.style.pointerEvents='';}
+
+  // Check stock alerts after sync
+  setTimeout(function(){
+    var alerts=[];
+    if(typeof APP_INTRANTS!=='undefined'&&Array.isArray(APP_INTRANTS)){
+      APP_INTRANTS.forEach(function(item){
+        if(!item.amortissable&&item.seuil){
+          var stock=typeof getItemCurrentStock==='function'?getItemCurrentStock(item.id):0;
+          if(stock<item.seuil){
+            alerts.push({name:item.name,stock:stock,seuil:item.seuil,unit:item.unit||''});
+          }
+        }
+      });
+    }
+    if(alerts.length>0){
+      var html='';
+      alerts.forEach(function(a){
+        html+='<div style="display:flex;align-items:center;gap:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:7px;padding:7px 10px">'
+          +'<span style="font-size:14px">📦</span>'
+          +'<div style="flex:1"><div style="font-weight:700;font-size:12px;color:var(--t1)">'+a.name+'</div>'
+          +'<div style="font-size:11px;color:var(--dng)">Stock: '+a.stock.toFixed(1)+' '+a.unit+' — Seuil: '+a.seuil+' '+a.unit+'</div></div>'
+          +'<span style="font-size:10px;font-weight:700;background:rgba(239,68,68,.15);color:var(--dng);padding:2px 7px;border-radius:10px">BAS</span>'
+        +'</div>';
+      });
+      G('sync-stock-list').innerHTML=html;
+      G('sync-stock-alerts').style.display='block';
+    }
+    G('sync-close-btn').style.display='block';
+  }, 400);
+}
+
+function closeSyncModal(){
+  G('sync-all-modal').classList.add('hidden');
+}
+
+// Remplacer l'ancienne bannière bassins par le nouveau système au login
+function showSyncBassinsModal(){
+  // Désormais délégué à syncAllData — affiche juste le bouton, pas de bannière auto
+  // La bannière auto a été supprimée pour éviter l'intrusion visuelle
+}
+
 </script>
+
+<!-- ═══ MODAL SYNCHRONISATION COMPLÈTE ═══ -->
+<div id="sync-all-modal" class="modal-overlay hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div class="modal-box" style="background:var(--card);border:1px solid var(--b2);border-radius:12px;padding:24px;max-width:500px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px;margin-bottom:4px;font-size:16px;font-weight:700;color:var(--t1)">
+      <span id="sync-modal-icon" style="font-size:20px">🔄</span>
+      <span id="sync-modal-title">Synchronisation en cours…</span>
+    </div>
+    <div id="sync-modal-steps" style="margin:16px 0;display:flex;flex-direction:column;gap:8px"></div>
+    <div id="sync-modal-time" style="font-size:11px;color:var(--t3);margin-bottom:16px"></div>
+    <div id="sync-stock-alerts" style="display:none">
+      <div style="height:1px;background:var(--b1);margin-bottom:14px"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--warn);margin-bottom:10px">⚠️ Alertes stock détectées</div>
+      <div id="sync-stock-list" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button id="sync-close-btn" class="sbtn" onclick="closeSyncModal()" style="display:none;background:var(--acc);color:#000;border:none;border-radius:6px;padding:8px 18px;font-weight:700;cursor:pointer">✅ Fermer</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
