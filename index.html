@@ -2903,6 +2903,13 @@ function showScreen(name){
     if(id===name){el.classList.remove('hidden');el.style.display='';}
     else{el.classList.add('hidden');}
   });
+  // Déclencher sync automatique à l'accès ferme
+  if(name==='screen-farm'){
+    setTimeout(function(){
+      if(typeof window.syncAllData==='function')window.syncAllData();
+      else if(typeof syncAllData==='function')syncAllData();
+    },2000);
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -3156,12 +3163,7 @@ async function showFarmApp(){
   loadERPFromFirestore().then(()=>setTimeout(autoSaveFarm,2000)).catch(()=>setTimeout(autoSaveFarm,2000));
   // Check backup reminder (first login of the day)
   checkBackupReminder();
-  // Synchronisation automatique à l'accès à la ferme (délai 2s pour laisser le DOM se stabiliser)
-  setTimeout(function(){
-    var fn=window.syncAllData||syncAllData;
-    if(typeof fn==='function')fn();
-    else console.warn('[ICHTUS] syncAllData introuvable à l\'accès ferme');
-  },2000);
+  // Sync déclenchée depuis showScreen('screen-farm') automatiquement
   // Log connexion dans journal
   setTimeout(()=>logAudit('connexion','Connexion réussie',`Rôle: ${role} — Ferme: ${APP.farmCode}`),1000);
   // Appliquer changement de mot de passe en attente
