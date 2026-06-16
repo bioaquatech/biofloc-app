@@ -2610,6 +2610,9 @@ if(typeof firebase === 'undefined'){
 }
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
+db.enablePersistence({synchronizeTabs:true}).catch(function(err){
+  if(err.code!=='failed-precondition'&&err.code!=='unimplemented')console.warn('[Firestore] persistence:',err.code);
+});
 const auth=firebase.auth();
 const storage=firebase.storage();
 // Secondary app for user creation without signing out admin
