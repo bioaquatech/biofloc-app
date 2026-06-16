@@ -78,78 +78,85 @@ service cloud.firestore {
       // ── bassins ─────────────────────────────────────────────────────────
       match /bassins/{doc} {
         allow read: if isFarmMember(farmCode);
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── suivi (daily tracking) ───────────────────────────────────────────
       match /suivi/{doc} {
         allow read: if isFarmMember(farmCode);
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── feed records ────────────────────────────────────────────────────
       match /feed/{doc} {
         allow read: if isFarmMember(farmCode);
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── daily logs ──────────────────────────────────────────────────────
       match /daily/{doc} {
         allow read: if isFarmMember(farmCode);
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── stock entries ───────────────────────────────────────────────────
       match /stock_entries/{doc} {
         allow read: if isFarmMember(farmCode);
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── stock movements ─────────────────────────────────────────────────
       match /stock_movements/{doc} {
         allow read: if isFarmMember(farmCode);
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── intrants ────────────────────────────────────────────────────────
       match /intrants/{doc} {
         allow read: if isFarmMember(farmCode);
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── charges ─────────────────────────────────────────────────────────
       match /charges/{doc} {
         allow read: if isFarmMember(farmCode);
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── sensors ─────────────────────────────────────────────────────────
       match /sensors/{doc} {
         allow read: if isFarmMember(farmCode);
-        // Sensor writes: allow members (IoT devices use farm-scoped tokens)
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── config (includes ERP sync document) ─────────────────────────────
       match /config/{doc} {
         allow read: if isFarmMember(farmCode);
-        // ERP sync and config updates: farm members can write their own config
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
 
       // ── backups ─────────────────────────────────────────────────────────
       match /backups/{doc} {
         allow read: if isFarmMember(farmCode);
         allow create: if isFarmMember(farmCode);
-        // Only managers can delete backups
-        allow delete: if isFarmManager(farmCode);
-        allow update: if isFarmManager(farmCode);
+        allow update, delete: if isFarmManager(farmCode);
       }
 
       // ── Catch-all for any future subcollections ──────────────────────────
       match /{subcollection}/{doc} {
         allow read: if isFarmMember(farmCode);
-        allow write: if isFarmMember(farmCode);
+        allow create, update: if isFarmMember(farmCode);
+        allow delete: if isFarmManager(farmCode);
       }
     }
 
