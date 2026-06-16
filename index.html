@@ -3156,8 +3156,12 @@ async function showFarmApp(){
   loadERPFromFirestore().then(()=>setTimeout(autoSaveFarm,2000)).catch(()=>setTimeout(autoSaveFarm,2000));
   // Check backup reminder (first login of the day)
   checkBackupReminder();
-  // Synchronisation automatique à l'accès à la ferme
-  setTimeout(()=>{if(typeof syncAllData==='function')syncAllData();},1200);
+  // Synchronisation automatique à l'accès à la ferme (délai 2s pour laisser le DOM se stabiliser)
+  setTimeout(function(){
+    var fn=window.syncAllData||syncAllData;
+    if(typeof fn==='function')fn();
+    else console.warn('[ICHTUS] syncAllData introuvable à l\'accès ferme');
+  },2000);
   // Log connexion dans journal
   setTimeout(()=>logAudit('connexion','Connexion réussie',`Rôle: ${role} — Ferme: ${APP.farmCode}`),1000);
   // Appliquer changement de mot de passe en attente
@@ -12676,6 +12680,10 @@ function closeSyncModal(){
     if(typeof checkStockAlerts==='function')checkStockAlerts();
   }, 200);
 }
+
+// Exposer globalement pour accès depuis showFarmApp setTimeout
+window.syncAllData=syncAllData;
+window.closeSyncModal=closeSyncModal;
 
 // Remplacer l'ancienne bannière bassins par le nouveau système au login
 function showSyncBassinsModal(){
