@@ -1246,7 +1246,6 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           </div>
           <div id="date-mode-badge" style="display:none;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;background:rgba(245,166,35,.15);color:var(--warn);border:1px solid rgba(245,166,35,.3)">📅 Mode historique</div>
         </div>
-        <button onclick="if(confirm('Synchroniser ERP → Bassins & Qualité d\'eau (conserve les données de monitoring) ?'))syncERPBassinsToProduction(false)" style="font-size:12px;font-weight:700;padding:7px 16px;border:2px solid var(--acc);background:linear-gradient(135deg,rgba(0,201,167,.18),rgba(0,201,167,.06));color:var(--acc);border-radius:8px;cursor:pointer;letter-spacing:.3px;box-shadow:0 0 10px rgba(0,201,167,.2)">🔄 Sync → Qualité d'eau</button>
         <button class="sbtn" onclick="openSaisieRapide()" style="background:rgba(167,139,250,.15);border-color:var(--purp);color:var(--purp);font-size:11px">⚡ Saisie rapide multi-bassins</button>
       </div>
 
@@ -3157,6 +3156,8 @@ async function showFarmApp(){
   loadERPFromFirestore().then(()=>setTimeout(autoSaveFarm,2000)).catch(()=>setTimeout(autoSaveFarm,2000));
   // Check backup reminder (first login of the day)
   checkBackupReminder();
+  // Synchronisation automatique à l'accès à la ferme
+  setTimeout(()=>{if(typeof syncAllData==='function')syncAllData();},1200);
   // Log connexion dans journal
   setTimeout(()=>logAudit('connexion','Connexion réussie',`Rôle: ${role} — Ferme: ${APP.farmCode}`),1000);
   // Appliquer changement de mot de passe en attente
@@ -3388,8 +3389,6 @@ function setupFarmListeners(){
         return x;
       });
       APP.state.bassins=nb;APP.bCount=nb.length+1;buildBTable();popSelects();upAll();
-      // Afficher le modal de vérification après chargement réel
-      if(typeof showSyncBassinsModal==='function')setTimeout(showSyncBassinsModal,300);
     }
   }).catch(e=>console.warn('Bassins load:',e));
 
@@ -12635,6 +12634,13 @@ async function syncAllData(){
       if(typeof loadIntrants==='function')await loadIntrants();
       syncStep('intrants','Intrants & mouvements','ok');
     }catch(e){syncStep('intrants','Intrants & mouvements','err');errors++;}
+
+    // Sync ERP bassins → Qualité eau
+    syncStep('qe','ERP Bassins → Qualité eau','pending');
+    try{
+      if(typeof syncERPBassinsToProduction==='function')syncERPBassinsToProduction(false);
+      syncStep('qe','ERP Bassins → Qualité eau','ok');
+    }catch(e){syncStep('qe','ERP Bassins → Qualité eau','err');errors++;}
   }
 
   var elapsed=((Date.now()-t0)/1000).toFixed(1);
