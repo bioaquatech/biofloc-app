@@ -3888,6 +3888,19 @@ function fmtXOF(n){return Number(n).toLocaleString('fr-FR')+' XOF';}
 
 var _subCache={};
 
+// Debug helper: run debugAuth() in console to check Firebase Auth UID and user document
+window.debugAuth=async function(){
+  var u=firebase.auth().currentUser;
+  if(!u){console.error('Non connecté');return;}
+  console.log('UID Firebase Auth:',u.uid);
+  console.log('Email:',u.email);
+  try{
+    var doc=await db.collection('users').doc(u.uid).get();
+    if(doc.exists){console.log('Document users/'+u.uid+':',doc.data());}
+    else{console.error('PROBLÈME: Aucun document dans users/'+u.uid+' — créez ce document avec role:"SuperAdmin"');}
+  }catch(e){console.error('Erreur lecture users/'+u.uid+':',e.message);}
+};
+
 async function renderSubscriptions(){
   var el=document.getElementById('ta6-sub-list');
   if(!el)return;
@@ -3946,7 +3959,10 @@ async function renderSubscriptions(){
         +'</div>';
     }
     el.innerHTML=rows||'<div style="color:var(--t3);text-align:center;padding:1rem;font-size:12px">Aucune ferme.</div>';
-  }catch(e){el.innerHTML='<div style="color:var(--dng);padding:1rem;font-size:12px">Erreur: '+e.message+'</div>';}
+  }catch(e){
+    console.error('renderSubscriptions error:',e);
+    el.innerHTML='<div style="color:var(--dng);padding:1rem;font-size:12px">Erreur: '+e.message+'<br><small style="opacity:.7">Vérifiez que votre document users/{votre-uid} existe avec role:"SuperAdmin". Tapez <strong>debugAuth()</strong> dans la console pour diagnostiquer.</small></div>';
+  }
 }
 
 function openSubModal(farmCode){
