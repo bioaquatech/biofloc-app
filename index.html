@@ -5202,7 +5202,8 @@ async function loadIntrants(){
     if(mSnap&&!mSnap.empty)APP_STOCK_MOVEMENTS=mSnap.docs.map(d=>({...d.data(),id:d.id}));
   }catch(e){console.warn('Movements:',e);}
   try{const cs=await withTimeout(farmCol('config').doc('compta').get(),6000);if(cs.exists&&cs.data().prix)COMPTA_PRIX=cs.data().prix;}catch(e){console.warn('Compta prix:',e);}
-  checkStockAlerts();
+  // Les alertes stock sont gérées par syncAllData à la connexion
+  // checkStockAlerts() appelé manuellement depuis syncAllData uniquement
 }
 
 // checkStockAlerts défini plus bas avec dialog box
@@ -12657,32 +12658,8 @@ async function syncAllData(){
   // Restore sync button
   if(btn){btn.style.opacity='';btn.style.pointerEvents='';}
 
-  // Check stock alerts after sync
+  // Show close button — stock alerts will appear via checkStockAlerts() after modal closes
   setTimeout(function(){
-    var alerts=[];
-    if(typeof APP_INTRANTS!=='undefined'&&Array.isArray(APP_INTRANTS)){
-      APP_INTRANTS.forEach(function(item){
-        if(!item.amortissable&&item.seuil){
-          var stock=typeof getItemCurrentStock==='function'?getItemCurrentStock(item.id):0;
-          if(stock<item.seuil){
-            alerts.push({name:item.name,stock:stock,seuil:item.seuil,unit:item.unit||''});
-          }
-        }
-      });
-    }
-    if(alerts.length>0){
-      var html='';
-      alerts.forEach(function(a){
-        html+='<div style="display:flex;align-items:center;gap:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:7px;padding:7px 10px">'
-          +'<span style="font-size:14px">📦</span>'
-          +'<div style="flex:1"><div style="font-weight:700;font-size:12px;color:var(--t1)">'+a.name+'</div>'
-          +'<div style="font-size:11px;color:var(--dng)">Stock: '+a.stock.toFixed(1)+' '+a.unit+' — Seuil: '+a.seuil+' '+a.unit+'</div></div>'
-          +'<span style="font-size:10px;font-weight:700;background:rgba(239,68,68,.15);color:var(--dng);padding:2px 7px;border-radius:10px">BAS</span>'
-        +'</div>';
-      });
-      var sl=G('sync-stock-list');if(sl)sl.innerHTML=html;
-      if(_stock)_stock.style.display='block';
-    }
     if(_close)_close.style.display='block';
   }, 400);
   }catch(e){
@@ -12694,6 +12671,10 @@ async function syncAllData(){
 function closeSyncModal(){
   var el=document.getElementById('sync-all-modal');
   if(el)el.classList.add('hidden');
+  // Après fermeture du modal sync → afficher alertes stock critiques si nécessaire
+  setTimeout(function(){
+    if(typeof checkStockAlerts==='function')checkStockAlerts();
+  }, 200);
 }
 
 // Remplacer l'ancienne bannière bassins par le nouveau système au login
