@@ -553,6 +553,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <button class="tb" onclick="swAdmin('ta3')">⚙️ Paramètres</button>
     <button class="tb" onclick="swAdmin('ta4')" style="border-color:rgba(0,201,167,.3);color:var(--acc)">📋 Journal</button>
     <button class="tb" onclick="swAdmin('ta5')" style="border-color:rgba(167,139,250,.3);color:var(--purp)">🌱 ERP Fermes</button>
+    <button class="tb" onclick="swAdmin('ta6')" style="border-color:rgba(251,191,36,.3);color:var(--gold)">💳 Abonnements</button>
   </div>
   <div class="main">
 
@@ -761,6 +762,40 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
         <div style="color:var(--t3);text-align:center;padding:2rem;font-size:12px">Cliquez sur une ferme ci-dessous pour voir ses données ERP.</div>
       </div>
       <div style="margin-top:.5rem" id="ta5-farm-btns"></div>
+    </div>
+
+    <!-- TA6: ABONNEMENTS -->
+    <div id="ta6" class="pane">
+      <div class="card" style="border-color:rgba(251,191,36,.25)">
+        <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Gestion des abonnements</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.5rem">
+          <div style="background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.6rem 1rem;min-width:140px">
+            <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">Plan 1 — ≤ 45,9 m³</div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-top:2px">32 000 XOF/mois</div>
+            <div style="font-size:10px;color:var(--t2)">326 400 XOF/an</div>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.6rem 1rem;min-width:140px">
+            <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">Plan 2 — 46 à 99,9 m³</div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-top:2px">45 000 XOF/mois</div>
+            <div style="font-size:10px;color:var(--t2)">459 000 XOF/an</div>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.6rem 1rem;min-width:140px">
+            <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">Plan 3 — 100 à 300 m³</div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-top:2px">60 000 XOF/mois</div>
+            <div style="font-size:10px;color:var(--t2)">612 000 XOF/an</div>
+          </div>
+          <div style="background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.6rem 1rem;min-width:140px">
+            <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">Plan 4 — > 300 m³</div>
+            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-top:2px">70 000 XOF/mois</div>
+            <div style="font-size:10px;color:var(--t2)">714 000 XOF/an</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+        <div style="font-size:11px;color:var(--t2)">Toutes les fermes enregistrées</div>
+        <button onclick="renderSubscriptions()" style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:6px;color:var(--gold);font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer">🔄 Actualiser</button>
+      </div>
+      <div id="ta6-sub-list"></div>
     </div>
 
   </div>
@@ -2906,12 +2941,13 @@ function showScreen(name){
     if(id===name){el.classList.remove('hidden');el.style.display='';}
     else{el.classList.add('hidden');}
   });
-  // Déclencher sync automatique à l'accès ferme
+  // Déclencher sync automatique + vérif abonnement à l'accès ferme
   if(name==='screen-farm'){
     setTimeout(function(){
       if(typeof window.syncAllData==='function')window.syncAllData();
       else if(typeof syncAllData==='function')syncAllData();
     },2000);
+    setTimeout(function(){checkFarmSubscription();},3000);
   }
 }
 
@@ -3825,9 +3861,182 @@ function swAdmin(id){
   document.querySelectorAll('#screen-admin .pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('#screen-admin .tb').forEach(b=>b.classList.remove('active'));
   G(id).classList.add('active');
-  ['ta0','ta1','ta2','ta3','ta4','ta5'].forEach((t,i)=>{if(t===id)document.querySelectorAll('#screen-admin .tb')[i]?.classList.add('active');});
+  ['ta0','ta1','ta2','ta3','ta4','ta5','ta6'].forEach((t,i)=>{if(t===id)document.querySelectorAll('#screen-admin .tb')[i]?.classList.add('active');});
   if(id==='ta4')renderAdminJournal();
   if(id==='ta5')renderAdminERPFarms();
+  if(id==='ta6')renderSubscriptions();
+}
+
+// ═══════════════════════════════════════════════
+// SUBSCRIPTION PLANS
+// ═══════════════════════════════════════════════
+var SUBSCRIPTION_PLANS=[
+  {plan:1,label:'Plan 1',maxVol:45.9,monthly:32000,annual:326400,color:'#4A7A9B'},
+  {plan:2,label:'Plan 2',minVol:46,maxVol:99.9,monthly:45000,annual:459000,color:'#3D8EF5'},
+  {plan:3,label:'Plan 3',minVol:100,maxVol:300,monthly:60000,annual:612000,color:'#00D4B4'},
+  {plan:4,label:'Plan 4',minVol:300.01,monthly:70000,annual:714000,color:'#FBBF24'}
+];
+
+function getPlanForVolume(volM3){
+  if(volM3<=45.9)return SUBSCRIPTION_PLANS[0];
+  if(volM3<=99.9)return SUBSCRIPTION_PLANS[1];
+  if(volM3<=300)return SUBSCRIPTION_PLANS[2];
+  return SUBSCRIPTION_PLANS[3];
+}
+
+function fmtXOF(n){return Number(n).toLocaleString('fr-FR')+' XOF';}
+
+var _subCache={};
+
+async function renderSubscriptions(){
+  var el=document.getElementById('ta6-sub-list');
+  if(!el)return;
+  el.innerHTML='<div style="color:var(--t3);text-align:center;padding:1rem;font-size:12px">Chargement…</div>';
+  try{
+    var snap=await db.collection('farms').get();
+    if(snap.empty){el.innerHTML='<div style="color:var(--t3);text-align:center;padding:1rem;font-size:12px">Aucune ferme.</div>';return;}
+    var rows='';
+    _subCache={};
+    for(var i=0;i<snap.docs.length;i++){
+      var fd=snap.docs[i].data();
+      var fc=snap.docs[i].id;
+      var sub=fd.subscription||{};
+      var status=sub.status||'none';
+      var plan=sub.plan||null;
+      var type=sub.type||'mensuel';
+      var expiresAt=sub.expiresAt?new Date(sub.expiresAt.seconds?sub.expiresAt.seconds*1000:sub.expiresAt):null;
+      var startDate=sub.startDate?new Date(sub.startDate.seconds?sub.startDate.seconds*1000:sub.startDate):null;
+
+      var volTotal=0;
+      try{
+        var bSnap=await db.collection('farms').doc(fc).collection('bassins').get();
+        bSnap.forEach(function(bd){var b=bd.data();volTotal+=Number(b.vol||b.volume||b.volumeMaxM3||0);});
+      }catch(e){}
+      var suggestedPlan=getPlanForVolume(volTotal);
+
+      // Cache data for modal use (avoids escaping nightmare in onclick)
+      _subCache[fc]={
+        plan:plan,type:type,status:status,
+        expiresAt:expiresAt?expiresAt.toISOString().split('T')[0]:'',
+        startDate:startDate?startDate.toISOString().split('T')[0]:new Date().toISOString().split('T')[0],
+        suggestedPlan:suggestedPlan.plan
+      };
+
+      var now=new Date();
+      var daysLeft=expiresAt?Math.ceil((expiresAt-now)/(1000*60*60*24)):null;
+      var statusColor='#6B9BB8',statusLabel='Non défini';
+      if(status==='active'&&daysLeft!==null&&daysLeft>0){
+        statusColor=daysLeft<=30?'#F59E0B':'#10B981';
+        statusLabel=daysLeft<=30?'Expire dans '+daysLeft+'j':'Actif';
+      }else if(status==='trial'){statusColor='#A78BFA';statusLabel="Période d'essai";}
+      else if(status==='expired'||(daysLeft!==null&&daysLeft<=0)){statusColor='#EF4444';statusLabel='Expiré';}
+
+      rows+='<div style="background:var(--card);border:1px solid var(--b1);border-radius:8px;padding:.75rem 1rem;margin-bottom:.5rem">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">'
+        +'<div>'
+        +'<div style="font-size:13px;font-weight:700;color:var(--t1)">'+(fd.name||fc)+'</div>'
+        +'<div style="font-size:10px;color:var(--t3);margin-top:2px">Code: '+fc+' · Volume: <strong style="color:var(--t1)">'+volTotal.toFixed(1)+' m³</strong> → <span style="color:'+suggestedPlan.color+'">'+suggestedPlan.label+'</span></div>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:.5rem">'
+        +'<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;background:'+statusColor+'22;border:1px solid '+statusColor+'55;color:'+statusColor+'">'+statusLabel+'</span>'
+        +'<button data-fc="'+fc+'" onclick="openSubModal(this.dataset.fc)" style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:5px;color:var(--gold);font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer">✏️ Gérer</button>'
+        +'</div>'
+        +'</div>'
+        +(plan?'<div style="margin-top:.4rem;font-size:10px;color:var(--t2)">Plan actuel: <strong style="color:var(--gold)">Plan '+plan+'</strong> · '+type+' · '+(expiresAt?'Expire le '+expiresAt.toLocaleDateString('fr-FR'):'Sans date')+'</div>':'')
+        +'</div>';
+    }
+    el.innerHTML=rows||'<div style="color:var(--t3);text-align:center;padding:1rem;font-size:12px">Aucune ferme.</div>';
+  }catch(e){el.innerHTML='<div style="color:var(--dng);padding:1rem;font-size:12px">Erreur: '+e.message+'</div>';}
+}
+
+function openSubModal(farmCode){
+  var data=_subCache[farmCode]||{};
+  var plan=data.plan||data.suggestedPlan||1;
+  var type=data.type||'mensuel';
+  var status=data.status||'active';
+  var expiresAt=data.expiresAt||'';
+  var startDate=data.startDate||new Date().toISOString().split('T')[0];
+
+  var html='<div class="modal-overlay" id="sub-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center">'
+    +'<div class="modal-box" style="background:var(--card);border:1px solid var(--b2);border-radius:12px;padding:24px;max-width:420px;width:90%">'
+    +'<div style="font-size:14px;font-weight:700;color:var(--gold);margin-bottom:1rem">💳 Abonnement — '+farmCode+'</div>'
+
+    +'<div style="font-size:10px;color:var(--t3);margin-bottom:3px">Plan</div>'
+    +'<select id="sub-plan" class="form-inp si" style="margin-bottom:.7rem;width:100%">'
+    +SUBSCRIPTION_PLANS.map(function(p){return '<option value="'+p.plan+'"'+(p.plan==plan?' selected':'')+'>'
+      +p.label+' — '+fmtXOF(p.monthly)+'/mois · '+fmtXOF(p.annual)+'/an</option>';}).join('')
+    +'</select>'
+
+    +'<div style="font-size:10px;color:var(--t3);margin-bottom:3px">Type</div>'
+    +'<select id="sub-type" class="form-inp si" style="margin-bottom:.7rem;width:100%" onchange="updateSubExpiry(\''+farmCode+'\')">'
+    +'<option value="mensuel"'+(type==='mensuel'?' selected':'')+'>Mensuel</option>'
+    +'<option value="annuel"'+(type==='annuel'?' selected':'')+'>Annuel</option>'
+    +'</select>'
+
+    +'<div style="font-size:10px;color:var(--t3);margin-bottom:3px">Statut</div>'
+    +'<select id="sub-status" class="form-inp si" style="margin-bottom:.7rem;width:100%">'
+    +'<option value="active"'+(status==='active'?' selected':'')+'>Actif</option>'
+    +'<option value="trial"'+(status==='trial'?' selected':'')+'>Période d\'essai</option>'
+    +'<option value="expired"'+(status==='expired'?' selected':'')+'>Expiré</option>'
+    +'</select>'
+
+    +'<div style="font-size:10px;color:var(--t3);margin-bottom:3px">Date de début</div>'
+    +'<input type="date" id="sub-start" class="form-inp" style="margin-bottom:.7rem;width:100%" value="'+startDate+'" onchange="updateSubExpiry(\''+farmCode+'\')">'
+
+    +'<div style="font-size:10px;color:var(--t3);margin-bottom:3px">Date d\'expiration</div>'
+    +'<input type="date" id="sub-expires" class="form-inp" style="margin-bottom:1rem;width:100%" value="'+expiresAt+'">'
+
+    +'<div style="display:flex;gap:.5rem">'
+    +'<button onclick="saveSubscription(\''+farmCode+'\')" style="flex:1;background:var(--gold);color:#000;border:none;border-radius:6px;padding:8px;font-weight:700;cursor:pointer">💾 Enregistrer</button>'
+    +'<button onclick="document.getElementById(\'sub-modal\').remove()" style="flex:1;background:var(--inp);border:1px solid var(--b2);border-radius:6px;padding:8px;color:var(--t2);cursor:pointer">Annuler</button>'
+    +'</div>'
+    +'<div id="sub-msg" style="font-size:11px;margin-top:.5rem"></div>'
+    +'</div></div>';
+
+  var existing=document.getElementById('sub-modal');
+  if(existing)existing.remove();
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function updateSubExpiry(farmCode){
+  var start=document.getElementById('sub-start');
+  var type=document.getElementById('sub-type');
+  var expires=document.getElementById('sub-expires');
+  if(!start||!type||!expires||!start.value)return;
+  var d=new Date(start.value);
+  if(type.value==='annuel')d.setFullYear(d.getFullYear()+1);
+  else d.setMonth(d.getMonth()+1);
+  expires.value=d.toISOString().split('T')[0];
+}
+
+async function saveSubscription(farmCode){
+  var plan=parseInt(document.getElementById('sub-plan').value);
+  var type=document.getElementById('sub-type').value;
+  var status=document.getElementById('sub-status').value;
+  var start=document.getElementById('sub-start').value;
+  var expires=document.getElementById('sub-expires').value;
+  var msg=document.getElementById('sub-msg');
+  if(!expires){msg.style.color='var(--dng)';msg.textContent='Date d\'expiration requise.';return;}
+  try{
+    await db.collection('farms').doc(farmCode).update({
+      subscription:{
+        plan:plan,
+        type:type,
+        status:status,
+        startDate:start?new Date(start):new Date(),
+        expiresAt:new Date(expires),
+        updatedAt:new Date(),
+        updatedBy:(window.APP&&APP.email)||'admin'
+      }
+    });
+    msg.style.color='var(--acc)';
+    msg.textContent='✅ Abonnement enregistré.';
+    setTimeout(function(){
+      var m=document.getElementById('sub-modal');
+      if(m)m.remove();
+      renderSubscriptions();
+    },1200);
+  }catch(e){msg.style.color='var(--dng)';msg.textContent='Erreur: '+e.message;}
 }
 
 // ═══════════════════════════════════════════════
@@ -12689,6 +12898,54 @@ function closeSyncModal(){
 // Exposer globalement pour accès depuis showFarmApp setTimeout
 window.syncAllData=syncAllData;
 window.closeSyncModal=closeSyncModal;
+
+// ═══════════════════════════════════════════════
+// VÉRIFICATION ABONNEMENT FERME
+// ═══════════════════════════════════════════════
+async function checkFarmSubscription(){
+  try{
+    var farmCode=window.APP&&APP.farmCode;
+    if(!farmCode)return;
+    var doc=await db.collection('farms').doc(farmCode).get();
+    if(!doc.exists)return;
+    var sub=doc.data().subscription;
+
+    // Supprimer ancien bandeau
+    var old=document.getElementById('sub-banner');
+    if(old)old.remove();
+
+    if(!sub||!sub.status||sub.status==='none'){
+      showSubBanner('⚠️ Aucun abonnement actif pour cette ferme. Contactez l\'administrateur.','warn');
+      return;
+    }
+
+    var now=new Date();
+    var expiresAt=sub.expiresAt?new Date(sub.expiresAt.seconds?sub.expiresAt.seconds*1000:sub.expiresAt):null;
+    if(!expiresAt)return;
+
+    var daysLeft=Math.ceil((expiresAt-now)/(1000*60*60*24));
+
+    if(daysLeft<=0){
+      showSubBanner('🔴 Abonnement expiré le '+expiresAt.toLocaleDateString('fr-FR')+'. Accès limité — contactez l\'administrateur.','danger',true);
+    }else if(daysLeft<=30){
+      showSubBanner('⚠️ Abonnement expire dans '+daysLeft+' jour(s) — le '+expiresAt.toLocaleDateString('fr-FR')+'. Pensez à renouveler.','warn',false);
+    }
+  }catch(e){console.warn('[checkFarmSubscription]',e);}
+}
+
+function showSubBanner(msg, type, isExpired){
+  var topbar=document.querySelector('#screen-farm .topbar');
+  if(!topbar)return;
+  var hex=type==='danger'?'#EF4444':'#F59E0B';
+  var banner=document.createElement('div');
+  banner.id='sub-banner';
+  banner.style.cssText='background:'+hex+'18;border-bottom:2px solid '+hex+';color:'+hex+';font-size:11px;font-weight:600;padding:6px 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem';
+  banner.innerHTML='<span>'+msg+'</span>'
+    +(isExpired?'<span style="font-size:10px;opacity:.7">Certaines fonctions peuvent être restreintes</span>':'')
+    +'<button onclick="this.parentElement.remove()" style="background:none;border:none;color:'+hex+';cursor:pointer;font-size:14px;padding:0 4px">✕</button>';
+  topbar.insertAdjacentElement('afterend',banner);
+}
+window.checkFarmSubscription=checkFarmSubscription;
 
 // Remplacer l'ancienne bannière bassins par le nouveau système au login
 function showSyncBassinsModal(){
