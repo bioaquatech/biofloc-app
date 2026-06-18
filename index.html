@@ -3338,7 +3338,7 @@ function saveBassins(){
     APP.state.bassins.forEach((b,i)=>{
       batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});
     });
-    batch.commit().then(showSynced).catch(showSyncErr);
+    batch.commit().then(()=>{showSynced();checkVolumeLimit();}).catch(showSyncErr);
   },600);
 }
 async function saveBassinsNow(){
@@ -3347,7 +3347,7 @@ async function saveBassinsNow(){
   showSyncing();
   const batch=db.batch();
   APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});});
-  await batch.commit().then(showSynced).catch(showSyncErr);
+  await batch.commit().then(()=>{showSynced();checkVolumeLimit();}).catch(showSyncErr);
 }
 // Sync ERP bassins (localStorage bassins_ref) → APP.state.bassins → Firebase
 // Call after any ERP bassin save/create/delete
@@ -3888,7 +3888,7 @@ var SUBSCRIPTION_PLANS=[
   {plan:1,label:'Plan 1',maxVol:45.9,monthly:32000,annual:326400,color:'#4A7A9B'},
   {plan:2,label:'Plan 2',minVol:46,maxVol:99.9,monthly:45000,annual:459000,color:'#3D8EF5'},
   {plan:3,label:'Plan 3',minVol:100,maxVol:300,monthly:60000,annual:612000,color:'#00D4B4'},
-  {plan:4,label:'Plan 4',minVol:300.01,monthly:70000,annual:714000,color:'#FBBF24'}
+  {plan:4,label:'Plan 4',minVol:300.01,maxVol:Infinity,monthly:70000,annual:714000,color:'#FBBF24'}
 ];
 
 function getPlanForVolume(volM3){
@@ -3915,6 +3915,47 @@ window.debugAuth=async function(){
   }catch(e){console.error('Erreur lecture users/'+u.uid+':',e.message);}
 };
 
+// Vérifie si le volume total des bassins dépasse le plan souscrit → déconnecte si oui
+async function checkVolumeLimit(){
+  try{
+    var farmCode=window.APP&&APP.farmCode;
+    if(!farmCode)return;
+    var farmDoc=await db.collection('farms').doc(farmCode).get();
+    if(!farmDoc.exists)return;
+    var sub=farmDoc.data().subscription||{};
+    var subPlan=sub.plan?SUBSCRIPTION_PLANS.find(function(p){return p.plan==sub.plan;}):null;
+    if(!subPlan)return; // pas d'abonnement défini, pas de limite
+    if(subPlan.maxVol===Infinity)return; // Plan 4 = illimité
+
+    var volTotal=0;
+    if(window.APP&&APP.state&&Array.isArray(APP.state.bassins)){
+      APP.state.bassins.forEach(function(b){volTotal+=Number(b.vol||b.volume||b.volumeMaxM3||0);});
+    }else{
+      var bSnap=await db.collection('farms').doc(farmCode).collection('bassins').get();
+      bSnap.forEach(function(bd){var b=bd.data();volTotal+=Number(b.vol||b.volume||b.volumeMaxM3||0);});
+    }
+
+    if(volTotal>subPlan.maxVol){
+      // Afficher alerte et déconnecter
+      var old=document.getElementById('sub-banner');if(old)old.remove();
+      var topbar=document.querySelector('#screen-farm .topbar');
+      if(topbar){
+        var banner=document.createElement('div');
+        banner.id='sub-banner';
+        banner.style.cssText='background:#EF444418;border-bottom:2px solid #EF4444;color:#EF4444;font-size:12px;font-weight:700;padding:8px 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem';
+        banner.innerHTML='<span>🚫 Volume total des bassins ('+volTotal.toFixed(1)+' m³) dépasse votre Plan '+subPlan.plan+' (max '+subPlan.maxVol+' m³). Contactez l\'administrateur pour mettre à niveau votre abonnement.</span>';
+        topbar.insertAdjacentElement('afterend',banner);
+      }
+      // Déconnexion après 5 secondes
+      setTimeout(function(){
+        if(typeof doLogout==='function')doLogout();
+        else if(firebase&&firebase.auth)firebase.auth().signOut().then(function(){location.reload();});
+      },5000);
+    }
+  }catch(e){console.warn('[checkVolumeLimit]',e);}
+}
+window.checkVolumeLimit=checkVolumeLimit;
+
 async function renderSubscriptions(){
   var el=document.getElementById('ta6-sub-list');
   if(!el)return;
@@ -3924,6 +3965,9 @@ async function renderSubscriptions(){
     if(snap.empty){el.innerHTML='<div style="color:var(--t3);text-align:center;padding:1rem;font-size:12px">Aucune ferme.</div>';return;}
     var rows='';
     _subCache={};
+    // Compteurs pour tableau de bord
+    var nbActif=0,nbExpire=0,nbEssai=0,nbAucun=0,revMensuel=0,revAnnuel=0,nbAlerte=0;
+
     for(var i=0;i<snap.docs.length;i++){
       var fd=snap.docs[i].data();
       var fc=snap.docs[i].id;
@@ -3940,6 +3984,19 @@ async function renderSubscriptions(){
         bSnap.forEach(function(bd){var b=bd.data();volTotal+=Number(b.vol||b.volume||b.volumeMaxM3||0);});
       }catch(e){}
       var suggestedPlan=getPlanForVolume(volTotal);
+      var currentPlanObj=plan?SUBSCRIPTION_PLANS.find(function(p){return p.plan==plan;}):null;
+      var volExceeded=currentPlanObj&&currentPlanObj.maxVol!==Infinity&&volTotal>currentPlanObj.maxVol;
+      if(volExceeded)nbAlerte++;
+
+      // Increment dashboard counters
+      var isExpired=status==='expired'||(expiresAt&&expiresAt<new Date());
+      if(status==='trial'){nbEssai++;}
+      else if(isExpired){nbExpire++;}
+      else if(status==='active'&&expiresAt&&expiresAt>=new Date()){
+        nbActif++;
+        var planObj2=plan?SUBSCRIPTION_PLANS.find(function(p){return p.plan==plan;}):null;
+        if(planObj2){revMensuel+=(type==='annuel'?planObj2.annual/12:planObj2.monthly);revAnnuel+=(type==='annuel'?planObj2.annual:planObj2.monthly*12);}
+      }else{nbAucun++;}
 
       // Cache data for modal use (avoids escaping nightmare in onclick)
       _subCache[fc]={
@@ -3966,13 +4023,33 @@ async function renderSubscriptions(){
         +'</div>'
         +'<div style="display:flex;align-items:center;gap:.5rem">'
         +'<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;background:'+statusColor+'22;border:1px solid '+statusColor+'55;color:'+statusColor+'">'+statusLabel+'</span>'
+        +(volExceeded?'<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:#EF444418;border:1px solid #EF444455;color:#EF4444">⚠️ Volume dépassé</span>':'')
         +'<button data-fc="'+fc+'" onclick="openSubModal(this.dataset.fc)" style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:5px;color:var(--gold);font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer">✏️ Gérer</button>'
         +'</div>'
         +'</div>'
         +(plan?'<div style="margin-top:.4rem;font-size:10px;color:var(--t2)">Plan actuel: <strong style="color:var(--gold)">Plan '+plan+'</strong> · '+type+' · '+(expiresAt?'Expire le '+expiresAt.toLocaleDateString('fr-FR'):'Sans date')+'</div>':'')
         +'</div>';
     }
-    el.innerHTML=rows||'<div style="color:var(--t3);text-align:center;padding:1rem;font-size:12px">Aucune ferme.</div>';
+    var dashboard='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.75rem">'
+      +'<div style="background:var(--card);border:1px solid #10B98133;border-radius:8px;padding:.6rem .75rem;text-align:center">'
+        +'<div style="font-size:18px;font-weight:700;color:#10B981">'+nbActif+'</div>'
+        +'<div style="font-size:10px;color:var(--t3)">Actifs</div>'
+      +'</div>'
+      +'<div style="background:var(--card);border:1px solid #EF444433;border-radius:8px;padding:.6rem .75rem;text-align:center">'
+        +'<div style="font-size:18px;font-weight:700;color:#EF4444">'+nbExpire+'</div>'
+        +'<div style="font-size:10px;color:var(--t3)">Expirés</div>'
+      +'</div>'
+      +'<div style="background:var(--card);border:1px solid #A78BFA33;border-radius:8px;padding:.6rem .75rem;text-align:center">'
+        +'<div style="font-size:18px;font-weight:700;color:#A78BFA">'+nbEssai+'</div>'
+        +'<div style="font-size:10px;color:var(--t3)">Essai</div>'
+      +'</div>'
+      +'</div>'
+      +(nbAlerte?'<div style="background:#EF444418;border:1px solid #EF444455;border-radius:8px;padding:.5rem .75rem;margin-bottom:.75rem;font-size:11px;color:#EF4444;font-weight:700">⚠️ '+nbAlerte+' ferme(s) dépassent le volume de leur plan</div>':'')
+      +'<div style="background:var(--card);border:1px solid var(--b1);border-radius:8px;padding:.6rem .75rem;margin-bottom:.75rem;display:flex;justify-content:space-around;flex-wrap:wrap;gap:.5rem">'
+        +'<div style="text-align:center"><div style="font-size:11px;color:var(--t3)">Revenu mensuel estimé</div><div style="font-size:14px;font-weight:700;color:var(--gold)">'+fmtXOF(Math.round(revMensuel))+'</div></div>'
+        +'<div style="text-align:center"><div style="font-size:11px;color:var(--t3)">Revenu annuel estimé</div><div style="font-size:14px;font-weight:700;color:var(--gold)">'+fmtXOF(Math.round(revAnnuel))+'</div></div>'
+      +'</div>';
+    el.innerHTML=dashboard+(rows||'<div style="color:var(--t3);text-align:center;padding:1rem;font-size:12px">Aucune ferme.</div>');
   }catch(e){
     console.error('renderSubscriptions error:',e);
     el.innerHTML='<div style="color:var(--dng);padding:1rem;font-size:12px">Erreur: '+e.message+'<br><small style="opacity:.7">Vérifiez que votre document users/{votre-uid} existe avec role:"SuperAdmin". Tapez <strong>debugAuth()</strong> dans la console pour diagnostiquer.</small></div>';
@@ -7411,6 +7488,7 @@ async function saveBassinRow(i){
     // Mise à jour locale après commit réussi
     pendingMovs.forEach(m=>{const idx=APP_STOCK_MOVEMENTS.findIndex(x=>x.id===m.id);if(idx>=0)APP_STOCK_MOVEMENTS[idx]=m;else APP_STOCK_MOVEMENTS.push(m);});
     showSynced();
+    checkVolumeLimit();
     if(isHistorical&&role==='Opérateur'){
       await saveNotification(i,dateStr,b);
       logAudit('modification',`Modification historique ${b.name}`,`Date: ${dateStr}`);
