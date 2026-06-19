@@ -6995,8 +6995,9 @@ function getRatEntry(poids){
 // Volume_ml = Poids_melasse / (1.4 * 1000) × 1000 = Poids_melasse / 1.4
 function calcMelassePreventive(gAlimJour, protPct, cnRatio){
   const g=+gAlimJour, p=+protPct/100, r=+cnRatio;
-  const TCO=(g/1000)*ALIM_C_ORGANIQUE*ALIM_POIDS_SEC*ALIM_NON_ASSIM;
-  const TAO=(g/1000)*p*ALIM_POIDS_SEC*ALIM_NON_ASSIM*ALIM_N_PROT;
+  // Tout en grammes — MELASSE_DENSITE (1.4 kg/L = 1.4 g/mL) donne bien des mL
+  const TCO=g*ALIM_C_ORGANIQUE*ALIM_POIDS_SEC*ALIM_NON_ASSIM;
+  const TAO=g*p*ALIM_POIDS_SEC*ALIM_NON_ASSIM*ALIM_N_PROT;
   const RCN=TAO>0?TCO/TAO:0;
   const deficit=Math.max(0,TAO*r-TCO);
   const poidsMel=deficit/MELASSE_FACTEUR;
@@ -7091,10 +7092,10 @@ function renderRationnement(){
       +'<div style="background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.2);border-radius:8px;padding:.5rem .7rem">'
       +'<div style="font-size:10px;font-weight:700;color:var(--warn);margin-bottom:.3rem">🍯 MÉLASSE PRÉVENTIVE — Ratio C:N '+ratio+':1</div>'
       +'<div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:10px;color:var(--t2)">'
-      +'<span>TCO: <strong>'+prev.TCO.toFixed(4)+'g</strong></span>'
-      +'<span>TAO: <strong>'+prev.TAO.toFixed(4)+'g</strong></span>'
-      +'<span>RCN naturel: <strong>'+prev.RCN.toFixed(2)+'</strong></span>'
-      +'<span>Déficit C: <strong>'+prev.deficit.toFixed(4)+'g</strong></span>'
+      +'<span>TCO: <strong>'+prev.TCO.toFixed(1)+'g</strong></span>'
+      +'<span>TAO: <strong>'+prev.TAO.toFixed(2)+'g</strong></span>'
+      +'<span>RCN naturel: <strong>'+prev.RCN.toFixed(1)+'</strong></span>'
+      +'<span>Déficit C: <strong>'+prev.deficit.toFixed(1)+'g</strong></span>'
       +'</div>'
       +'<div style="font-size:13px;font-weight:800;color:var(--warn);margin-top:.3rem">→ '
       +(prev.deficit<=0
