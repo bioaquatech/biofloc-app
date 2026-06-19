@@ -10920,29 +10920,45 @@ function enregistrerRappelsBas(){enregistrerPlanningBas();}
 function exportBasifiantPDF(){
   var cible=parseFloat(document.getElementById('tac-cible')?.value)||150;
   var n=parseInt(document.getElementById('bas-n-val')?.value)||1;
-  var prod=_getChosenBasifiant();
-  var K=prod?prod.facteurK:0.75;
-  var prodName=prod?prod.name:'CaCO₃';
-  var intervalle=prod?prod.intervalle:'H+24';
+  var prodGlobal=_getChosenBasifiant();
   var bassins=APP.state.bassins||[];
   var date=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
   var farmName=(APP&&APP.farmName)||APP.farmCode||'';
 
-  var rows=bassins.filter(function(b){return b.statut==='Actif';}).map(function(b){
+  // Collecter les produits utilisés pour les notes de bas de page
+  var produitsUtilises={};
+
+  var rows=bassins.filter(function(b){return b.statut==='Actif';}).map(function(b,rawIdx){
+    // Trouver l'index réel du bassin dans APP.state.bassins
+    var i=APP.state.bassins.indexOf(b);
     var tac=b.TAC;
     var tacStr=(tac!==null&&tac!==undefined)?tac+' mg/L':'—';
     var delta=(tac!==null&&tac!==undefined)?Math.max(0,cible-tac):null;
     var deltaStr=delta!==null?(delta>0?delta.toFixed(0):'0 ✅'):'—';
+
+    // Produit spécifique à ce bassin
+    var prod=_getChosenBasifiant(i)||prodGlobal;
+    var K=prod?prod.facteurK:0.75;
+    var prodName=prod?prod.name:'CaCO₃';
+    var intervalle=prod?(prod.intervalle||'H+24'):'H+24';
+    if(prod)produitsUtilises[prod.id]=prod;
+
     var doseTot=delta&&delta>0?(delta*(b.vol||3.8)*K):null;
-    var doseApp=doseTot!==null?(doseTot/n).toFixed(0)+'g':'—';
-    var doseTotal=doseTot!==null?doseTot.toFixed(0)+'g':'—';
+    var doseApp=doseTot!==null?(doseTot/n).toFixed(0)+' g':'—';
+    var doseTotal=doseTot!==null?doseTot.toFixed(0)+' g':'—';
     var urgColor=delta&&delta>70?'#c0392b':delta&&delta>50?'#e67e22':delta&&delta>0?'#f39c12':'#27ae60';
     var bgRow=delta&&delta>70?'#fff5f5':delta&&delta>50?'#fff9f0':delta&&delta>0?'#fffef0':'';
+
+    // Badge produit coloré
+    var prodColor=prod&&prod.id==='nahco3'?'#c0392b':'#1a5276';
+    var prodShort=prod&&prod.id==='nahco3'?'NaHCO₃':'CaCO₃';
+
     return '<tr style="background:'+bgRow+';border-bottom:1px solid #e0e0e0">'
       +'<td style="padding:6px 10px;font-weight:700;color:#1a5276">'+b.name+'</td>'
-      +'<td style="padding:6px 10px;text-align:center">'+( b.vol||'?')+' m³</td>'
+      +'<td style="padding:6px 10px;text-align:center">'+(b.vol||'?')+' m³</td>'
       +'<td style="padding:6px 10px;text-align:center;color:'+(tac!==null&&tac!==undefined?urgColor:'#888')+'"><strong>'+tacStr+'</strong></td>'
       +'<td style="padding:6px 10px;text-align:center;color:'+urgColor+';font-weight:700">'+deltaStr+'</td>'
+      +'<td style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:'+prodColor+';background:'+prodColor+'12;border-radius:4px">'+prodShort+'</td>'
       +'<td style="padding:6px 10px;text-align:center;color:#6c3483;font-weight:700">'+doseApp+'</td>'
       +'<td style="padding:6px 10px;text-align:center">'+n+'×</td>'
       +'<td style="padding:6px 10px;text-align:center;font-weight:700;color:#1a5276">'+doseTotal+'</td>'
@@ -10950,19 +10966,18 @@ function exportBasifiantPDF(){
       +'</tr>';
   }).join('');
 
-  var html='<div style="font-family:Arial,sans-serif;max-width:900px;margin:0 auto">'
+  // Notes de bas de page selon les produits effectivement utilisés
+  var notes='';
+  if(produitsUtilises.caco3)notes+='<div style="margin-top:8px;font-size:10px;color:#555">⚗️ <strong>CaCO₃</strong> (×0,75) : Prédissoudre au vinaigre blanc 5–8 ml/g · Verser à l\'arrosoir pendant aération maximale · 2–3 apports max/correction</div>';
+  if(produitsUtilises.nahco3)notes+='<div style="margin-top:6px;font-size:10px;color:#555">💧 <strong>NaHCO₃</strong> (×0,84) : Dissoudre dans 2L eau du bassin · Verser progressivement en pluie · 1–2 apports max · Action rapide</div>';
+
+  var html='<div style="font-family:Arial,sans-serif;max-width:950px;margin:0 auto">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1a5276;padding-bottom:10px;margin-bottom:16px">'
       +'<div>'
         +'<div style="font-size:18px;font-weight:700;color:#1a5276">🧪 Distribution Basifiant — Ajustement TAC</div>'
-        +'<div style="font-size:11px;color:#666;margin-top:2px">'+farmName+' · '+date+' · Cible TAC : '+cible+' mg/L</div>'
+        +'<div style="font-size:11px;color:#666;margin-top:2px">'+farmName+' · '+date+' · Cible TAC : '+cible+' mg/L · '+n+' apport(s)</div>'
       +'</div>'
       +'<div style="text-align:right;font-size:10px;color:#888">Référentiel Technique Juin 2026</div>'
-    +'</div>'
-    +'<div style="background:#eaf4fb;border:1px solid #aed6f1;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11px">'
-      +'<strong style="color:#1a5276">Produit : '+prodName+'</strong> · '
-      +'Formule : Dose/apport (g) = ΔTAC × V(m³) × '+K+' ÷ '+n+' · '
-      +'Nombre d\'apports : <strong>'+n+'×</strong> (espacer '+intervalle+' entre apports) · '
-      +'Remesurer TAC avant chaque dose suivante'
     +'</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
       +'<thead><tr style="background:#1a5276;color:white">'
@@ -10970,6 +10985,7 @@ function exportBasifiantPDF(){
         +'<th style="padding:8px 10px;text-align:center">Volume</th>'
         +'<th style="padding:8px 10px;text-align:center">TAC mesuré</th>'
         +'<th style="padding:8px 10px;text-align:center">ΔTAC</th>'
+        +'<th style="padding:8px 10px;text-align:center">Produit</th>'
         +'<th style="padding:8px 10px;text-align:center">Dose / apport</th>'
         +'<th style="padding:8px 10px;text-align:center">Nb apports</th>'
         +'<th style="padding:8px 10px;text-align:center">Total à préparer</th>'
@@ -10977,13 +10993,12 @@ function exportBasifiantPDF(){
       +'</tr></thead>'
       +'<tbody>'+rows+'</tbody>'
     +'</table>'
-    +(prod&&prod.id==='caco3'?'<div style="margin-top:12px;font-size:10px;color:#555;border-top:1px solid #ddd;padding-top:8px">⚗️ CaCO₃ : Prédissoudre au vinaigre blanc 5–8 ml/g · Verser à l\'arrosoir pendant aération maximale · 2–3 apports max/correction</div>':'')
-    +(prod&&prod.id==='nahco3'?'<div style="margin-top:12px;font-size:10px;color:#555;border-top:1px solid #ddd;padding-top:8px">💧 NaHCO₃ : Dissoudre dans 2L eau du bassin · Verser progressivement en pluie · 1–2 apports max</div>':'')
+    +(notes?'<div style="margin-top:12px;border-top:1px solid #ddd;padding-top:8px">'+notes+'</div>':'')
     +'<div style="margin-top:16px;font-size:9px;color:#aaa;text-align:center">BioAquaTech · Aquaculture Biofloc · Lomé, Togo · Régulation TAC Juin 2026</div>'
     +'</div>';
 
   if(typeof openPDF==='function')openPDF(html,'Distribution Basifiant — '+date);
-  else{var w=window.open('','_blank');if(w){w.document.write('<html><head><title>Distribution Basifiant</title><style>body{font-family:Arial;margin:20px}</style></head><body>'+html+'</body></html>');w.document.close();w.print();}}
+  else{var w=window.open('','_blank');if(w){w.document.write('<html><head><title>Distribution Basifiant</title><style>body{font-family:Arial;margin:20px;background:#fff;color:#111}</style></head><body>'+html+'</body></html>');w.document.close();w.print();}}
 }
 window.exportBasifiantPDF=exportBasifiantPDF;
 window.renderBasifiantCalc=renderBasifiantCalc;
