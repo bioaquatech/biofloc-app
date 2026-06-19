@@ -1745,6 +1745,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
             <div id="bas-result" style="font-size:11px;color:var(--t2)">
               <span style="color:var(--t3)">Sélectionnez un bassin et un basifiant.</span>
             </div>
+            <div id="bas-planning" style="display:none;margin-top:.6rem"></div>
             <button onclick="exportBasifiantPDF()" style="width:100%;margin-top:.6rem;background:var(--dng);color:#fff;border:none;border-radius:7px;padding:7px;font-size:11px;font-weight:700;cursor:pointer">📄 Exporter tableau de distribution PDF</button>
           </div>
 
@@ -4614,19 +4615,19 @@ const ANALYSE_RULES={
     rules:[
       {max:2, level:'CRISE', color:'#ff1744',
         interpretation:'Asphyxie en cours — mortalité dans les 30 min si aucune action.',
-        actions:['O₂ pur immédiat si disponible','Les deux souffleurs à fond','Vidange partielle 10% eau fraîche oxygénée','Arrêt total alimentation et mélasse','Identifier cause : panne électrique ? Imhoff > 50 ? nuit ?']},
+        actions:['Activer immédiatement tous les souffleurs à plein régime','Apporter de l\'oxygène pur si disponible','Effectuer une vidange partielle et remplacer par de l\'eau fraîche oxygénée','Arrêter toute alimentation et tout apport de mélasse','Identifier la cause : panne électrique, floc excessif, chaleur nocturne ?']},
       {min:2,max:3, level:'URGENCE', color:'var(--dng)',
         interpretation:'Hypoxie sévère — poissons commencent à monter en surface.',
-        actions:['Arrêt alimentation immédiat','Vérifier souffleur — panne ?','Démarrer S2 si S1 en panne','O₂ pur si disponible','Réduire Imhoff si > 30 ml/L']},
+        actions:['Arrêter l\'alimentation immédiatement','Vérifier l\'état des souffleurs — panne ou obstruction ?','Basculer sur le souffleur de secours si disponible','Apporter de l\'oxygène pur si disponible','Surveiller le niveau de floc — vidange si Imhoff trop élevé']},
       {min:3,max:4, level:'ALERTE', color:'var(--dng)',
         interpretation:'Hypoxie modérée — poissons stressés, activité bactérienne ralentie.',
-        actions:['Réduire ration 50% ou suspendre','Vérifier souffleurs et disques','Ouvrir vannes à fond','Remesurer toutes les 30 min','Ne pas augmenter mélasse']},
+        actions:['Réduire ou suspendre la ration alimentaire','Vérifier souffleurs, disques diffuseurs et vannes','Ne pas augmenter la mélasse dans l\'immédiat','Remesurer l\'oxygène toutes les 30 minutes']},
       {min:4,max:5, level:'VIGILANCE', color:'var(--warn)',
         interpretation:'Stress modéré — légèrement sous l\'optimum.',
-        actions:['Réduire ration 30%','Vérifier filtres souffleur','Vérifier Imhoff — si > 40 ml/L : vidange urgente','Ne pas augmenter mélasse']},
+        actions:['Réduire la ration alimentaire temporairement','Vérifier les filtres et l\'état des souffleurs','Contrôler le volume de floc — vidange si nécessaire','Ne pas augmenter la mélasse']},
       {min:5,max:6, level:'ACCEPTABLE', color:'var(--t2)',
         interpretation:'Légèrement sous l\'optimum. Surveiller post-repas.',
-        actions:['Régime normal','Mesurer DO 1h après chaque repas','Si descend sous 5 après repas : réduire ration 20%']},
+        actions:['Maintenir le régime en cours','Mesurer le DO une heure après chaque repas','Réduire la ration si le DO descend fortement après les repas']},
     ]
   },
   ph:{
@@ -4634,19 +4635,19 @@ const ANALYSE_RULES={
     rules:[
       {max:6, level:'URGENCE', color:'var(--dng)',
         interpretation:'Arrêt nitrification — toxicité — mortalité possible.',
-        actions:['NaHCO₃ 20 g/m³ immédiatement','Mesurer TAC en priorité','Arrêt alimentation','Remesurer toutes les 3h','Vidange 10% pour diluer']},
+        actions:['Apporter un basifiant à action rapide (NaHCO₃) — utiliser le calculateur Basifiants pour la dose','Mesurer le TAC en priorité','Arrêter l\'alimentation','Effectuer une vidange partielle pour diluer','Remesurer le pH toutes les 3 heures']},
       {min:6,max:6.5, level:'ALERTE', color:'var(--dng)',
         interpretation:'Nitrification très réduite — stress poissons — TAN en hausse.',
-        actions:['CaCO₃ 100 g/m³ + NaHCO₃ 15 g/m³','Réduire ration 50%','Vidange 10% pour diluer','Remesurer dans 6h']},
+        actions:['Apporter un correcteur d\'alcalinité (CaCO₃ et/ou NaHCO₃) — utiliser le calculateur Basifiants','Réduire la ration alimentaire','Effectuer une vidange partielle pour diluer','Remesurer dans 6 heures']},
       {min:6.5,max:7, level:'VIGILANCE', color:'var(--warn)',
         interpretation:'Zone limite basse — nitrifiantes partiellement actives.',
-        actions:['CaCO₃ 75 g/m³','Vérifier TAC bassin','Réduire mélasse 20% (source d\'acidité)','Remesurer le soir']},
+        actions:['Apporter du CaCO₃ en dose d\'entretien — utiliser le calculateur Basifiants','Vérifier le TAC du bassin','Réduire légèrement la mélasse (source d\'acidité)','Remesurer le soir']},
       {min:7.8,max:8.5, level:'VIGILANCE', color:'var(--warn)',
-        interpretation:'NH₃ libre augmente — à pH 8, 5% du TAN est sous forme libre toxique.',
-        actions:['Mesurer TAN immédiatement','Réduire mélasse si possible','Vidange légère 5–10% si Imhoff > 30 ml/L']},
+        interpretation:'NH₃ libre augmente — à pH 8, une fraction du TAN devient toxique.',
+        actions:['Mesurer le TAN immédiatement','Réduire les apports de mélasse si possible','Effectuer une légère vidange si le floc est dense']},
       {min:8.5, level:'URGENCE', color:'var(--dng)',
         interpretation:'NH₃ très toxique même à TAN faible — nitrifiantes inhibées.',
-        actions:['HCl dilué (1 mL HCl 10% / m³ max)','Arrêt mélasse et alimentation','Vidange 15%','Remesurer toutes les 3h']},
+        actions:['Acidifier avec précaution (acide dilué — se référer aux recommandations techniques)','Arrêter la mélasse et l\'alimentation','Effectuer une vidange partielle','Remesurer toutes les 3 heures']},
     ]
   },
   temp:{
@@ -4654,19 +4655,19 @@ const ANALYSE_RULES={
     rules:[
       {max:22, level:'ATTENTION', color:'var(--warn)',
         interpretation:'Froid — croissance ralentie, nitrifiantes peu actives.',
-        actions:['Réduire ration 30% (digestion lente)','Surveiller TAN — nitrification ralentie','Situation rare à Lomé — vérifier source eau froide']},
+        actions:['Réduire la ration alimentaire (digestion ralentie)','Surveiller le TAN — nitrification moins efficace','Vérifier la source d\'eau — eau froide anormale ?']},
       {min:22,max:26, level:'SOUS-OPTIMAL', color:'var(--t2)',
         interpretation:'Croissance réduite — nitrification acceptable.',
-        actions:['Réduire ration 15%','Surveiller FCR','Adapter le calendrier si saisonnier']},
+        actions:['Réduire légèrement la ration','Surveiller le FCR','Adapter le programme si situation saisonnière']},
       {min:30,max:32, level:'VIGILANCE', color:'var(--warn)',
         interpretation:'Limite haute — DO commence à baisser, stress thermique léger.',
-        actions:['Mesurer DO plus fréquemment','Réduire ration 10%','Vérifier aération']},
+        actions:['Augmenter la fréquence de mesure du DO','Réduire légèrement la ration','Vérifier que l\'aération fonctionne à plein régime']},
       {min:32,max:35, level:'ALERTE', color:'var(--dng)',
         interpretation:'DO fortement réduit — stress métabolique poissons.',
-        actions:['Réduire ration 30%','Mesurer DO toutes les heures','Ventiler le bâtiment','Eau de remplissage fraîche (forage)','Surveiller TAN — augmente vite à cette température']},
+        actions:['Réduire significativement la ration','Mesurer le DO toutes les heures','Aérer le bâtiment si possible','Utiliser de l\'eau de forage fraîche pour refroidir','Surveiller le TAN — augmente rapidement à cette température']},
       {min:35, level:'URGENCE', color:'var(--dng)',
         interpretation:'Danger vital — nitrifiantes inhibées + DO critique.',
-        actions:['Arrêt alimentation','Refroidir eau (eau de forage fraîche)','Aération maximale','Réduire Imhoff si > 30 ml/L','Vérifier toiture — situation exceptionnelle à Lomé']},
+        actions:['Arrêter l\'alimentation','Refroidir l\'eau avec de l\'eau de forage fraîche','Aération maximale','Réduire le volume de floc si Imhoff trop élevé','Vérifier l\'état de la toiture']},
     ]
   },
   NH3:{
@@ -4674,13 +4675,13 @@ const ANALYSE_RULES={
     rules:[
       {min:0.07,max:0.5, level:'VIGILANCE', color:'var(--warn)',
         interpretation:'Pression ammoniacale en hausse — nitrifiantes sous pression.',
-        actions:['Remesurer TAN 24h plus tard','Réduire ration 20%','Vérifier ratio C/N mélasse','Ne pas augmenter la charge']},
+        actions:['Remesurer le TAN 24 heures plus tard','Réduire la ration alimentaire temporairement','Vérifier le ratio C/N de la mélasse','Ne pas augmenter la charge organique']},
       {min:0.5,max:1, level:'ALERTE', color:'var(--dng)',
         interpretation:'Nitrification dépassée — risque NH₃ libre significatif.',
-        actions:['Réduire ration 50%','Vidange 10%','Augmenter mélasse','Inoculer nitrifiants (9–14 L eau mature)','Remesurer le lendemain matin']},
+        actions:['Réduire fortement la ration alimentaire','Effectuer une vidange partielle','Appliquer de la mélasse corrective — utiliser le calculateur Probiotiques/PWA','Inoculer des nitrifiants (eau mature de bassin sain)','Remesurer le lendemain matin']},
       {min:1, level:'URGENCE', color:'var(--dng)',
         interpretation:'Intoxication NH₃ imminente — branchies en danger.',
-        actions:['Arrêt alimentation immédiat','Vidange 15–20%','BC 100 dose choc (1,2 L/bassin)','Mesurer pH — si > 7,8 : corriger en priorité','Aération maximale — remesurer toutes les 6h']},
+        actions:['Arrêter immédiatement l\'alimentation','Effectuer une vidange importante','Appliquer un correcteur bactérien (BC 100 ou équivalent)','Vérifier le pH — corriger si > 7,8','Aération maximale — remesurer toutes les 6 heures']},
     ]
   },
   NO2:{
@@ -4688,16 +4689,16 @@ const ANALYSE_RULES={
     rules:[
       {min:0.2,max:0.5, level:'VIGILANCE', color:'var(--warn)',
         interpretation:'Nitrospira sous pression ou en établissement.',
-        actions:['NaCl 1 g/L préventif (protection branchies)','Remesurer 48h','Surveiller comportement poissons','Vérifier Imhoff — floc excessif aggrave les NO₂']},
+        actions:['Apporter du sel de cuisine en dose préventive (protection des branchies)','Remesurer dans 48 heures','Surveiller le comportement des poissons','Vérifier le volume de floc — un floc excessif aggrave les NO₂']},
       {min:0.5,max:1, level:'ALERTE', color:'var(--dng)',
         interpretation:'Nitrospira insuffisantes — risque méthémoglobinémie.',
-        actions:['Vidange 10% immédiate','NaCl 2 g/L','Inoculer eau mature riche en Nitrospira (15–20 L/m³)','Réduire ration 30%','Remesurer 24h']},
+        actions:['Effectuer une vidange partielle immédiate','Apporter du sel en dose corrective','Inoculer de l\'eau mature riche en Nitrospira (bassin sain)','Réduire la ration alimentaire','Remesurer dans 24 heures']},
       {min:1,max:2, level:'URGENCE', color:'var(--dng)',
         interpretation:'Méthémoglobinémie active — poissons suffoquent malgré DO correct.',
-        actions:['Vidange 15% urgente','NaCl 3–5 g/L','BC 100 dose choc (1,2 L/bassin)','Arrêt alimentation','Vérifier DO > 6 ppm','Remesurer toutes les 12h']},
+        actions:['Vidange urgente','Apporter du sel en dose élevée','Appliquer un correcteur bactérien (BC 100 ou équivalent)','Arrêter l\'alimentation','Vérifier que le DO reste élevé','Remesurer toutes les 12 heures']},
       {min:2, level:'CRISE', color:'#ff1744',
         interpretation:'Crise nitrification grave — mortalité probable si non traité.',
-        actions:['Vidange 20% immédiate','NaCl 5 g/L','Arrêt alimentation et mélasse 48h','Inoculation massive Nitrospira','Identifier cause : choc pH ? antibiotique ? température ?']},
+        actions:['Vidange importante en urgence','Apporter du sel à dose de choc','Arrêter alimentation et mélasse pendant 48 heures','Inoculation massive de Nitrospira (eau mature)','Identifier la cause : choc pH, antibiotique, température ?']},
     ]
   },
   TAN:{
@@ -4705,16 +4706,16 @@ const ANALYSE_RULES={
     rules:[
       {min:0.5,max:1, level:'VIGILANCE', color:'var(--warn)',
         interpretation:'Système sous pression — Nitrosomonas insuffisantes ou charge trop élevée.',
-        actions:['Remesurer 24h plus tard','Réduire ration 20%','Vérifier ratio C/N mélasse','Ne pas augmenter la charge']},
+        actions:['Remesurer 24 heures plus tard','Réduire la ration alimentaire temporairement','Vérifier le ratio C/N de la mélasse','Ne pas augmenter la charge organique']},
       {min:1,max:2, level:'ALERTE', color:'var(--dng)',
         interpretation:'Nitrification dépassée — risque NH₃ libre significatif.',
-        actions:['Réduire ration 50%','Vidange 10%','Augmenter mélasse (méthode corrective)','Inoculer nitrifiants (9–14 L eau mature)','Remesurer le lendemain matin']},
+        actions:['Réduire fortement la ration alimentaire','Effectuer une vidange partielle','Appliquer de la mélasse corrective — utiliser le calculateur Probiotiques/PWA','Inoculer des nitrifiants (eau mature de bassin sain)','Remesurer le lendemain matin']},
       {min:2,max:3, level:'URGENCE', color:'var(--dng)',
         interpretation:'Intoxication NH₃ imminente — branchies en danger.',
-        actions:['Arrêt alimentation immédiat','Vidange 15–20%','Dose de choc BC 100 (1,2 L/bassin)','Mesurer pH — si > 7,8 : corriger en priorité','Aération maximale — remesurer toutes les 6h']},
+        actions:['Arrêter immédiatement l\'alimentation','Effectuer une vidange importante','Appliquer un correcteur bactérien en dose de choc','Vérifier le pH — corriger si > 7,8','Aération maximale — remesurer toutes les 6 heures']},
       {min:3, level:'CRISE', color:'#ff1744',
         interpretation:'Mortalité en cours ou imminente — effondrement du système.',
-        actions:['Arrêt alimentation','Vidange 20% immédiate','O₂ pur si disponible','BC 100 dose choc','Séparer les poissons si possible','Identifier la cause : panne aération ? pluie ? sur-alimentation ?']},
+        actions:['Arrêter l\'alimentation','Vidange importante en urgence','Apporter de l\'oxygène pur si disponible','Appliquer un correcteur bactérien en dose de choc','Séparer les poissons si possible','Identifier la cause : panne aération, pluie, sur-alimentation ?']},
     ]
   },
   TAC:{
@@ -4722,16 +4723,16 @@ const ANALYSE_RULES={
     rules:[
       {min:100,max:150, level:'ACCEPTABLE', color:'var(--t2)',
         interpretation:'Tampon suffisant — surveiller l\'évolution hebdomadaire.',
-        actions:['CaCO₃ maintenance : 20 g/m³ tous les 3 jours','Régime normal']},
+        actions:['Maintenir un apport régulier de CaCO₃ en entretien — utiliser le calculateur Basifiants','Régime normal']},
       {min:50,max:100, level:'VIGILANCE', color:'var(--warn)',
         interpretation:'Réserve en baisse — risque crash pH dans 2–4 jours.',
-        actions:['CaCO₃ 25 g/m³ immédiatement','Remesurer dans 48h','Surveiller pH 2×/jour']},
+        actions:['Apporter du CaCO₃ dès que possible — utiliser le calculateur Basifiants pour la dose','Remesurer dans 48 heures','Surveiller le pH deux fois par jour']},
       {min:40,max:50, level:'ALERTE', color:'var(--dng)',
         interpretation:'Réserve presque épuisée — crash pH imminent.',
-        actions:['CaCO₃ 50 g/m³ immédiatement','NaHCO₃ 10 g/m³ en appoint','Remesurer le lendemain matin','Réduire mélasse 30%']},
+        actions:['Apporter du CaCO₃ en urgence, avec NaHCO₃ en appoint si disponible — utiliser le calculateur Basifiants','Remesurer le lendemain matin','Réduire les apports de mélasse']},
       {max:40, level:'URGENCE', color:'var(--dng)',
         interpretation:'Réserve épuisée — effondrement pH probable dans les heures.',
-        actions:['CaCO₃ 100 g/m³ + NaHCO₃ 15 g/m³ immédiatement','Mesurer pH toutes les 3h','Arrêt alimentation','Vidange 10% pour diluer','Vérifier si eau forage a TAC plus élevée aujourd\'hui']},
+        actions:['Apporter CaCO₃ et NaHCO₃ immédiatement — utiliser le calculateur Basifiants pour les doses','Mesurer le pH toutes les 3 heures','Arrêter l\'alimentation','Effectuer une vidange partielle pour diluer','Vérifier si l\'eau de forage dispose d\'un TAC plus élevé']},
     ]
   },
   imhoff:{
@@ -4739,19 +4740,19 @@ const ANALYSE_RULES={
     rules:[
       {max:5, level:'INSUFFISANT', color:'var(--dng)',
         interpretation:'Floc inexistant ou détruit — risque NH₃ immédiat — système non protecteur.',
-        actions:['Arrêt de toute vidange immédiatement','Mélasse dose max (150–180 ml/m³/j) 2×/jour','Inoculer eau mature ou BC 100','Mesurer TAN quotidiennement','Vérifier DO ≥ 5 ppm']},
+        actions:['Arrêter toute vidange immédiatement','Augmenter fortement les apports de mélasse — utiliser le calculateur Probiotiques/PWA','Inoculer de l\'eau mature ou un correcteur bactérien','Mesurer le TAN quotidiennement','S\'assurer que le DO reste suffisant']},
       {min:5,max:10, level:'VIGILANCE', color:'var(--warn)',
         interpretation:'Floc insuffisant — système en démarrage ou floc dilué.',
-        actions:['Pas de vidange','Mélasse 130–150 ml/m³/j','Surveiller TAN 2×/semaine','Laisser le floc se développer naturellement']},
+        actions:['Pas de vidange','Augmenter les apports de mélasse — utiliser le calculateur Probiotiques/PWA','Surveiller le TAN deux fois par semaine','Laisser le floc se développer naturellement']},
       {min:10,max:25, level:'EN MONTÉE', color:'var(--warn)',
         interpretation:'Floc en développement — zone de transition vers l\'optimum tilapia.',
-        actions:['Pas de vidange encore','Maintenir mélasse 110–130 ml/m³/j','Mesurer DO après chaque repas','Préparer le protocole vidange pour Imhoff ≥ 25 ml/L']},
+        actions:['Pas de vidange encore','Maintenir un apport régulier de mélasse — utiliser le calculateur Probiotiques/PWA','Mesurer le DO après chaque repas','Se préparer au protocole de vidange dès que le floc atteint l\'optimum']},
       {min:40,max:45, level:'ALERTE', color:'var(--dng)',
         interpretation:'Floc dense — risque hypoxie nocturne — consommation O₂ excessive la nuit.',
-        actions:['Vidange 15% immédiatement','Réduire mélasse de 20%','Surveiller DO la nuit (mesure à 2h00 si possible)','Mesurer TAN et NO₂ quotidiennement']},
+        actions:['Effectuer une vidange partielle immédiatement','Réduire les apports de mélasse','Surveiller le DO la nuit si possible','Mesurer TAN et NO₂ quotidiennement']},
       {min:45, level:'URGENCE', color:'var(--dng)',
-        interpretation:'Floc excessif — hypoxie nocturne quasi certaine — DO peut tomber à 1–2 mg/L avant l\'aube.',
-        actions:['Vidange 15% urgente 2×/semaine','Arrêt mélasse 48–72h','Réduire ration 30–40% ou suspendre 24h','DO toutes les heures la nuit','Ne pas nourrir si DO < 5 ppm','Reprendre mélasse en doses réduites après 72h']},
+        interpretation:'Floc excessif — hypoxie nocturne quasi certaine — DO peut chuter avant l\'aube.',
+        actions:['Vidanges répétées urgentes','Arrêter la mélasse temporairement','Réduire ou suspendre la ration alimentaire','Surveiller le DO en continu la nuit','Reprendre la mélasse progressivement après stabilisation']},
     ]
   }
 };
@@ -7576,6 +7577,64 @@ async function renameBassin(i, newName){
   hideLoader();
 }
 
+function _autoRappelBasifiant(b){
+  var getR=typeof getBasRappels==='function'?getBasRappels:function(){return[];};
+  var saveR=typeof saveBasRappels==='function'?saveBasRappels:function(){};
+  var getP=typeof getBasPlans==='function'?getBasPlans:function(){return[];};
+  var saveP=typeof saveBasPlans==='function'?saveBasPlans:function(){};
+
+  // Chercher un plan actif pour ce bassin (créé par le calculateur)
+  var plans=getP();
+  var planIdx=plans.findIndex(function(p){return !p.done&&p.bassinName===b.name;});
+
+  if(planIdx>=0){
+    // ── Flux Plan : consommer l'apport suivant du plan ──
+    var plan=plans[planIdx];
+    plan.appFaites=(plan.appFaites||0)+1;
+    if(plan.appFaites>=plan.n){
+      plan.done=true;
+      saveP(plans);
+      showToast('✅ '+b.name+' — Toutes les applications effectuées ('+plan.n+'/'+plan.n+')','acc');
+    } else {
+      // Marquer le rappel correspondant au prochain apport comme actif
+      var rappels=getR();
+      // Trouver le rappel pour l'apport suivant
+      var nextApp=plan.appFaites+1;
+      var nextRappel=rappels.find(function(r){return !r.done&&r.bassinName===b.name&&r.source==='plan'&&r.appNo===nextApp;});
+      saveP(plans);
+      if(nextRappel){
+        showToast('⏰ Apport '+plan.appFaites+'/'+plan.n+' enregistré — Rappel Apport '+nextApp+' actif','acc');
+      } else {
+        showToast('⏰ Apport '+plan.appFaites+'/'+plan.n+' enregistré','acc');
+      }
+      if(typeof renderBasRappelsBanner==='function')setTimeout(renderBasRappelsBanner,200);
+    }
+    return;
+  }
+
+  // ── Flux simple : pas de plan → rappel remesure TAC ──
+  var produitName=b.basifiantType||'CaCO₃';
+  var intrant=(typeof APP_INTRANTS!=='undefined'?APP_INTRANTS:[]).find(function(x){
+    return x.category==='basifiant'&&(
+      x.name.toLowerCase().includes((b.basifiantType||'').toLowerCase())||
+      x.id===(b.basifiantType||'').toLowerCase().replace(/[₃₂]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')
+    );
+  });
+  var intervalH=intrant&&typeof _parseIntervalleH==='function'?_parseIntervalleH(intrant.intervalle):24;
+  var intervalLabel=intrant?intrant.intervalle:'H+24';
+
+  var rappels=getR();
+  var existingIdx=rappels.findIndex(function(r){return !r.done&&r.bassinName===b.name&&r.source==='auto';});
+  var echeance=new Date(Date.now()+intervalH*3600000).toISOString();
+  var createdTs=existingIdx>=0?rappels[existingIdx].created:new Date().toISOString();
+  var rappel={bassinName:b.name,appNo:'remesure',totalN:'—',produitName:produitName,intervalle:intervalLabel,doseG:b.basifiant,echeance:echeance,created:createdTs,done:false,source:'auto'};
+
+  if(existingIdx>=0)rappels[existingIdx]=rappel; else rappels.push(rappel);
+  saveR(rappels);
+  if(typeof renderBasRappelsBanner==='function')setTimeout(renderBasRappelsBanner,200);
+  showToast('⏰ Rappel remesure TAC — '+intervalLabel,'acc');
+}
+
 async function saveBassinRow(i){
   const b=APP.state.bassins[i];
   b._hasData=true;
@@ -7634,6 +7693,10 @@ async function saveBassinRow(i){
     const tr=G('b-tbody')?.rows[i];
     if(tr){tr.style.background='rgba(0,201,167,.15)';setTimeout(()=>{tr.style.background='';},1500);}
     showToast(`✅ ${b.name} enregistré avec succès`,'acc');
+    // Rappel automatique basifiant : si une qté est saisie, créer/mettre à jour un rappel de remesure TAC
+    if(!isHistorical&&b.basifiant>0){
+      try{_autoRappelBasifiant(b);}catch(re){console.warn('rappel bas:',re);}
+    }
   }catch(e){
     showSyncErr();
     showToast(`❌ Erreur enregistrement ${b.name}`,'dng');
@@ -10465,10 +10528,13 @@ function openThemeModal(){
 // Formule : x = ΔTAC × V(m³) × (1/d) × (1/f) × (1/n)
 // ═══════════════════════════════════════════════
 
-// ─── helpers rappels ────────────────────────────
+// ─── helpers rappels + plans actifs ─────────────
 var BAS_RAPPELS_KEY='biofloc_bas_rappels';
+var BAS_PLAN_KEY='biofloc_bas_plans';
 function getBasRappels(){try{return JSON.parse(localStorage.getItem(BAS_RAPPELS_KEY)||'[]');}catch(e){return[];}}
-function saveBasRappels(r){try{localStorage.setItem(BAS_RAPPELS_KEY,JSON.stringify(r));}catch(e){}}
+function saveBasRappels(r){try{localStorage.setItem(BAS_RAPPELS_KEY,JSON.stringify(r));}catch(e){console.warn('Rappels non sauvegardés (localStorage plein?)',e);}}
+function getBasPlans(){try{return JSON.parse(localStorage.getItem(BAS_PLAN_KEY)||'[]');}catch(e){return[];}}
+function saveBasPlans(p){try{localStorage.setItem(BAS_PLAN_KEY,JSON.stringify(p));}catch(e){console.warn('Plans non sauvegardés',e);}}
 function addBasRappel(bassinName,appNo,totalN,produitName,intervalle,doseG){
   var r=getBasRappels();
   var now=new Date();
@@ -10478,7 +10544,7 @@ function addBasRappel(bassinName,appNo,totalN,produitName,intervalle,doseG){
   r.push({bassinName,appNo,totalN,produitName,intervalle,doseG:doseG.toFixed(0),echeance:echeance.toISOString(),created:now.toISOString(),done:false});
   saveBasRappels(r);
 }
-function dismissBasRappel(idx){var r=getBasRappels();if(r[idx])r[idx].done=true;saveBasRappels(r);renderBasRappelsBanner();}
+function dismissBasRappel(created){var r=getBasRappels();var item=r.find(function(x){return x.created===created;});if(item)item.done=true;saveBasRappels(r);renderBasRappelsBanner();}
 function renderBasRappelsBanner(){
   var r=getBasRappels().filter(function(x){return !x.done;});
   var banner=document.getElementById('bas-rappels-banner');
@@ -10489,11 +10555,18 @@ function renderBasRappelsBanner(){
     var ech=new Date(x.echeance);
     var isDue=ech<=now;
     var diff=Math.round((ech-now)/60000);
-    var timeStr=isDue?'<strong style="color:#EF4444">MAINTENANT</strong>':'dans '+(diff<60?diff+'min':Math.round(diff/60)+'h');
-    return '<div style="display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;background:'+(isDue?'rgba(239,68,68,.1)':'rgba(251,191,36,.08)')+';border-radius:6px;margin-bottom:.25rem">'
+    var timeStr=isDue?'<strong style="color:#EF4444">⚠️ MAINTENANT</strong>':'dans '+(diff<60?diff+'min':Math.round(diff/60)+'h');
+    var dateStr=ech.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' à '+ech.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    return '<div style="display:flex;align-items:center;gap:.5rem;padding:.4rem .5rem;background:'+(isDue?'rgba(239,68,68,.12)':'rgba(251,191,36,.08)')+';border:1px solid '+(isDue?'rgba(239,68,68,.3)':'rgba(251,191,36,.2)')+';border-radius:6px;margin-bottom:.3rem">'
       +'<span style="font-size:16px">'+(isDue?'🔔':'⏰')+'</span>'
-      +'<span style="font-size:10px;flex:1"><strong style="color:var(--t1)">'+x.bassinName+'</strong> — '+x.produitName+' application <strong>'+x.appNo+'/'+x.totalN+'</strong> · <strong style="color:var(--gold)">'+x.doseG+' g</strong> · '+timeStr+'</span>'
-      +'<button onclick="dismissBasRappel('+idx+')" style="background:none;border:1px solid var(--b2);border-radius:4px;font-size:9px;color:var(--t3);padding:1px 6px;cursor:pointer">✓ Fait</button>'
+      +'<div style="flex:1">'
+        +(x.source==='auto'
+          ?'<div style="font-size:10px;font-weight:700;color:var(--t1)">🔬 Remesurer TAC — <strong>'+x.bassinName+'</strong> · '+x.produitName.split('—')[0].trim()+' ('+x.doseG+' g appliqués)</div>'
+          :'<div style="font-size:10px;font-weight:700;color:var(--t1)">'+x.bassinName+' — Apport <strong>'+x.appNo+'/'+x.totalN+'</strong> · <strong style="color:var(--gold)">'+x.doseG+' g</strong> '+x.produitName.split('—')[0].trim()+'</div>'
+        )
+        +'<div style="font-size:9px;color:var(--t3)">📅 '+dateStr+' · '+timeStr+'</div>'
+      +'</div>'
+      +'<button onclick="dismissBasRappel(\''+x.created+'\')" style="background:rgba(0,201,167,.12);border:1px solid var(--acc);border-radius:4px;font-size:9px;color:var(--acc);padding:2px 8px;cursor:pointer;font-weight:700">✓ Fait</button>'
       +'</div>';
   }).join('');
   banner.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:.3rem">⏰ Rappels application basifiant</div>'+html;
@@ -10596,8 +10669,9 @@ function renderBasifiantResult(){
     if(tac>=cible){rows+='<div style="font-size:10px;color:#10B981;margin-bottom:.3rem">✅ '+b.name+' — TAC suffisant ('+tac+' ≥ '+cible+' mg/L) — ne pas ajouter</div>';return;}
     var delta=cible-tac;
     var vol=b.vol||3.8;
-    // Formule mémo ICHTUS : x = ΔTAC × V × K (dose par application)
-    var doseApp=delta*vol*K; // en grammes
+    // Formule mémo ICHTUS : dose totale = ΔTAC × V × K, divisée en n apports
+    var doseTotal=delta*vol*K; // grammes au total
+    var doseApp=doseTotal/n;   // grammes par application
     totalPerApp+=doseApp;
     var urgColor=tac<50?'#EF4444':tac<80?'#EF4444':tac<100?'var(--warn)':'#F59E0B';
 
@@ -10611,10 +10685,11 @@ function renderBasifiantResult(){
         +'<strong style="font-size:11px;color:var(--acc)">'+b.name+'</strong>'
         +'<span style="font-size:10px;background:'+urgColor+'18;color:'+urgColor+';border:1px solid '+urgColor+'44;border-radius:4px;padding:1px 6px;font-weight:700">TAC '+tac+' · Δ'+delta.toFixed(0)+' mg/L</span>'
       +'</div>'
-      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem;margin-bottom:.3rem">'
+      +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.3rem">'
         +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Volume</div><strong style="font-size:11px;color:var(--t1)">'+vol+' m³</strong></div>'
         +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Dose / apport</div><strong style="font-size:12px;color:var(--purp)">'+doseApp.toFixed(0)+' g</strong></div>'
         +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Nbre apports</div><strong style="font-size:11px;color:var(--gold)">'+n+'× (reco: '+nReco+')</strong></div>'
+        +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Total</div><strong style="font-size:11px;color:var(--acc)">'+doseTotal.toFixed(0)+' g</strong></div>'
       +'</div>'
       +(n>1?'<div style="font-size:9px;color:var(--acc2);background:rgba(61,142,245,.07);border-radius:5px;padding:.3rem .5rem">'
         +'⏰ Intervalle entre apports : <strong>'+prod.intervalle+'</strong> · Remesurer le TAC avant chaque dose suivante'
@@ -10622,41 +10697,166 @@ function renderBasifiantResult(){
       +'</div>';
   });
 
-  // Bouton "Enregistrer rappels" si n>1
-  var btnRappel='';
-  if(n>1&&checks.length){
-    btnRappel='<button onclick="enregistrerRappelsBas()" style="width:100%;margin-top:.5rem;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:7px;padding:7px;font-size:11px;font-weight:700;color:var(--gold);cursor:pointer">⏰ Enregistrer les rappels d\'application</button>';
-  }
-
   if(totalPerApp>0){
+    var totalAll=totalPerApp*n;
     rows='<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:.4rem .65rem;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center">'
-      +'<div><div style="font-size:9px;color:var(--t3)">Dose par application (tous bassins)</div><strong style="font-size:13px;color:var(--gold)">'+totalPerApp.toFixed(0)+' g</strong></div>'
-      +'<div style="font-size:9px;color:var(--t3);text-align:right">Formule : ΔTAC × V × '+K+'<br><span style="font-size:8px">(Mémo ICHTUS v1.0)</span></div>'
-      +'</div>'+rows+btnRappel;
+      +'<div><div style="font-size:9px;color:var(--t3)">Dose par application (tous bassins)</div><strong style="font-size:13px;color:var(--gold)">'+totalPerApp.toFixed(0)+' g</strong>'
+      +(n>1?'<span style="font-size:9px;color:var(--t3);margin-left:8px">· Total '+n+' apports : <strong style="color:var(--acc)">'+totalAll.toFixed(0)+' g</strong></span>':'')
+      +'</div>'
+      +'<div style="font-size:9px;color:var(--t3);text-align:right">ΔTAC × V × '+K+' ÷ '+n+'<br><span style="font-size:8px">(Mémo ICHTUS v1.0)</span></div>'
+      +'</div>'+rows;
   }
   res.innerHTML=rows||'<span style="color:var(--t3)">Aucun déficit détecté.</span>';
+  // Planning section (après le résultat)
+  setTimeout(function(){renderPlanningBas();},0);
 }
 
-function enregistrerRappelsBas(){
+function _parseIntervalleH(intervalle){
+  // "H+24" → 24, "H+4–6" ou "H+4-6" → 5 (midpoint)
+  var s=String(intervalle||'H+24').replace('H+','');
+  if(s.includes('–')||s.includes('-')){
+    var parts=s.split(/[–\-]/);
+    return (parseInt(parts[0])+parseInt(parts[1]))/2;
+  }
+  return parseInt(s)||24;
+}
+
+function _localDatetimeValue(dt){
+  // Retourne "YYYY-MM-DDTHH:MM" pour input[type=datetime-local]
+  var y=dt.getFullYear(),mo=String(dt.getMonth()+1).padStart(2,'0'),d=String(dt.getDate()).padStart(2,'0');
+  var h=String(dt.getHours()).padStart(2,'0'),mi=String(dt.getMinutes()).padStart(2,'0');
+  return y+'-'+mo+'-'+d+'T'+h+':'+mi;
+}
+
+function renderPlanningBas(){
+  var planDiv=document.getElementById('bas-planning');
+  if(!planDiv)return;
+  var n=parseInt(document.getElementById('bas-n-val')?.value)||1;
+  var prod=_getChosenBasifiant();
+  var checks=document.querySelectorAll('.bas-cb:checked');
+  if(n<=1||!checks.length||!prod){planDiv.style.display='none';return;}
+
+  var intervalH=_parseIntervalleH(prod.intervalle);
+  var now=new Date();
+  // Lire heure de base existante ou défaut = maintenant
+  var baseInput=document.getElementById('bas-plan-slot-0');
+  var baseTime=baseInput&&baseInput.value?new Date(baseInput.value):now;
+  if(isNaN(baseTime))baseTime=now;
+
+  // Construire les créneaux (1 par apport)
+  var slots=[];
+  for(var j=0;j<n;j++){
+    var slotId='bas-plan-slot-'+j;
+    var existing=document.getElementById(slotId);
+    var slotTime;
+    if(j===0){slotTime=baseTime;}
+    else{
+      slotTime=existing?new Date(existing.value):new Date(baseTime.getTime()+j*intervalH*3600000);
+      if(isNaN(slotTime))slotTime=new Date(baseTime.getTime()+j*intervalH*3600000);
+    }
+    slots.push(slotTime);
+  }
+
+  var html='<div style="background:rgba(61,142,245,.06);border:1px solid rgba(61,142,245,.25);border-radius:10px;padding:.75rem">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--acc2);margin-bottom:.6rem">📅 Planning d\'application — '+n+' apport(s)</div>'
+    +'<div style="font-size:9px;color:var(--t3);margin-bottom:.6rem">Définissez l\'heure du 1ᵉʳ apport. Les suivants sont calculés automatiquement (intervalle '+prod.intervalle+') mais restent modifiables.</div>';
+
+  for(var k=0;k<n;k++){
+    var isFirst=k===0;
+    var label=isFirst?'🟢 Apport 1 (maintenant)':'⏰ Apport '+(k+1)+' — après remesure TAC';
+    var slotColor=isFirst?'var(--acc)':'var(--gold)';
+    html+='<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:'+(k<n-1?'.3rem':'.5rem')+'">'
+      +'<div style="font-size:10px;color:'+slotColor+';font-weight:700;min-width:120px">'+label+'</div>'
+      +'<input type="datetime-local" id="bas-plan-slot-'+k+'" value="'+_localDatetimeValue(slots[k])+'"'
+      +' onchange="renderPlanningBas()" '
+      +' style="flex:1;background:var(--inp);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:10px;padding:3px 6px;outline:none"'+(isFirst?' oninput="renderPlanningBas()"':'')+' />';
+    if(k<n-1){
+      html+='<span style="font-size:9px;color:var(--t3)">→ remesure '+prod.intervalle+'</span>';
+    }
+    html+='</div>';
+  }
+
+  html+='<button onclick="enregistrerPlanningBas()" '
+    +'style="width:100%;background:rgba(251,191,36,.18);border:1px solid rgba(251,191,36,.45);border-radius:7px;padding:7px;font-size:11px;font-weight:700;color:var(--gold);cursor:pointer">'
+    +'⏰ Enregistrer le planning de rappels</button>'
+    +'</div>';
+
+  planDiv.innerHTML=html;
+  planDiv.style.display='block';
+}
+
+function enregistrerPlanningBas(){
   var n=parseInt(document.getElementById('bas-n-val')?.value)||1;
   var cible=parseFloat(document.getElementById('tac-cible')?.value)||150;
   var prod=_getChosenBasifiant();
-  if(!prod||n<=1)return;
+  if(!prod){showToast('Sélectionnez un produit basifiant','warn');return;}
   var K=prod.facteurK;
   var checks=document.querySelectorAll('.bas-cb:checked');
+  if(!checks.length){showToast('Cochez au moins un bassin','warn');return;}
+
+  // Lire et valider les créneaux
+  var slots=[];
+  for(var k=0;k<n;k++){
+    var el=document.getElementById('bas-plan-slot-'+k);
+    var dt=el&&el.value?new Date(el.value):new Date(Date.now()+k*_parseIntervalleH(prod.intervalle)*3600000);
+    if(isNaN(dt))dt=new Date(Date.now()+k*_parseIntervalleH(prod.intervalle)*3600000);
+    slots.push(dt);
+  }
+
+  var bassinsChecked=[];
+  checks.forEach(function(cb){var b=APP.state.bassins[parseInt(cb.dataset.i)];if(b)bassinsChecked.push(b.name);});
+
+  // Supprimer anciens plans et rappels pour ces bassins
+  var plans=getBasPlans().filter(function(p){return !bassinsChecked.includes(p.bassinName);});
+  var r=getBasRappels().filter(function(x){return x.done||!bassinsChecked.includes(x.bassinName);});
+
+  var count=0;
   checks.forEach(function(cb){
     var i=parseInt(cb.dataset.i);
     var b=APP.state.bassins[i];if(!b)return;
     var tac=b.TAC;if(tac===null||tac===undefined||tac>=cible)return;
-    var delta=cible-tac;var vol=b.vol||3.8;var doseApp=delta*vol*K;
-    // Enregistrer n-1 rappels (le 1er apport est maintenant, les suivants sont des rappels)
-    for(var j=2;j<=n;j++){
-      addBasRappel(b.name,j,n,prod.name,prod.intervalle,doseApp);
+    var delta=cible-tac;var vol=b.vol||3.8;var doseApp=(delta*vol*K)/n;
+
+    // Sauvegarder le plan actif pour ce bassin
+    plans.push({
+      bassinName:b.name,
+      produitName:prod.name,
+      produitId:prod.id,
+      intervalle:prod.intervalle,
+      n:n,
+      doseParApport:parseFloat(doseApp.toFixed(1)),
+      appFaites:0,
+      slots:slots.map(function(s){return s.toISOString();}),
+      cible:cible,
+      created:new Date().toISOString(),
+      done:false
+    });
+
+    // Apport 1 = slot[0] (fait immédiatement), créer rappels pour apports 2..n
+    for(var j=1;j<n;j++){
+      r.push({
+        bassinName:b.name,
+        appNo:j+1,
+        totalN:n,
+        produitName:prod.name,
+        intervalle:prod.intervalle,
+        doseG:doseApp.toFixed(0),
+        echeance:slots[j].toISOString(),
+        created:new Date(Date.now()+j).toISOString(), // +j ms pour unicité garantie
+        done:false,
+        source:'plan'
+      });
+      count++;
     }
   });
-  showToast('⏰ '+(n-1)+' rappel(s) enregistré(s)','acc');
+
+  saveBasPlans(plans);
+  saveBasRappels(r);
+  showToast('✅ Plan enregistré — '+count+' rappel(s) créé(s)','acc');
   renderBasRappelsBanner();
 }
+
+function enregistrerRappelsBas(){enregistrerPlanningBas();}
 
 function exportBasifiantPDF(){
   var cible=parseFloat(document.getElementById('tac-cible')?.value)||150;
@@ -10674,8 +10874,9 @@ function exportBasifiantPDF(){
     var tacStr=(tac!==null&&tac!==undefined)?tac+' mg/L':'—';
     var delta=(tac!==null&&tac!==undefined)?Math.max(0,cible-tac):null;
     var deltaStr=delta!==null?(delta>0?delta.toFixed(0):'0 ✅'):'—';
-    var doseApp=delta&&delta>0?(delta*(b.vol||3.8)*K).toFixed(0)+'g':'—';
-    var doseTotal=delta&&delta>0?((delta*(b.vol||3.8)*K)*n).toFixed(0)+'g':'—';
+    var doseTot=delta&&delta>0?(delta*(b.vol||3.8)*K):null;
+    var doseApp=doseTot!==null?(doseTot/n).toFixed(0)+'g':'—';
+    var doseTotal=doseTot!==null?doseTot.toFixed(0)+'g':'—';
     var urgColor=delta&&delta>70?'#c0392b':delta&&delta>50?'#e67e22':delta&&delta>0?'#f39c12':'#27ae60';
     var bgRow=delta&&delta>70?'#fff5f5':delta&&delta>50?'#fff9f0':delta&&delta>0?'#fffef0':'';
     return '<tr style="background:'+bgRow+';border-bottom:1px solid #e0e0e0">'
@@ -10700,7 +10901,7 @@ function exportBasifiantPDF(){
     +'</div>'
     +'<div style="background:#eaf4fb;border:1px solid #aed6f1;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11px">'
       +'<strong style="color:#1a5276">Produit : '+prodName+'</strong> · '
-      +'Formule : Dose/apport (g) = ΔTAC × V(m³) × '+K+' · '
+      +'Formule : Dose/apport (g) = ΔTAC × V(m³) × '+K+' ÷ '+n+' · '
       +'Nombre d\'apports : <strong>'+n+'×</strong> (espacer '+intervalle+' entre apports) · '
       +'Remesurer TAC avant chaque dose suivante'
     +'</div>'
@@ -10726,10 +10927,11 @@ function exportBasifiantPDF(){
   else{var w=window.open('','_blank');if(w){w.document.write('<html><head><title>Distribution Basifiant</title><style>body{font-family:Arial;margin:20px}</style></head><body>'+html+'</body></html>');w.document.close();w.print();}}
 }
 window.exportBasifiantPDF=exportBasifiantPDF;
-
 window.renderBasifiantCalc=renderBasifiantCalc;
 window.renderBasifiantResult=renderBasifiantResult;
 window.renderBasRappelsBanner=renderBasRappelsBanner;
+window.renderPlanningBas=renderPlanningBas;
+window.enregistrerPlanningBas=enregistrerPlanningBas;
 window.dismissBasRappel=dismissBasRappel;
 window.enregistrerRappelsBas=enregistrerRappelsBas;
 window.setBasN=setBasN;
