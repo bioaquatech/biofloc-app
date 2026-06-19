@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ICHTUS ERP — Gestion de ferme biofloc | Production, Logistique & Comptabilité</title>
-<meta name="description" content="ICHTUS ERP : logiciel de gestion en ligne pour fermes aquacoles biofloc. Suivi des bassins, alimentation, stock, comptabilité et capteurs en temps réel. Solution PWA accessible partout.">
+<title>BioFloc ERP — Gestion de ferme aquacole | Production, Logistique & Comptabilité</title>
+<meta name="description" content="BioFloc ERP : logiciel de gestion en ligne pour fermes aquacoles. Suivi des bassins, alimentation, stock, comptabilité et capteurs en temps réel. Solution PWA accessible partout.">
 <meta name="keywords" content="biofloc, aquaculture, ERP aquacole, gestion ferme poisson, logiciel aquaculture, tilapia, catfish, suivi bassins, production aquacole, Afrique">
 <meta name="author" content="BioAquaTech">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://bioaquatech.github.io/biofloc-app/">
 <!-- Open Graph (partage sur réseaux sociaux) -->
-<meta property="og:title" content="ICHTUS ERP — Gestion de ferme biofloc en ligne">
+<meta property="og:title" content="BioFloc ERP — Gestion de ferme aquacole en ligne">
 <meta property="og:description" content="Logiciel de gestion aquacole biofloc : suivi bassins, stock, alimentation, comptabilité. Accessible en ligne et hors connexion.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://bioaquatech.github.io/biofloc-app/">
 <meta property="og:image" content="https://bioaquatech.github.io/biofloc-app/preview.png">
 <!-- Schema.org pour Google -->
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"ICHTUS ERP","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Logiciel ERP de gestion de fermes aquacoles biofloc. Suivi de production, logistique, stock et comptabilité.","offers":{"@type":"Offer","price":"0","priceCurrency":"XOF"},"author":{"@type":"Organization","name":"BioAquaTech"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"BioFloc ERP","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Logiciel ERP de gestion de fermes aquacoles biofloc. Suivi de production, logistique, stock et comptabilité.","offers":{"@type":"Offer","price":"0","priceCurrency":"XOF"},"author":{"@type":"Organization","name":"BioAquaTech"}}</script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -281,7 +281,7 @@ body{background:#060F1E!important;color:#F0F9FF!important;font-family:'Inter','S
   padding-top:56px!important;z-index:100!important;
 }
 #screen-admin .tabnav::before,#screen-farm .tabnav::before{
-  content:'🐟 ICHTUS ERP';position:absolute;top:0;left:0;right:0;height:56px;
+  content:'🐟 BioFloc ERP';position:absolute;top:0;left:0;right:0;height:56px;
   display:flex;align-items:center;padding:0 16px;
   font-size:13px;font-weight:700;color:#00D4B4;letter-spacing:1px;
   border-bottom:1px solid #0F2540;background:#060F1E;
@@ -507,7 +507,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     </div>
     <div class="boot-logo" id="boot-farm-display" style="font-size:22px;letter-spacing:2px;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Bio Aqua Tech</div>
     <div class="boot-sub" style="font-size:11px;letter-spacing:2px;color:var(--t2)">Système de gestion aquacole</div>
-    <div class="boot-platform light-msg" id="boot-platform-name">Bienvenue sur la plateforme ICHTUS</div>
+    <div class="boot-platform light-msg" id="boot-platform-name">Bienvenue sur la plateforme BioFloc</div>
     <div class="boot-clock" id="boot-clock">--:--:--</div>
     <div class="boot-date" id="boot-date">—</div>
     <div class="boot-sep"></div>
@@ -672,7 +672,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <!-- TA3: PARAMÈTRES -->
     <div id="ta3" class="pane">
       <div class="card" style="border-color:rgba(0,212,180,.25);background:linear-gradient(135deg,rgba(0,212,180,.05),rgba(0,170,255,.04));margin-bottom:.75rem">
-        <div class="ctitle"><span class="dot"></span>Architecture ICHTUS ERP — version 1.0</div>
+        <div class="ctitle"><span class="dot"></span>Architecture BioFloc ERP — version 1.0</div>
         <div class="mgrid" style="margin-bottom:0">
           <div class="met"><div class="mlbl">Production</div><div style="font-size:11px;color:var(--t2);line-height:1.7">Bassins, biomasse, croissance, FCR, mortalité, alimentation, récoltes, qualité d'eau.</div></div>
           <div class="met"><div class="mlbl">Logistique</div><div style="font-size:11px;color:var(--t2);line-height:1.7">Catalogue intrants, réceptions, consommations, inventaires, stock et alertes.</div></div>
@@ -731,7 +731,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
             <p style="font-size:10px;color:var(--t2);line-height:1.7;margin-bottom:.55rem">Ces messages défilent sur la page d'accueil à l'attention des utilisateurs. Écrire un message par ligne.</p>
             <div class="form-group" style="margin-bottom:.75rem">
               <div class="form-lbl">Messages utilisateurs</div>
-              <textarea id="set-platform-messages" class="form-inp" rows="5" placeholder="Ex: Bienvenue sur la plateforme ICHTUS&#10;Pensez à mesurer le DO avant le premier repas"></textarea>
+              <textarea id="set-platform-messages" class="form-inp" rows="5" placeholder="Ex: Bienvenue sur la plateforme BioFloc&#10;Pensez à mesurer le DO avant le premier repas"></textarea>
             </div>
             <button class="sbtn" onclick="saveSettings()">Enregistrer</button>
           </div>
@@ -1146,7 +1146,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
         </div>
       </div>
 
-      <!-- D — Réflexe d'appétit (Amendement v7 ICHTUS) -->
+      <!-- D — Réflexe d'appétit  -->
       <div class="card" style="margin-top:.75rem">
         <div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Réflexe d'appétit — Indicateur de santé quotidien</div>
         <p style="font-size:10px;color:var(--t2);line-height:1.7;margin-bottom:.6rem">Évaluer à <strong style="color:var(--t1)">chaque repas dès J+3</strong> (premier repas post-silence alimentaire). C'est le premier indicateur visible de la bonne acclimatation. À noter dans le cahier de suivi.</p>
@@ -1246,7 +1246,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
 
       <!-- Tableau référence fréquences -->
       <div style="margin-bottom:.75rem">
-        <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.4rem">📋 Tableau de rationnement ICHTUS — Fréquences & aliments par stade</div>
+        <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.4rem">📋 Tableau de rationnement — Fréquences & aliments par stade</div>
         <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:10px;min-width:600px">
           <thead><tr style="background:var(--inp)">
@@ -1395,13 +1395,13 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
         </div>
       </div>
 
-      <!-- MODULE FCR & SURVIE HEBDOMADAIRE — Outil FCR v2.0 ICHTUS -->
+      <!-- MODULE FCR & SURVIE HEBDOMADAIRE — Outil FCR v2.0 -->
       <div class="card" style="margin-top:.75rem">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:.65rem">
           <div style="font-size:18px">📊</div>
           <div>
             <div class="ctitle" style="margin-bottom:0"><span class="dot" style="background:var(--gold)"></span>Moniteur FCR &amp; Survie — 22 semaines</div>
-            <div style="font-size:9px;color:var(--t3)">570 alevins/bassin · Survie cible 90% · FCR objectif 1.3 · Source : Outil FCR v2.0 ICHTUS</div>
+            <div style="font-size:9px;color:var(--t3)">570 alevins/bassin · Survie cible 90% · FCR objectif 1.3 · Source : Outil FCR v2.0</div>
           </div>
           <div style="margin-left:auto;display:flex;align-items:center;gap:.5rem">
             <select id="fcr-bassin" class="si" style="font-size:11px" onchange="renderFCRModule()"><option value="">Sélectionner bassin...</option></select>
@@ -1693,7 +1693,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
       <!-- ═══ PANNEAU BASIFIANTS TAC ═══ -->
       <div id="lp-basifiant" class="log-pane" style="display:none">
         <div style="font-size:13px;font-weight:700;color:var(--acc2);margin-bottom:.5rem">🧪 Calculateur Basifiant — Ajustement TAC</div>
-        <div style="font-size:10px;color:var(--t3);margin-bottom:.6rem">Formules conformes Mémo ICHTUS Juin 2026 · CaCO₃ : ×0,75 · NaHCO₃ : ×0,84 · Remesurer avant chaque dose suivante</div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:.6rem">Formules conformes Référentiel Technique Juin 2026 · CaCO₃ : ×0,75 · NaHCO₃ : ×0,84 · Remesurer avant chaque dose suivante</div>
 
         <!-- Bannière rappels -->
         <div id="bas-rappels-banner" style="display:none;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.4);border-radius:8px;padding:.6rem .75rem;margin-bottom:.75rem"></div>
@@ -1715,7 +1715,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           <div style="flex:1;min-width:220px;background:var(--card);border:1px solid var(--b1);border-radius:10px;padding:.85rem">
             <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.5rem">② Paramètres de calcul</div>
 
-            <div style="font-size:10px;color:var(--t3);margin-bottom:3px">Basifiant disponible</div>
+            <div style="font-size:10px;color:var(--t3);margin-bottom:3px">Basifiant par défaut <span style="font-size:9px">(modifiable par bassin ci-dessous)</span></div>
             <select id="bas-produit" class="si" style="width:100%;font-size:11px;margin-bottom:.6rem" onchange="renderBasifiantResult()"></select>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.6rem">
@@ -1740,7 +1740,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
             <div style="font-size:9px;color:var(--t2);background:var(--inp);border:1px solid var(--b1);border-radius:6px;padding:6px;margin-bottom:.5rem">
               <strong style="color:var(--acc2)">CaCO₃</strong> : x = ΔTAC × V × <strong>0,75</strong> g/apport<br>
               <strong style="color:var(--acc2)">NaHCO₃</strong> : x = ΔTAC × V × <strong>0,84</strong> g/apport<br>
-              <span style="color:var(--t3)">Mémo ICHTUS · 1ʳᵉ apport maintenant · remesurer avant chaque dose suivante</span>
+              <span style="color:var(--t3)">Référentiel Technique · 1ʳᵉ apport maintenant · remesurer avant chaque dose suivante</span>
             </div>
             <div id="bas-result" style="font-size:11px;color:var(--t2)">
               <span style="color:var(--t3)">Sélectionnez un bassin et un basifiant.</span>
@@ -1778,7 +1778,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
               </div>
               <div style="font-size:9px;color:var(--t3);border-top:1px solid var(--b1);padding-top:.35rem">
                 ⚠️ Règle absolue : mesurer le TAC AVANT tout ajout · jamais sur calendrier fixe<br>
-                Mémo ICHTUS Juin 2026 · TAC cible biofloc tilapia ≥ 150 mg/L
+                Référentiel Technique Juin 2026 · TAC cible biofloc tilapia ≥ 150 mg/L
               </div>
             </div>
           </div>
@@ -2850,7 +2850,7 @@ let APP={
   warnCountdown:null,
   warnSecs:60,
   whatsapp:'',
-  platformName:'' , platformMessages:['Bienvenue sur la plateforme ICHTUS'],
+  platformName:'' , platformMessages:['Bienvenue sur la plateforme BioFloc'],
   state:{bassins:[],suivi:[],suiviId:0,logoUrl:null},
   unsubs:[],
   bCount:17,
@@ -2870,7 +2870,7 @@ const SPECIES_PROFILES=[
     // Paramètres de croissance
     gmqCible:2.9,       // g/jour — cible croissance
     poidsDepart:5,      // g — poids de départ pour courbe cible
-    // Plages optimales eau — Source: Mémo paramètres eau v4.1 ICHTUS
+    // Plages optimales eau — Source: Paramètres eau v4.1
     tempMin:26, tempOpt:28, tempMax:32,
     phMin:7.0,  phOpt:7.4,  phMax:7.8,   // pH harmonisé 7.0-7.8 — amendement v7
     doMin:5,    doOpt:7,    doAlerte:4,   // vigilance à 4-5 ppm
@@ -2997,7 +2997,7 @@ function sp(){return getSpecies();}
 // ═══════════════════════════════════════════════
 // ─────────────────────────────────────────────────────────────────────────────
 // TABLE DE RATIONNEMENT — Koudijs AKF · Biofloc Tilapia GIFT · Lomé 28–30°C
-// Source : Dossier technique ICHTUS v8 p.62 (Juin 2026)
+// Source : Dossier technique v8 p.62 (Juin 2026)
 // Cycle démarre S0 · alevins 5 g · 9008 Floating 2.0mm (pas de nurserie 9004)
 // Fréquences : 6·5·4·4·3·3 (K4→K4b→K5→K5b→K6→K6b)
 // Réduction Biofloc −20% sur ration Koudijs (floc optimal 25–40 ml/L Imhoff)
@@ -3008,7 +3008,7 @@ const KOUDIJS_PROFILE={
   id:'koudijs',
   nom:'Koudijs AKF',
   types:[
-    // K4–K6b : Grower 9008 (32% CP) — cycle ICHTUS démarre S0 alevins 5g
+    // K4–K6b : Grower 9008 (32% CP) — cycle démarre S0 alevins 5g
     {id:'K4', name:'9008 Floating 2.0mm', granule:'2.0mm',  protein:32, maxPoids:25,   rate:0.036, freq:6, color:'#60a5fa', stage:'5–25 g'},
     {id:'K4b',name:'9008 Floating 2.0mm', granule:'2.0mm',  protein:32, maxPoids:50,   rate:0.032, freq:5, color:'#38bdf8', stage:'25–50 g'},
     {id:'K5', name:'9008 Floating 3.0mm', granule:'3.0mm',  protein:32, maxPoids:100,  rate:0.023, freq:4, color:'#f59e0b', stage:'50–100 g'},
@@ -3161,7 +3161,7 @@ async function loadPlatformSettings(){
       APP.whatsapp=d.whatsapp||'';
       APP.sessionMin=d.sessionTimeout||10;
       APP.platformName=d.platformName||'';
-      APP.platformMessages=d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme ICHTUS'];
+      APP.platformMessages=d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme BioFloc'];
     }
     updateBootMessage();
   }catch(e){console.warn('Settings load error:',e);}
@@ -3601,7 +3601,7 @@ function setupFarmListeners(){
 
 function updateBootMessage(){
   const el=G('boot-platform-name');if(!el)return;
-  const msgs=(APP.platformMessages&&APP.platformMessages.length?APP.platformMessages:['Bienvenue sur la plateforme ICHTUS']);
+  const msgs=(APP.platformMessages&&APP.platformMessages.length?APP.platformMessages:['Bienvenue sur la plateforme BioFloc']);
   let i=0;el.textContent=msgs[0];
   if(window._bootMsgTimer)clearInterval(window._bootMsgTimer);
   if(msgs.length>1){window._bootMsgTimer=setInterval(()=>{i=(i+1)%msgs.length;el.textContent=msgs[i];},4500);}
@@ -3618,10 +3618,10 @@ async function loadAdminDashboard(){
     const settSnap=await db.collection('superadmin').doc('settings').get();
     if(settSnap.exists){
       const d=settSnap.data();
-      APP.whatsapp=d.whatsapp||'';APP.sessionMin=d.sessionTimeout||10;APP.platformName=d.platformName||'';APP.platformMessages=d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme ICHTUS'];updateBootMessage();
+      APP.whatsapp=d.whatsapp||'';APP.sessionMin=d.sessionTimeout||10;APP.platformName=d.platformName||'';APP.platformMessages=d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme BioFloc'];updateBootMessage();
       if(G('set-wa'))G('set-wa').value=APP.whatsapp;
       if(G('set-timeout'))G('set-timeout').value=APP.sessionMin;
-      if(G('set-platform-messages'))G('set-platform-messages').value=(d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme ICHTUS']).join('\n');
+      if(G('set-platform-messages'))G('set-platform-messages').value=(d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme BioFloc']).join('\n');
     }
     // Load farms
     const farmsSnap=await db.collection('farms').get();
@@ -4304,7 +4304,7 @@ function calcBassin(b){
 }
 
 // ═══════════════════════════════════════════════
-// CONSTANTES CALCUL MÉLASSE — Outil C/N Mélasse v2.0 ICHTUS
+// CONSTANTES CALCUL MÉLASSE — Outil C/N Mélasse v2.0
 // Source: OUTIL_DE_CALCUL_DE_LA_QTE_DE_MELASSE... xlsx
 // Facteur effectif mélasse = f1×f2×f3×f4 = 0.80×0.75×0.50×0.70 = 0.21
 // ═══════════════════════════════════════════════
@@ -4433,7 +4433,7 @@ function calcRation(){
           <div><span style="color:var(--t3)">Mélasse préventive/j</span> <strong style="color:var(--acc);font-size:13px">${Math.round(molassesMl)} ml</strong></div>
           <div><span style="color:var(--t3)">Par repas ×${ft.freq}</span> <strong style="color:var(--acc)">${Math.round(molassesMl/ft.freq)} ml</strong></div>
         </div>
-        <div style="font-size:9px;color:var(--t3);margin-top:3px">Facteur effectif mélasse : 0.21 · Densité : 1.4 kg/L · Source : Outil C/N v2.0 ICHTUS</div>
+        <div style="font-size:9px;color:var(--t3);margin-top:3px">Facteur effectif mélasse : 0.21 · Densité : 1.4 kg/L · Source : Outil C/N v2.0</div>
       </div>`;
   }
 
@@ -4606,7 +4606,7 @@ async function openBassinStats(bassinName){
   }
 }
 // ═══════════════════════════════════════════════
-// MOTEUR D\'ANALYSE — Mémo paramètres eau v4.1 ICHTUS
+// MOTEUR D\'ANALYSE — Paramètres eau v4.1
 // ═══════════════════════════════════════════════
 
 const ANALYSE_RULES={
@@ -5043,7 +5043,7 @@ const DEFAULT_INTRANTS=[
   {id:'k4',name:'Aliment K4 Granulé 2mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
   {id:'k5',name:'Aliment K5 Granulé 3mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
   {id:'k6',name:'Aliment K6 Granulé 4.5mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
-  // Basifiants — facteurK = facteur direct de la formule mémo ICHTUS
+  // Basifiants — facteurK = facteur direct de la formule
   // CaCO₃ : K=0.75 (dissolution réelle 65% × fraction prudente 50%) · remesure H+24
   // NaHCO₃ : K=0.84 (stoéch ×1.68 × fraction prudente 50%) · remesure H+4–6
   {id:'caco3',name:'CaCO₃ — Carbonate de calcium',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'basifiant',isDefault:true,tauxDissolution:0.65,facteurStoech:1.0,facteurK:0.75,intervalle:'H+24'},
@@ -6955,10 +6955,10 @@ async function updatePWAStock(){
 }
 
 // ═══════════════════════════════════════════════
-// MODULE RATIONNEMENT — Formules ICHTUS C:N Mélasse v2.0
+// MODULE RATIONNEMENT — Formules C:N Mélasse v2.0
 // ═══════════════════════════════════════════════
 
-// Constantes extraites des fichiers Excel ICHTUS
+// Constantes calcul
 const MELASSE_F1=0.80,MELASSE_F2=0.75,MELASSE_F3=0.50,MELASSE_F4=0.70;
 const MELASSE_FACTEUR=MELASSE_F1*MELASSE_F2*MELASSE_F3*MELASSE_F4; // 0.21
 const MELASSE_DENSITE=1.4; // kg/L
@@ -7120,7 +7120,7 @@ function initRatSelect(){
 }
 
 // ═══════════════════════════════════════════════
-// MODULE FCR — Suivi Croissance · Excel ICHTUS v2.0
+// MODULE FCR — Suivi Croissance v2.0
 // ═══════════════════════════════════════════════
 
 // Référence FCR par semaine (22 semaines)
@@ -8020,7 +8020,7 @@ function buildBTable(){
 
 
 // ═══════════════════════════════════════════════
-// VALIDATION EN TEMPS RÉEL — Seuils dossier technique ICHTUS v4.1
+// VALIDATION EN TEMPS RÉEL — Seuils dossier technique v4.1
 // ═══════════════════════════════════════════════
 function upConfigCalcs(){
   let tBio=0,tTheo=0,tReel=0,actifs=0,sumPh=0,sumT=0,phCnt=0,tCnt=0,recoltes=0;
@@ -10382,20 +10382,12 @@ const THEMES={
       '--acc':'#0077B6','--acc2':'#00B4D8','--warn':'#E76F51','--dng':'#D62828','--purp':'#5C7A99','--gold':'#F4A261'
     }
   },
-  lagon:{
-    id:'lagon', nom:'Lagon', icon:'🪸', desc:'Turquoise tropical — eaux peu profondes',
+  charbon:{
+    id:'charbon', nom:'Charbon', icon:'🪨', desc:'Gris anthracite — lecture longue, confort oculaire',
     vars:{
-      '--bg':'#f0fcfa','--panel':'#ffffff','--card':'#ffffff','--inp':'#eef9f7','--hov':'#e0f5f2',
-      '--t1':'#0a3040','--t2':'#1a6070','--t3':'#5a9aaa','--b1':'#b0dde5','--b2':'#90cdd8',
-      '--acc':'#008c7a','--acc2':'#0077b6','--warn':'#e07b00','--dng':'#c1121f','--purp':'#6a4fc8','--gold':'#9a6800'
-    }
-  },
-  corail:{
-    id:'corail', nom:'Récif', icon:'🐠', desc:'Couleurs chaudes du récif corallien',
-    vars:{
-      '--bg':'#0d0a14','--panel':'#130f1e','--card':'#1a1428','--inp':'#110d1c','--hov':'#1f1830',
-      '--t1':'#ffd8c0','--t2':'#c08070','--t3':'#7a4a3a','--b1':'#2a1a28','--b2':'#301e30',
-      '--acc':'#ff7e5f','--acc2':'#ff9f43','--warn':'#ffd166','--dng':'#ff2d6f','--purp':'#d4a5f5','--gold':'#ffca3a'
+      '--bg':'#111214','--panel':'#1a1c1f','--card':'#202328','--inp':'#16181b','--hov':'#272a2f',
+      '--t1':'#e8eaed','--t2':'#9aa0a8','--t3':'#5f6368','--b1':'#2d3035','--b2':'#35383d',
+      '--acc':'#8ab4f8','--acc2':'#81c995','--warn':'#fdd663','--dng':'#f28b82','--purp':'#c58af9','--gold':'#ffa75e'
     }
   },
   bioluminescence:{
@@ -10406,76 +10398,76 @@ const THEMES={
       '--acc':'#00ffcc','--acc2':'#00d4ff','--warn':'#ffee00','--dng':'#ff3366','--purp':'#cc88ff','--gold':'#aaff00'
     }
   },
+  minuit:{
+    id:'minuit', nom:'Minuit Indigo', icon:'🌌', desc:'Bleu-violet profond — sobre et élégant',
+    vars:{
+      '--bg':'#0a0a1a','--panel':'#11112a','--card':'#161630','--inp':'#0e0e24','--hov':'#1c1c38',
+      '--t1':'#dde4ff','--t2':'#8896cc','--t3':'#4a5490','--b1':'#1e2040','--b2':'#252850',
+      '--acc':'#6c8fff','--acc2':'#a78bfa','--warn':'#f9a825','--dng':'#ff5252','--purp':'#e040fb','--gold':'#ffd740'
+    }
+  },
+  foret:{
+    id:'foret', nom:'Forêt Équatoriale', icon:'🌳', desc:'Vert sombre tropical — immersion nature',
+    vars:{
+      '--bg':'#030d06','--panel':'#071510','--card':'#0a1c12','--inp':'#061209','--hov':'#0e2018',
+      '--t1':'#c8f0d0','--t2':'#60a870','--t3':'#2e6040','--b1':'#142818','--b2':'#183020',
+      '--acc':'#2dd56a','--acc2':'#00c8a0','--warn':'#f5c842','--dng':'#ff5040','--purp':'#b088f0','--gold':'#d4c040'
+    }
+  },
+  papier:{
+    id:'papier', nom:'Papier', icon:'📄', desc:'Blanc crème doux — lecture longue sans fatigue',
+    vars:{
+      '--bg':'#fafaf8','--panel':'#ffffff','--card':'#ffffff','--inp':'#f5f4f0','--hov':'#eeede8',
+      '--t1':'#1a1a1a','--t2':'#4a4a4a','--t3':'#888880','--b1':'#ddddd8','--b2':'#ccccC5',
+      '--acc':'#1a6b4a','--acc2':'#1a5fa0','--warn':'#b86800','--dng':'#c0251a','--purp':'#6040b0','--gold':'#9a6800'
+    }
+  },
+  lagon:{
+    id:'lagon', nom:'Lagon', icon:'🪸', desc:'Turquoise tropical — eaux peu profondes',
+    vars:{
+      '--bg':'#f0fcfa','--panel':'#ffffff','--card':'#ffffff','--inp':'#eef9f7','--hov':'#dff4f0',
+      '--t1':'#0a3040','--t2':'#1a6070','--t3':'#5a9aaa','--b1':'#aadde5','--b2':'#88ccd8',
+      '--acc':'#007a6a','--acc2':'#0070b0','--warn':'#d07800','--dng':'#c0121a','--purp':'#6048c0','--gold':'#9a6500'
+    }
+  },
+  sahel:{
+    id:'sahel', nom:'Ciel Sahel', icon:'🌤️', desc:'Bleu ciel clair — horizon Africain',
+    vars:{
+      '--bg':'#eaf4fd','--panel':'#ffffff','--card':'#ffffff','--inp':'#daedf8','--hov':'#c8e2f4',
+      '--t1':'#003050','--t2':'#1a5070','--t3':'#5090b8','--b1':'#a0cce8','--b2':'#7ab8e0',
+      '--acc':'#006898','--acc2':'#0044b8','--warn':'#c84800','--dng':'#b82020','--purp':'#6030a0','--gold':'#a06000'
+    }
+  },
+  laterite:{
+    id:'laterite', nom:'Terre de Latérite', icon:'🟤', desc:'Rouge-ocre chaud — couleurs du Togo',
+    vars:{
+      '--bg':'#1a0c06','--panel':'#251408','--card':'#301a0a','--inp':'#201008','--hov':'#3a2010',
+      '--t1':'#ffe8d0','--t2':'#c09060','--t3':'#805030','--b1':'#3a1e10','--b2':'#462618',
+      '--acc':'#e07040','--acc2':'#d0a030','--warn':'#f0c030','--dng':'#ff4020','--purp':'#c070d0','--gold':'#ffb830'
+    }
+  },
+  lisibilite:{
+    id:'lisibilite', nom:'Haute Lisibilité', icon:'👁️', desc:'Fond blanc, texte noir pur — plein soleil',
+    vars:{
+      '--bg':'#ffffff','--panel':'#f8f8f8','--card':'#ffffff','--inp':'#f0f0f0','--hov':'#e8e8e8',
+      '--t1':'#000000','--t2':'#333333','--t3':'#666666','--b1':'#cccccc','--b2':'#bbbbbb',
+      '--acc':'#006600','--acc2':'#004499','--warn':'#cc6600','--dng':'#cc0000','--purp':'#550099','--gold':'#886600'
+    }
+  },
+  atlantique:{
+    id:'atlantique', nom:'Atlantique', icon:'🌊', desc:'Bleu Atlantique saturé — dynamique et vif',
+    vars:{
+      '--bg':'#030c20','--panel':'#051428','--card':'#071a32','--inp':'#041030','--hov':'#0c2040',
+      '--t1':'#e0f0ff','--t2':'#5090d0','--t3':'#2860a0','--b1':'#0e2848','--b2':'#103058',
+      '--acc':'#0090ff','--acc2':'#00d0ff','--warn':'#ffaa00','--dng':'#ff3040','--purp':'#8060ff','--gold':'#40e0d0'
+    }
+  },
   mangrove:{
-    id:'mangrove', nom:'Mangrove', icon:'🌿', desc:'Vert forêt tropicale humide',
+    id:'mangrove', nom:'Mangrove', icon:'🌿', desc:'Vert forêt humide tropicale',
     vars:{
-      '--bg':'#061208','--panel':'#0a1e0c','--card':'#0d2510','--inp':'#091a0b','--hov':'#112b14',
-      '--t1':'#c8f0c0','--t2':'#70b060','--t3':'#3a6830','--b1':'#1a3a1c','--b2':'#1e4220',
-      '--acc':'#4cd460','--acc2':'#80e080','--warn':'#f0c040','--dng':'#ff5040','--purp':'#a080e0','--gold':'#e0c040'
-    }
-  },
-  desert:{
-    id:'desert', nom:'Sahel', icon:'🌅', desc:'Tons chauds du Togo — terre et harmattan',
-    vars:{
-      '--bg':'#1a0f06','--panel':'#241608','--card':'#2e1c0a','--inp':'#20120a','--hov':'#38220e',
-      '--t1':'#ffe8cc','--t2':'#c09060','--t3':'#806030','--b1':'#3a2010','--b2':'#442812',
-      '--acc':'#ff9040','--acc2':'#ffb850','--warn':'#ffd040','--dng':'#ff4020','--purp':'#c080e0','--gold':'#ffc030'
-    }
-  },
-  nuit:{
-    id:'nuit', nom:'Nuit Étoilée', icon:'🌙', desc:'Ciel nocturne de Lomé',
-    vars:{
-      '--bg':'#08060e','--panel':'#100c1e','--card':'#14102a','--inp':'#0c0a18','--hov':'#1c1830',
-      '--t1':'#e8e0ff','--t2':'#9080c0','--t3':'#504070','--b1':'#201c38','--b2':'#282040',
-      '--acc':'#8060ff','--acc2':'#c080ff','--warn':'#ffa040','--dng':'#ff4060','--purp':'#ff80e0','--gold':'#ffd060'
-    }
-  },
-  ocean:{
-    id:'ocean', nom:'Océan Profond', icon:'🌊', desc:'Bleu profond de l\'Atlantique',
-    vars:{
-      '--bg':'#020918','--panel':'#041020','--card':'#061428','--inp':'#030c1c','--hov':'#0a1a30',
-      '--t1':'#a0d8f8','--t2':'#4090c0','--t3':'#205880','--b1':'#0c2040','--b2':'#0e2848',
-      '--acc':'#20a0e0','--acc2':'#4040ff','--warn':'#40d0a0','--dng':'#ff2060','--purp':'#8060c0','--gold':'#40e0d0'
-    }
-  },
-  blanc:{
-    id:'blanc', nom:'Blanc Pur', icon:'☁️', desc:'Interface claire et épurée',
-    vars:{
-      '--bg':'#ffffff','--panel':'#f8f9fa','--card':'#ffffff','--inp':'#f1f3f5','--hov':'#e9ecef',
-      '--t1':'#212529','--t2':'#495057','--t3':'#868e96','--b1':'#dee2e6','--b2':'#ced4da',
-      '--acc':'#099268','--acc2':'#1971c2','--warn':'#e67700','--dng':'#c92a2a','--purp':'#6741d9','--gold':'#f59f00'
-    }
-  },
-  ciel:{
-    id:'ciel', nom:'Ciel d\'Aqua', icon:'🌤️', desc:'Bleu ciel doux et lumineux',
-    vars:{
-      '--bg':'#e8f4fd','--panel':'#ffffff','--card':'#ffffff','--inp':'#ddeeff','--hov':'#cce4ff',
-      '--t1':'#003a5c','--t2':'#1a5276','--t3':'#5499c7','--b1':'#a8d4f0','--b2':'#85c1e9',
-      '--acc':'#0077a8','--acc2':'#0055cc','--warn':'#d35400','--dng':'#c0392b','--purp':'#6c3483','--gold':'#b7770d'
-    }
-  },
-  menthe:{
-    id:'menthe', nom:'Menthe Fraîche', icon:'🌱', desc:'Vert menthe apaisant',
-    vars:{
-      '--bg':'#f0fdf4','--panel':'#ffffff','--card':'#ffffff','--inp':'#dcfce7','--hov':'#bbf7d0',
-      '--t1':'#14532d','--t2':'#166534','--t3':'#4ade80','--b1':'#86efac','--b2':'#6ee7b7',
-      '--acc':'#16a34a','--acc2':'#0891b2','--warn':'#ca8a04','--dng':'#dc2626','--purp':'#7c3aed','--gold':'#a16207'
-    }
-  },
-  sable:{
-    id:'sable', nom:'Sable Doré', icon:'🏖️', desc:'Tons chaleureux sable et terre',
-    vars:{
-      '--bg':'#fefce8','--panel':'#ffffff','--card':'#fffbeb','--inp':'#fef9c3','--hov':'#fde68a',
-      '--t1':'#422006','--t2':'#713f12','--t3':'#a16207','--b1':'#fcd34d','--b2':'#fbbf24',
-      '--acc':'#d97706','--acc2':'#ea580c','--warn':'#dc2626','--dng':'#be123c','--purp':'#7c3aed','--gold':'#92400e'
-    }
-  },
-  lavande:{
-    id:'lavande', nom:'Lavande', icon:'💜', desc:'Violet clair et doux',
-    vars:{
-      '--bg':'#faf5ff','--panel':'#ffffff','--card':'#ffffff','--inp':'#f3e8ff','--hov':'#e9d5ff',
-      '--t1':'#2e1065','--t2':'#4c1d95','--t3':'#7c3aed','--b1':'#c4b5fd','--b2':'#a78bfa',
-      '--acc':'#7c3aed','--acc2':'#2563eb','--warn':'#d97706','--dng':'#dc2626','--purp':'#6d28d9','--gold':'#b45309'
+      '--bg':'#040e06','--panel':'#081808','--card':'#0a1e0c','--inp':'#061208','--hov':'#0f2412',
+      '--t1':'#c0f0b8','--t2':'#68a858','--t3':'#386830','--b1':'#163418','--b2':'#1a3e1c',
+      '--acc':'#3acc50','--acc2':'#60d888','--warn':'#e8c030','--dng':'#ff4830','--purp':'#9870e0','--gold':'#d8b830'
     }
   }
 };
@@ -10641,14 +10633,36 @@ function renderBasifiantCalc(){
   renderBasifiantResult();
 }
 
-function _getChosenBasifiant(){
+function _getBasifiantById(id){
+  var defaults={caco3:{id:'caco3',name:'CaCO₃ — Carbonate de calcium',facteurK:0.75,intervalle:'H+24'},nahco3:{id:'nahco3',name:'NaHCO₃ — Bicarbonate de sodium',facteurK:0.84,intervalle:'H+4–6'}};
+  var found=APP_INTRANTS.find(function(p){return p.id===id&&p.category==='basifiant';});
+  return found||defaults[id]||null;
+}
+function _getChosenBasifiant(bassinIndex){
+  // Si un select spécifique par bassin existe, l'utiliser
+  if(bassinIndex!==undefined){
+    var perSel=document.getElementById('bas-produit-'+bassinIndex);
+    if(perSel&&perSel.value)return _getBasifiantById(perSel.value);
+  }
   var sel=document.getElementById('bas-produit');
   if(!sel||!sel.value)return null;
-  var found=APP_INTRANTS.find(function(p){return p.id===sel.value&&p.category==='basifiant';});
-  if(found)return found;
-  // fallback defaults
-  var defaults={caco3:{id:'caco3',name:'CaCO₃',facteurK:0.75,intervalle:'H+24'},nahco3:{id:'nahco3',name:'NaHCO₃',facteurK:0.84,intervalle:'H+4–6'}};
-  return defaults[sel.value]||null;
+  return _getBasifiantById(sel.value);
+}
+function _recoBasifiant(tac){
+  // Recommandation automatique selon le niveau TAC
+  if(tac===null||tac===undefined)return 'caco3';
+  if(tac<50)return 'nahco3';   // Critique → NaHCO₃ action rapide
+  if(tac<80)return 'nahco3';   // Urgence → NaHCO₃ prioritaire
+  return 'caco3';              // Prévention/Correction → CaCO₃
+}
+function _buildBasifiantOptions(selectedId){
+  var basisIntrants=APP_INTRANTS.filter(function(i){return i.category==='basifiant';});
+  if(!basisIntrants.length)basisIntrants=[
+    {id:'caco3',name:'CaCO₃ — Carbonate de calcium'},{id:'nahco3',name:'NaHCO₃ — Bicarbonate de sodium'}
+  ];
+  return basisIntrants.map(function(p){
+    return '<option value="'+p.id+'"'+(p.id===selectedId?' selected':'')+'>'+p.name+'</option>';
+  }).join('');
 }
 
 function setBasN(n){
@@ -10663,15 +10677,14 @@ function renderBasifiantResult(){
   var res=document.getElementById('bas-result');
   if(!res)return;
 
-  var prod=_getChosenBasifiant();
-  if(!prod){res.innerHTML='<span style="color:var(--t3)">Sélectionnez un basifiant.</span>';return;}
+  var prod=_getChosenBasifiant(); // produit global (fallback)
+  // On accepte prod null si des selects per-bassin existent (chaque bassin a son propre produit)
+  var K=prod?prod.facteurK:0.75; // K de fallback
 
-  // Mise à jour affichage K dans l'UI
+  // Mise à jour affichage K dans l'UI (produit global)
   var dInp=document.getElementById('tac-d'),fInp=document.getElementById('tac-f');
-  if(dInp)dInp.value=prod.tauxDissolution||'';
-  if(fInp)fInp.value=prod.facteurStoech||'';
-  var K=prod.facteurK;
-  if(!K){res.innerHTML='<span style="color:var(--t3)">Facteur K manquant pour ce produit.</span>';return;}
+  if(dInp)dInp.value=prod?(prod.tauxDissolution||''):'';
+  if(fInp)fInp.value=prod?(prod.facteurStoech||''):'';
 
   var checks=document.querySelectorAll('.bas-cb:checked');
   if(!checks.length){res.innerHTML='<span style="color:var(--t3)">Cochez au moins un bassin.</span>';return;}
@@ -10686,22 +10699,47 @@ function renderBasifiantResult(){
     if(tac>=cible){rows+='<div style="font-size:10px;color:#10B981;margin-bottom:.3rem">✅ '+b.name+' — TAC suffisant ('+tac+' ≥ '+cible+' mg/L) — ne pas ajouter</div>';return;}
     var delta=cible-tac;
     var vol=b.vol||3.8;
-    // Formule mémo ICHTUS : dose totale = ΔTAC × V × K, divisée en n apports
-    var doseTotal=delta*vol*K; // grammes au total
-    var doseApp=doseTotal/n;   // grammes par application
+
+    // Produit spécifique à ce bassin (select par bassin ou défaut global)
+    var prodB=_getChosenBasifiant(i);
+    if(!prodB)prodB=prod;
+    var KB=prodB?prodB.facteurK:K;
+
+    // Formule : dose totale = ΔTAC × V × K, divisée en n apports
+    var doseTotal=delta*vol*KB;
+    var doseApp=doseTotal/n;
     totalPerApp+=doseApp;
     var urgColor=tac<50?'#EF4444':tac<80?'#EF4444':tac<100?'var(--warn)':'#F59E0B';
 
-    // Nb applications recommandées selon mémo §4
+    // Recommandation automatique basifiant selon TAC
+    var recoId=_recoBasifiant(tac);
+    var recoLabel=recoId==='nahco3'?'⚡ NaHCO₃ recommandé':'🟢 CaCO₃ recommandé';
+    var recoColor=recoId==='nahco3'?'#EF4444':'#10B981';
+
+    // Nb applications recommandées
     var nReco;
-    if(prod.id==='caco3'){nReco=delta<30?'1–2':delta<50?'2–3':'3';}
+    if(prodB&&prodB.id==='caco3'){nReco=delta<30?'1–2':delta<50?'2–3':'3';}
     else{nReco=delta<50?'1':'1–2';}
+
+    // Select par bassin avec pré-sélection basée sur TAC
+    var perSelCurrent=document.getElementById('bas-produit-'+i);
+    var perSelVal=perSelCurrent?perSelCurrent.value:recoId;
+    var perSelHtml='<div style="margin-bottom:.35rem">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
+        +'<span style="font-size:9px;color:var(--t3)">Basifiant :</span>'
+        +'<span style="font-size:9px;font-weight:700;color:'+recoColor+';background:'+recoColor+'15;border:1px solid '+recoColor+'30;border-radius:4px;padding:1px 5px">'+recoLabel+'</span>'
+      +'</div>'
+      +'<select id="bas-produit-'+i+'" style="width:100%;font-size:10px;background:var(--inp);border:1px solid var(--b2);border-radius:5px;color:var(--t1);padding:3px 5px" onchange="renderBasifiantResult()">'
+        +_buildBasifiantOptions(perSelVal)
+      +'</select>'
+    +'</div>';
 
     rows+='<div style="background:var(--inp);border:1px solid var(--b1);border-radius:7px;padding:.5rem .65rem;margin-bottom:.4rem">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">'
         +'<strong style="font-size:11px;color:var(--acc)">'+b.name+'</strong>'
         +'<span style="font-size:10px;background:'+urgColor+'18;color:'+urgColor+';border:1px solid '+urgColor+'44;border-radius:4px;padding:1px 6px;font-weight:700">TAC '+tac+' · Δ'+delta.toFixed(0)+' mg/L</span>'
       +'</div>'
+      +perSelHtml
       +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.3rem">'
         +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Volume</div><strong style="font-size:11px;color:var(--t1)">'+vol+' m³</strong></div>'
         +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Dose / apport</div><strong style="font-size:12px;color:var(--purp)">'+doseApp.toFixed(0)+' g</strong></div>'
@@ -10709,7 +10747,7 @@ function renderBasifiantResult(){
         +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Total</div><strong style="font-size:11px;color:var(--acc)">'+doseTotal.toFixed(0)+' g</strong></div>'
       +'</div>'
       +(n>1?'<div style="font-size:9px;color:var(--acc2);background:rgba(61,142,245,.07);border-radius:5px;padding:.3rem .5rem">'
-        +'⏰ Intervalle entre apports : <strong>'+prod.intervalle+'</strong> · Remesurer le TAC avant chaque dose suivante'
+        +'⏰ Intervalle entre apports : <strong>'+(prodB&&prodB.intervalle?prodB.intervalle:'H+24')+'</strong> · Remesurer le TAC avant chaque dose suivante'
         +'</div>':'')
       +'</div>';
   });
@@ -10720,7 +10758,7 @@ function renderBasifiantResult(){
       +'<div><div style="font-size:9px;color:var(--t3)">Dose par application (tous bassins)</div><strong style="font-size:13px;color:var(--gold)">'+totalPerApp.toFixed(0)+' g</strong>'
       +(n>1?'<span style="font-size:9px;color:var(--t3);margin-left:8px">· Total '+n+' apports : <strong style="color:var(--acc)">'+totalAll.toFixed(0)+' g</strong></span>':'')
       +'</div>'
-      +'<div style="font-size:9px;color:var(--t3);text-align:right">ΔTAC × V × '+K+' ÷ '+n+'<br><span style="font-size:8px">(Mémo ICHTUS v1.0)</span></div>'
+      +'<div style="font-size:9px;color:var(--t3);text-align:right">ΔTAC × V × K ÷ '+n+'<br><span style="font-size:8px">(Référentiel Technique v1.0)</span></div>'
       +'</div>'+rows;
   }
   res.innerHTML=rows||'<span style="color:var(--t3)">Aucun déficit détecté.</span>';
@@ -10805,20 +10843,9 @@ function renderPlanningBas(){
 function enregistrerPlanningBas(){
   var n=parseInt(document.getElementById('bas-n-val')?.value)||1;
   var cible=parseFloat(document.getElementById('tac-cible')?.value)||150;
-  var prod=_getChosenBasifiant();
-  if(!prod){showToast('Sélectionnez un produit basifiant','warn');return;}
-  var K=prod.facteurK;
+  var prodGlobal=_getChosenBasifiant();
   var checks=document.querySelectorAll('.bas-cb:checked');
   if(!checks.length){showToast('Cochez au moins un bassin','warn');return;}
-
-  // Lire et valider les créneaux
-  var slots=[];
-  for(var k=0;k<n;k++){
-    var el=document.getElementById('bas-plan-slot-'+k);
-    var dt=el&&el.value?new Date(el.value):new Date(Date.now()+k*_parseIntervalleH(prod.intervalle)*3600000);
-    if(isNaN(dt))dt=new Date(Date.now()+k*_parseIntervalleH(prod.intervalle)*3600000);
-    slots.push(dt);
-  }
 
   var bassinsChecked=[];
   checks.forEach(function(cb){var b=APP.state.bassins[parseInt(cb.dataset.i)];if(b)bassinsChecked.push(b.name);});
@@ -10832,7 +10859,22 @@ function enregistrerPlanningBas(){
     var i=parseInt(cb.dataset.i);
     var b=APP.state.bassins[i];if(!b)return;
     var tac=b.TAC;if(tac===null||tac===undefined||tac>=cible)return;
+
+    // Produit spécifique à ce bassin
+    var prod=_getChosenBasifiant(i)||prodGlobal;
+    if(!prod){showToast('Sélectionnez un produit basifiant pour '+b.name,'warn');return;}
+    var K=prod.facteurK;
+
     var delta=cible-tac;var vol=b.vol||3.8;var doseApp=(delta*vol*K)/n;
+
+    // Créneaux spécifiques à ce bassin
+    var slots=[];
+    for(var k=0;k<n;k++){
+      var el=document.getElementById('bas-plan-slot-'+k);
+      var dt=el&&el.value?new Date(el.value):new Date(Date.now()+k*_parseIntervalleH(prod.intervalle)*3600000);
+      if(isNaN(dt.getTime()))dt=new Date(Date.now()+k*_parseIntervalleH(prod.intervalle)*3600000);
+      slots.push(dt);
+    }
 
     // Sauvegarder le plan actif pour ce bassin
     plans.push({
@@ -10914,7 +10956,7 @@ function exportBasifiantPDF(){
         +'<div style="font-size:18px;font-weight:700;color:#1a5276">🧪 Distribution Basifiant — Ajustement TAC</div>'
         +'<div style="font-size:11px;color:#666;margin-top:2px">'+farmName+' · '+date+' · Cible TAC : '+cible+' mg/L</div>'
       +'</div>'
-      +'<div style="text-align:right;font-size:10px;color:#888">Mémo ICHTUS Juin 2026</div>'
+      +'<div style="text-align:right;font-size:10px;color:#888">Référentiel Technique Juin 2026</div>'
     +'</div>'
     +'<div style="background:#eaf4fb;border:1px solid #aed6f1;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11px">'
       +'<strong style="color:#1a5276">Produit : '+prodName+'</strong> · '
@@ -10937,7 +10979,7 @@ function exportBasifiantPDF(){
     +'</table>'
     +(prod&&prod.id==='caco3'?'<div style="margin-top:12px;font-size:10px;color:#555;border-top:1px solid #ddd;padding-top:8px">⚗️ CaCO₃ : Prédissoudre au vinaigre blanc 5–8 ml/g · Verser à l\'arrosoir pendant aération maximale · 2–3 apports max/correction</div>':'')
     +(prod&&prod.id==='nahco3'?'<div style="margin-top:12px;font-size:10px;color:#555;border-top:1px solid #ddd;padding-top:8px">💧 NaHCO₃ : Dissoudre dans 2L eau du bassin · Verser progressivement en pluie · 1–2 apports max</div>':'')
-    +'<div style="margin-top:16px;font-size:9px;color:#aaa;text-align:center">ICHTUS · Aquaculture Biofloc · Lomé, Togo · Mémo Régulation TAC Juin 2026</div>'
+    +'<div style="margin-top:16px;font-size:9px;color:#aaa;text-align:center">BioAquaTech · Aquaculture Biofloc · Lomé, Togo · Régulation TAC Juin 2026</div>'
     +'</div>';
 
   if(typeof openPDF==='function')openPDF(html,'Distribution Basifiant — '+date);
@@ -10955,7 +10997,7 @@ window.setBasN=setBasN;
 
 // ═══════════════════════════════════════════════
 // CALCULATEUR TAC / CaCO₃ (ancien — délègue vers le nouveau)
-// Source: Mémo Technique TAT/CaCO₃ ICHTUS v1.0
+// Source: Référentiel Technique TAT/CaCO₃ v1.0
 // ═══════════════════════════════════════════════
 function calcTAC(){
   const tac=parseFloat(G('tac-val')?.value);
@@ -10989,7 +11031,7 @@ function calcTAC(){
 }
 
 // ═══════════════════════════════════════════════
-// FCR DE RÉFÉRENCE PAR SEMAINE — Outil FCR & Survie v2.0 ICHTUS
+// FCR DE RÉFÉRENCE PAR SEMAINE — Outil FCR & Survie v2.0
 // ═══════════════════════════════════════════════
 // FCR_REF et getFCRStatus définis dans module Rationnement ci-dessus
 // Alias pour compatibilité
@@ -11688,11 +11730,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function enhanceAnalyse(){var t13=G('t13');if(t13&&!G('ana-v12-economie'))t13.insertAdjacentHTML('beforeend','<div id="ana-v12-economie" class="card" style="border-color:rgba(0,170,255,.25)"><div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Analyse économique complète</div><div class="mgrid"><div class="met"><div class="mlbl">Coût revient/kg</div><div class="mval" id="ana-revientkg">—</div></div><div class="met"><div class="mlbl">Prix conseillé 30%</div><div class="mval" id="ana-prix30">—</div></div><div class="met"><div class="mlbl">Rentabilité</div><div class="mval" id="ana-rentab">—</div></div><div class="met"><div class="mlbl">Amort. mensuel</div><div class="mval" id="ana-amortm">—</div></div></div><div id="ana-eco-detail" style="font-size:11px;color:var(--t2);line-height:1.8"></div></div>');}
   window.renderAnalyseEconomique=function(){var m=metrics(), revient=m.kg?m.cost/m.kg:0;if(G('ana-revientkg'))G('ana-revientkg').textContent=revient?money(revient):'—';if(G('ana-prix30'))G('ana-prix30').textContent=revient?money(revient/(1-.30)):'—';if(G('ana-rentab'))G('ana-rentab').textContent=m.ca?((m.margin/m.ca)*100).toFixed(1)+' %':'—';if(G('ana-amortm'))G('ana-amortm').textContent=money(m.amortM);if(G('ana-eco-detail'))G('ana-eco-detail').innerHTML='Coût estimé = stock consommé ('+money(m.stockCons)+') + charges ('+money(m.charges)+') + amortissement mensuel ('+money(m.amortM)+'). Prix conseillé = coût de revient / (1 - marge souhaitée).';renderDirection();};
   window.renderDirection=function(){var m=metrics();if(G('dir-kg'))G('dir-kg').textContent=m.kg.toFixed(1)+' kg';if(G('dir-ca'))G('dir-ca').textContent=money(m.ca);if(G('dir-cost'))G('dir-cost').textContent=money(m.cost);if(G('dir-margin'))G('dir-margin').textContent=money(m.margin);var alerts=[];if(!cycles().length)alerts.push('Aucun cycle créé : impossible de rattacher précisément les coûts.');if(!harvests().length)alerts.push('Aucune récolte : coût/kg non calculable.');if(!sales().length)alerts.push('Aucune vente : rentabilité réelle non calculable.');if(!investments().length)alerts.push('Aucun investissement : amortissement non intégré au coût complet.');if(m.ca&&m.margin<0)alerts.push('Prix de vente inférieur au coût estimé.');if(G('dir-alerts'))G('dir-alerts').innerHTML=alerts.length?alerts.map(function(a){return '⚠️ '+a;}).join('<br>'):'✅ Les données principales sont synchronisées.';};
-  function init(){try{ensureTabs();ensurePanes();enhanceCompta();enhanceAnalyse();swParamV12('cycle');swRecV12('new');renderAnalyseEconomique();}catch(e){console.error('ICHTUS v12 clean init:',e);}}
+  function init(){try{ensureTabs();ensurePanes();enhanceCompta();enhanceAnalyse();swParamV12('cycle');swRecV12('new');renderAnalyseEconomique();}catch(e){console.error('BioFloc v12 init:',e);}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
-<!-- Correctifs et modules ICHTUS réinjectés proprement hors du template PDF -->
+<!-- Correctifs et modules réinjectés proprement hors du template PDF -->
 
 <script>
 // Correctif d\'accès landing page : garantit que les boutons restent cliquables même si un module secondaire échoue.
@@ -11722,7 +11764,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 
 <script>
-/* ICHTUS ERP v11 — Synchronisation Réceptions / Inventaire / PWA
+/* BioFloc ERP — Synchronisation Réceptions / Inventaire / PWA
    Règles intégrées :
    1) Une réception non validée peut être supprimée par Opérateur, Responsable ferme ou Super Admin.
    2) Une réception validée est verrouillée : correction uniquement par inventaire.
@@ -12450,7 +12492,7 @@ function renderComptaExtras(){var pane=G('t5');if(!pane||G('erp-sales-box'))retu
 function renderSalesBox(){var c=G('erp-sales-content');if(!c)return;var hs=harvests();c.innerHTML='<div class="admin-form"><input id="sale-date" type="date" class="form-inp" value="'+today()+'"><select id="sale-hv" class="form-inp">'+hs.map(function(h){return '<option value="'+esc(h.id)+'">'+esc(h.date)+' · '+esc(h.bassinName)+' · stock '+fishStockByHarvest(h.id).toFixed(2)+' kg</option>'}).join('')+'</select><select id="sale-client" class="form-inp">'+clients().map(function(cl){return '<option>'+esc(cl.name)+'</option>'}).join('')+'</select><input id="sale-kg" type="number" class="form-inp" placeholder="kg vendus"><input id="sale-price" type="number" class="form-inp" placeholder="Prix/kg XOF"><select id="sale-pay" class="form-inp"><option>Espèces</option><option>Mobile money</option><option>Virement</option><option>Crédit client</option></select></div><button class="sbtn" onclick="addSaleERP()">Valider vente</button><div class="tw" style="margin-top:.7rem"><table><thead><tr><th>Date</th><th>Client</th><th>Récolte</th><th>Kg</th><th>Prix/kg</th><th>CA</th></tr></thead><tbody>'+sales().map(function(s){return '<tr><td>'+esc(s.date)+'</td><td>'+esc(s.client)+'</td><td>'+esc(s.harvestLabel)+'</td><td>'+n(s.kg).toFixed(2)+'</td><td>'+money(s.price)+'</td><td class="cn">'+money(n(s.kg)*n(s.price))+'</td></tr>'}).join('')+'</tbody></table></div>'}
 window.addSaleERP=function(){var hid=G('sale-hv').value,kg=n(G('sale-kg').value),price=n(G('sale-price').value);if(kg<=0||price<=0)return alert('Quantité et prix obligatoires');if(kg>fishStockByHarvest(hid))return alert('Stock poisson insuffisant');var h=harvests().find(function(x){return x.id===hid})||{};var a=sales();a.push({id:'SALE-'+Date.now(),date:G('sale-date').value,harvestId:hid,harvestLabel:(h.date||'')+' '+(h.bassinName||''),cycleId:h.cycleId,bassinId:h.bassinId,client:G('sale-client').value||'Client non défini',kg:kg,price:price,payment:G('sale-pay').value});saveSales(a);renderSalesBox();if(G('t7'))renderHarvestModule();toast('✅ Vente validée : stock poisson diminué','ok')};
 function hookSw(){if(window.__ichtus_v23_hooked)return;window.__ichtus_v23_hooked=true;var old=window.sw;window.sw=function(id){if(old)old(id);setTimeout(function(){if(id==='t7')renderHarvestModule();if(id==='t5')renderComptaExtras();if(id==='t15')renderParamERP('bassins')},0)}}
-function init(){try{ensureNav();hookSw();syncBassins();if(G('t7'))renderHarvestModule();if(G('t5'))renderComptaExtras();console.log('ICHTUS v23 stable accessible chargé')}catch(e){console.error('ICHTUS v23 init',e)}}
+function init(){try{ensureNav();hookSw();syncBassins();if(G('t7'))renderHarvestModule();if(G('t5'))renderComptaExtras();console.log('BioFloc v23 chargé')}catch(e){console.error('BioFloc v23 init',e)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else setTimeout(init,0);
 })();
 </script>
@@ -12735,14 +12777,14 @@ window.deleteHarvestERP=function(id){var h=harvests().find(function(x){return x.
 window.addFishOutERP=function(){var hid=G('out-hv')&&G('out-hv').value,kg=n(G('out-kg')&&G('out-kg').value);if(!hid)return alert('Aucun stock poisson disponible.');if(kg<=0)return alert('Quantité obligatoire.');if(kg>fishStockByHarvest(hid))return alert('Stock poisson insuffisant.');var h=harvests().find(function(x){return x.id===hid})||{};var a=fishOuts();a.push({id:'OUT-'+Date.now(),harvestId:hid,cycleId:h.cycleId,bassinId:h.bassinId,type:G('out-type').value,kg:kg,comment:G('out-comment').value,date:today(),createdAt:new Date().toISOString()});saveFishOuts(a);renderHarvestModule();if(window.renderSalesBoxERP)renderSalesBoxERP();toast('✅ Sortie stock poisson enregistrée','ok')};
 function ensureSalesBox(){var pane=G('t5');if(!pane)return;var box=G('erp-sales-box');if(!box){box=document.createElement('div');box.id='erp-sales-box';box.className='card';box.innerHTML='<div class="ctitle"><span class="dot"></span>Ventes poisson</div><div id="erp-sales-content"></div>';pane.appendChild(box)}}
 function dedupeParamTabs(){var nav=document.querySelector('#screen-farm .tabnav');if(!nav)return;var seen=false;Array.from(nav.querySelectorAll('button')).forEach(function(b){if((b.textContent||'').indexOf('Paramètres ERP')>=0){if(seen)b.remove();seen=true}})}
-function hook(){if(window.__ichtus_v28_hooked)return;window.__ichtus_v28_hooked=true;var old=window.sw;window.sw=function(id){if(old)old.apply(this,arguments);setTimeout(function(){dedupeParamTabs();if(id==='t7')renderHarvestModule();if(id==='t5'){ensureSalesBox();renderSalePricesPanel();renderSalesBoxERP()}},0)};setTimeout(function(){dedupeParamTabs();if(G('t7'))renderHarvestModule();if(G('t5')){ensureSalesBox();renderSalePricesPanel();renderSalesBoxERP()}console.log('ICHTUS v28 prix éditables et récoltes partielles chargé')},700)}
+function hook(){if(window.__ichtus_v28_hooked)return;window.__ichtus_v28_hooked=true;var old=window.sw;window.sw=function(id){if(old)old.apply(this,arguments);setTimeout(function(){dedupeParamTabs();if(id==='t7')renderHarvestModule();if(id==='t5'){ensureSalesBox();renderSalePricesPanel();renderSalesBoxERP()}},0)};setTimeout(function(){dedupeParamTabs();if(G('t7'))renderHarvestModule();if(G('t5')){ensureSalesBox();renderSalePricesPanel();renderSalesBoxERP()}console.log('BioFloc v28 chargé')},700)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else hook();
 })();
 </script>
 
 <script id="ichtus-v29-rentabilite-sync">
 /* ═══════════════════════════════════════════════════════════════════
-   ICHTUS v29 — Module Rentabilité & Synchronisation inter-onglets
+   BioFloc — Module Rentabilité & Synchronisation inter-onglets
    - Firebase sync pour investissements, ventes, récoltes
    - Tableau de rentabilité complet (CA, charges, amortissements, résultat)
    - Liaisons automatiques entre tous les onglets financiers
@@ -13047,7 +13089,7 @@ window.refreshFinancials=function(){
       },1200);
     });
   }
-  console.log('ICHTUS v29 rentabilité & sync chargé');
+  console.log('BioFloc v29 chargé');
 })();
 
 // Populate PWA bassin select now that bassins() is defined and exposed
@@ -13316,7 +13358,7 @@ if(window.fillPwaBassinSelect)window.fillPwaBassinSelect();
     downloadXLSX([{name:'Rentabilité',rows:rows}],'rentabilite_'+new Date().toISOString().slice(0,10)+'.xlsx');
   };
 
-  console.log('ICHTUS exports PDF/CSV chargés');
+  console.log('BioFloc exports PDF/CSV chargés');
 })();
 </script>
 
@@ -13368,7 +13410,7 @@ async function requestNotifPermission(){
   const perm=await Notification.requestPermission();
   if(perm==='granted'){
     showToast('✅ Notifications activées','ok');
-    new Notification('ICHTUS ERP',{body:'Vous recevrez les alertes importantes (DO critique, stock bas, PWA…)',icon:''});
+    new Notification('BioFloc ERP',{body:'Vous recevrez les alertes importantes (DO critique, stock bas, PWA…)',icon:''});
   } else {
     showToast('Notifications refusées par le navigateur','warn');
   }
@@ -13376,7 +13418,7 @@ async function requestNotifPermission(){
 
 function sendLocalNotif(title,body,tag){
   if(Notification.permission==='granted'){
-    new Notification(title,{body,tag:tag||'ichtus',icon:''});
+    new Notification(title,{body,tag:tag||'biofloc',icon:''});
   }
 }
 
