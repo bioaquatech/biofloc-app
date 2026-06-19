@@ -4925,6 +4925,7 @@ function exportAnalysePDF(){
   printWin.document.close();
   setTimeout(()=>{ try{ printWin.print(); }catch(e){} },300);
 }
+window.exportAnalysePDF=exportAnalysePDF;
 
 // ═══════════════════════════════════════════════
 // MOT DE PASSE OUBLIÉ — Réinitialisation
@@ -7164,7 +7165,7 @@ async function loadParamLists(){
     const snap=await db.collection('platform').doc('params').get();
     if(snap.exists&&snap.data().lists){
       var loaded=snap.data().lists;
-      if(loaded.basifiants)loaded.basifiants=loaded.basifiants.filter(function(x){return !_BAS_BLACKLIST.includes(x.label);});
+      if(loaded.basifiants)loaded.basifiants=loaded.basifiants.filter(function(x){return !_BAS_BLACKLIST.some(function(b){return x.label.toLowerCase().includes(b.toLowerCase());});});
       PARAM_LISTS={...PARAM_LISTS,...loaded};
     }
   }catch(e){console.warn('ParamLists:',e);}
@@ -7208,6 +7209,7 @@ function addParamItem(type){
   const unit=unitSel?.value||'g';
   const list=isB?PARAM_LISTS.basifiants:PARAM_LISTS.carbohydrates;
   if(list.find(x=>x.label===label))return;
+  if(isB&&_BAS_BLACKLIST.some(b=>label.toLowerCase().includes(b.toLowerCase())))return showToast('⛔ Ce produit est interdit (dangereux pour le biofloc)','dng');
   list.push({label,unit});
   if(input)input.value='';
   renderAdminParamLists();saveParamLists();
@@ -7654,12 +7656,13 @@ function _autoRappelBasifiant(b){
 
 async function saveBassinRow(i){
   const b=APP.state.bassins[i];
-  b._hasData=true;
-  b._savedAt=new Date().toISOString();
+  if(!b)return;
   const dateStr=APP_historyDate||today();
   const isHistorical=!!APP_historyDate;
   const role=APP.user?.role||'Opérateur';
   try{
+    b._hasData=true;
+    b._savedAt=new Date().toISOString();
     clearTimeout(_dbt['bassins']);_pendingSaveKeys.delete('bassins');
     showSyncing();
     const batch=db.batch();
@@ -9621,7 +9624,7 @@ function renderJournal(){
   });
 }
 
-function exportJournalPDF(){
+window.exportJournalPDF=function exportJournalPDF(){
   const typeF=G('journal-filter-type')?.value||'';
   const userF=G('journal-filter-user')?.value||'';
   const fromF=G('journal-filter-from')?.value||'';
@@ -9899,7 +9902,7 @@ async function renderAdminJournal(){
   }
 }
 
-function exportAdminJournalPDF(){
+window.exportAdminJournalPDF=function exportAdminJournalPDF(){
   const typeF=G('adm-journal-filter-type')?.value||'';
   const farmF=G('adm-journal-filter-farm')?.value||'';
   const fromF=G('adm-journal-filter-from')?.value||'';
