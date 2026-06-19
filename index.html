@@ -7168,12 +7168,16 @@ async function loadParamLists(){
       PARAM_LISTS={...PARAM_LISTS,...loaded};
     }
   }catch(e){console.warn('ParamLists:',e);}
-  // Toujours s'assurer que Javel n'est pas dans la liste en mémoire
-  PARAM_LISTS.basifiants=PARAM_LISTS.basifiants.filter(function(x){return !_BAS_BLACKLIST.includes(x.label);});
+  // Toujours s'assurer que les produits blacklistés ne sont pas en mémoire ni dans Firestore
+  var beforeCount=PARAM_LISTS.basifiants.length;
+  PARAM_LISTS.basifiants=PARAM_LISTS.basifiants.filter(function(x){return !_BAS_BLACKLIST.some(function(b){return x.label.toLowerCase().includes(b.toLowerCase());});});
+  if(PARAM_LISTS.basifiants.length<beforeCount)saveParamLists();// purger Firestore si blacklist trouvée
   renderAdminParamLists();
 }
 
 async function saveParamLists(){
+  // Toujours nettoyer la blacklist avant d'écrire dans Firestore
+  PARAM_LISTS.basifiants=PARAM_LISTS.basifiants.filter(function(x){return !_BAS_BLACKLIST.some(function(b){return x.label.toLowerCase().includes(b.toLowerCase());});});
   try{
     await db.collection('platform').doc('params').set({lists:PARAM_LISTS},{merge:true});
     const msg=G('admin-params-msg');
