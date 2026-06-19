@@ -4876,7 +4876,7 @@ function openAnalyse(){
             </div>`).join('')}
           </div>`}
         ${ok.length>0&&alerts.length>0?`<div style="padding:.3rem 1rem .5rem;font-size:9px;color:var(--t3)">✓ Normaux : ${ok.map(p=>ANALYSE_RULES[p]?.label||p).join(' · ')}</div>`:''}
-        ${bassin.note?`<div style="padding:.4rem 1rem .6rem;display:flex;align-items:flex-start;gap:6px;border-top:1px solid var(--b1)"><span style="font-size:12px;margin-top:1px">📝</span><div style="font-size:10px;color:var(--t2);font-style:italic;line-height:1.5">${esc(bassin.note)}</div></div>`:''}
+        ${bassin.note?`<div style="padding:.4rem 1rem .6rem;display:flex;align-items:flex-start;gap:6px;border-top:1px solid var(--b1)"><span style="font-size:12px;margin-top:1px">📝</span><div style="font-size:10px;color:var(--t2);font-style:italic;line-height:1.5">${String(bassin.note).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}</div></div>`:''}
       </div>`;
     }).join('');
 }
@@ -4892,23 +4892,35 @@ function exportAnalysePDF(){
   printWin.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Analyse Paramètres — ${farmName}</title>
     <style>
-      body{font-family:Arial,sans-serif;padding:20px;color:#E8F4FF;font-size:12px}
-      .doc-header{display:flex;align-items:center;gap:14px;border-bottom:2px solid #22d3ee004466;padding-bottom:10px;margin-bottom:14px}
-      .doc-header h1{font-size:15px;color:#90E0EF;margin-bottom:2px}
-      .doc-header .sub{font-size:10px;color:#666}
-      .bassin{margin-bottom:12px;border:2px solid #ccc;border-radius:8px;overflow:hidden}
-      .bassin-head{padding:8px 12px;font-weight:700;font-size:13px}
-      .bassin-body{padding:8px 12px}
-      .alert-item{margin-bottom:8px;padding:6px 10px;border-left:3px solid #cc0000;background:#2a0f0f;border-radius:0 4px 4px 0}
-      .ok{color:#34d399;font-size:11px;padding:8px 12px}
-      @media print{body{margin:0}}
+      *{box-sizing:border-box}
+      body{font-family:Arial,sans-serif;padding:24px;background:#ffffff;color:#1e293b;font-size:12px;margin:0}
+      .doc-header{display:flex;align-items:center;gap:14px;border-bottom:2px solid #cbd5e1;padding-bottom:12px;margin-bottom:16px}
+      .doc-header h1{font-size:15px;color:#0f172a;margin:0 0 2px}
+      .doc-header .sub{font-size:10px;color:#64748b;margin:0}
+      /* override CSS variables used in the injected HTML */
+      [style*="var(--dng)"],[style*="color:var(--dng)"]{color:#dc2626!important}
+      [style*="var(--warn)"]{color:#d97706!important}
+      [style*="var(--acc)"]{color:#059669!important}
+      [style*="var(--t1)"]{color:#1e293b!important}
+      [style*="var(--t2)"]{color:#475569!important}
+      [style*="var(--t3)"]{color:#64748b!important}
+      [style*="var(--b1)"]{border-color:#e2e8f0!important}
+      [style*="background:rgba(255,61,87"]{background:rgba(220,38,38,.08)!important}
+      [style*="background:rgba(245,166,35"]{background:rgba(217,119,6,.08)!important}
+      [style*="background:rgba(0,201,167"]{background:rgba(5,150,105,.07)!important}
+      [style*="background:rgba(0,0,0,.04)"]{background:#f8fafc!important}
+      [style*="background:rgba(0,0,0,.1)"]{background:#e2e8f0!important}
+      [style*="border:2px solid var(--dng)"]{border-color:#dc2626!important}
+      [style*="border:2px solid var(--warn)"]{border-color:#d97706!important}
+      [style*="border:2px solid var(--acc)"]{border-color:#059669!important}
+      [style*="color:#ff1744"]{color:#dc2626!important}
+      @media print{body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
     </style></head><body>
     <div class="doc-header">
       ${logoHtml}
-      <div><h1>${farmName} — Rapport d\'Analyse des Paramètres</h1><p class="sub">${date}</p></div>
+      <div><h1>${farmName} — Rapport d'Analyse des Paramètres</h1><p class="sub">${date}</p></div>
     </div>
     <div id="pdf-content">${content}</div>
-
 </body></html>`);
   printWin.document.close();
   setTimeout(()=>{ try{ printWin.print(); }catch(e){} },300);
