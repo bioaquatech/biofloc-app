@@ -94,8 +94,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100
 /* ── TABS ── */
 .tabnav{background:var(--panel);border-bottom:1px solid var(--b1);display:flex;overflow-x:auto;flex-shrink:0}
 .tabnav::-webkit-scrollbar{height:0}
-.subnav-scroll::-webkit-scrollbar{height:0}
+.subnav-scroll::-webkit-scrollbar{height:3px}
+.subnav-scroll::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
+.subnav-scroll::-webkit-scrollbar-track{background:transparent}
 .subnav-scroll .tb{flex-shrink:0}
+.subnav-wrap{position:relative}
+.subnav-wrap::after{content:'';position:absolute;right:0;top:0;bottom:6px;width:32px;background:linear-gradient(to right,transparent,var(--panel));pointer-events:none;border-radius:0 4px 0 0}
 .tb{padding:0 1rem;height:40px;font-size:11px;font-weight:500;color:var(--t2);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:4px}
 .tb:hover{color:var(--t1);background:var(--hov)}
 .tb.active{color:var(--acc);border-bottom-color:var(--acc)}
@@ -1278,11 +1282,13 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <div id="t1" class="pane">
       <div class="card" style="padding:.65rem .8rem;margin-bottom:.75rem">
         <div class="ctitle"><span class="dot"></span>Production piscicole</div>
-        <div style="display:flex;gap:.35rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none" class="subnav-scroll">
+        <div class="subnav-wrap">
+        <div style="display:flex;gap:.35rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch" class="subnav-scroll">
           <button class="tb active" onclick="sw('t1')" style="font-size:11px;flex-shrink:0">⚙️ Bassins & qualité d'eau</button>
           <button class="tb" onclick="sw('t3')" style="font-size:11px;flex-shrink:0">📈 Croissance & FCR</button>
           <button class="tb" onclick="sw('t12')" style="font-size:11px;flex-shrink:0">🍽️ Rationnement</button>
           <button class="tb" onclick="sw('t7')" style="font-size:11px;flex-shrink:0">🏆 Récoltes</button>
+        </div>
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin-bottom:.7rem">
@@ -1426,7 +1432,8 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <!-- T4 LOGISTIQUE (fusionné Aliments + Logistique) -->
     <div id="t4" class="pane">
       <!-- Sous-navigation Logistique -->
-      <div style="display:flex;gap:.3rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem;scrollbar-width:none" class="subnav-scroll">
+      <div class="subnav-wrap">
+      <div style="display:flex;gap:.3rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem" class="subnav-scroll">
         <button class="tb active" id="lt-intrants" onclick="swLog('intrants')" style="font-size:11px">📦 Catalogue intrants</button>
         <button class="tb" id="lt-stock" onclick="swLog('stock')" style="font-size:11px">📥 Réceptions</button>
         <button class="tb" id="lt-consommations" onclick="swLog('consommations')" style="font-size:11px">📤 Consommations</button>
@@ -1438,6 +1445,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
         <button class="tb" id="lt-mouvements" onclick="swLog('mouvements')" style="font-size:11px">🔄 Historique mouvements</button>
         <button class="tb" id="lt-rapportstock" onclick="swLog('rapportstock')" style="font-size:11px">📊 Rapport hebdo</button>
         <button class="tb" id="lt-previsionnel" onclick="swLog('previsionnel')" style="font-size:11px">📈 Prévisionnel</button>
+      </div>
       </div>
 
       <!-- Panneau Intrants -->
@@ -1782,11 +1790,13 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <!-- T5 COMPTABILITÉ -->
     <div id="t5" class="pane">
       <!-- Sous-nav Comptabilité -->
-      <div style="display:flex;gap:.3rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem;scrollbar-width:none" class="no-print subnav-scroll">
+      <div class="subnav-wrap no-print">
+      <div style="display:flex;gap:.3rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem" class="subnav-scroll">
         <button class="tb active" id="ct-tab-saisie" onclick="swCompta('saisie')" style="font-size:11px">✅ Validation achats</button>
         <button class="tb" id="ct-tab-charges" onclick="swCompta('charges')" style="font-size:11px">📋 Charges exploitation</button>
         <button class="tb" id="ct-tab-synthese" onclick="swCompta('synthese')" style="font-size:11px">📊 Tableau financier</button>
         <button class="tb" id="ct-tab-coutcycle" onclick="swCompta('coutcycle')" style="font-size:11px">💰 Coût/Cycle</button>
+      </div>
       </div>
 
       <!-- Sous-onglet 1 : Prix & CUMP -->
@@ -3435,8 +3445,8 @@ async function flushPendingSaves(){
 }
 let syncDotEl=null;
 function showSyncing(){syncDotEl=G('sync-dot');if(syncDotEl)syncDotEl.style.background='var(--warn)';}
-function showSynced(){if(syncDotEl)syncDotEl.style.background='var(--acc)';}
-function showSyncErr(){if(syncDotEl)syncDotEl.style.background='var(--dng)';}
+function showSynced(){syncDotEl=G('sync-dot')||syncDotEl;if(syncDotEl)syncDotEl.style.background='var(--acc)';}
+function showSyncErr(){syncDotEl=G('sync-dot')||syncDotEl;if(syncDotEl)syncDotEl.style.background='var(--dng)';}
 
 function saveBassins(){
   if(!APP.farmCode)return;
@@ -7586,28 +7596,31 @@ async function saveBassinRow(i){
       const who=APP.user?.name||'?';
       // alimReel=g, probiot=ml, carb=ml(melasse)/g(autres), basifiant=g → convertis en unité stock (kg ou L)
       const mkMov=(type,intrantId,qty,unit)=>({id:'mov_'+type+'_'+sn+'_'+dateStr,intrantId,quantity:qty,unit,date:dateStr,type:'sortie',source:'daily',bassin:b.name,createdAt:new Date().toISOString(),createdBy:who});
-      if(b.alimReel>0){const feedId=b.feedId||'aliment';const m=mkMov('alim',feedId,b.alimReel/1000,'kg');batch.set(farmCol('stock_movements').doc(m.id),m);pendingMovs.push(m);}
-      if(b.probiot>0){const m=mkMov('pwa','pwa_prep',b.probiot/1000,'L');batch.set(farmCol('stock_movements').doc(m.id),m);pendingMovs.push(m);}
+      if(b.alimReel>0){const feedId=b.feedId||'aliment';pendingMovs.push(mkMov('alim',feedId,b.alimReel/1000,'kg'));}
+      if(b.probiot>0){pendingMovs.push(mkMov('pwa','pwa_prep',b.probiot/1000,'L'));}
       if(b.carb>0){
-        // Résoudre l'id intrant depuis le libellé carbType (ex: 'Mélasse' → 'melasse')
         const carbIntrant=APP_INTRANTS.find(x=>x.category==='carbohydrate'&&(x.id===(b.carbType||'').toLowerCase().replace(/[éèê]/g,'e').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')||x.name.toLowerCase().includes((b.carbType||'').toLowerCase())));
         const carbId=carbIntrant?.id||'melasse';
         const carbUnit=carbIntrant?.unit||'L';
-        // carb est en mL (melasse) ou g (farines) dans le bassin → convertir en L ou kg
-        const carbQty=b.carb/1000;
-        const m=mkMov('carb',carbId,carbQty,carbUnit);batch.set(farmCol('stock_movements').doc(m.id),m);pendingMovs.push(m);
+        pendingMovs.push(mkMov('carb',carbId,b.carb/1000,carbUnit));
       }
       if(b.basifiant>0){
-        // Résoudre l'id intrant depuis le libellé basifiantType (ex: 'CaCO₃' → 'caco3')
         const basIntrant=APP_INTRANTS.find(x=>x.category==='basifiant'&&(x.id===(b.basifiantType||'').toLowerCase().replace(/[₃₂]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')||x.name.toLowerCase().includes((b.basifiantType||'').toLowerCase())));
         const basId=basIntrant?.id||'caco3';
-        const m=mkMov('bas',basId,b.basifiant/1000,'kg');batch.set(farmCol('stock_movements').doc(m.id),m);pendingMovs.push(m);
+        pendingMovs.push(mkMov('bas',basId,b.basifiant/1000,'kg'));
       }
     }
 
     await batch.commit();
-    // Mise à jour locale après commit réussi
-    pendingMovs.forEach(m=>{const idx=APP_STOCK_MOVEMENTS.findIndex(x=>x.id===m.id);if(idx>=0)APP_STOCK_MOVEMENTS[idx]=m;else APP_STOCK_MOVEMENTS.push(m);});
+    // Mouvements stock dans un batch séparé (erreurs permissions n'affectent pas le sync principal)
+    if(pendingMovs.length>0){
+      try{
+        const movBatch=db.batch();
+        pendingMovs.forEach(m=>movBatch.set(farmCol('stock_movements').doc(m.id),m));
+        await movBatch.commit();
+        pendingMovs.forEach(m=>{const idx=APP_STOCK_MOVEMENTS.findIndex(x=>x.id===m.id);if(idx>=0)APP_STOCK_MOVEMENTS[idx]=m;else APP_STOCK_MOVEMENTS.push(m);});
+      }catch(me){console.warn('[stock_movements] write skipped:',me.message);}
+    }
     showSynced();
     setTimeout(checkVolumeLimit,0);
     if(isHistorical&&role==='Opérateur'){
@@ -7682,7 +7695,7 @@ async function checkNotifications(){
       // Marquer comme lues
       const batch=db.batch();
       snap.docs.forEach(d=>batch.update(d.ref,{read:true}));
-      batch.commit();
+      batch.commit().catch(e=>console.warn('Notif mark-read:',e));
     }
   }catch(e){console.warn('Notifications:',e);}
 }
