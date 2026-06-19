@@ -1358,6 +1358,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
               <div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">BASSIN</div><select id="sc-bassin" class="si" style="width:100%;font-size:11px"><option value="">Sélectionner...</option></select></div>
               <div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">POIDS (g)</div><input type="number" id="sc-poids" class="ci" style="width:100%" placeholder="12.5" step="0.1"></div>
               <div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">MORTALITÉ</div><input type="number" id="sc-mort" class="ci" style="width:100%" placeholder="0"></div>
+              <div style="grid-column:1/-1"><div style="font-size:9px;color:var(--t3);margin-bottom:3px">NOTE (optionnel)</div><input type="text" id="sc-note" class="ci" style="width:100%" placeholder="Ex: comportement normal, eau légèrement trouble…"></div>
             </div>
             <button class="sbtn" style="width:100%" onclick="addSuivi()">+ Ajouter pesée</button>
           </div>
@@ -7448,6 +7449,7 @@ async function renameBassin(i, newName){
 async function saveBassinRow(i){
   const b=APP.state.bassins[i];
   b._hasData=true;
+  b._savedAt=new Date().toISOString();
   const dateStr=APP_historyDate||today();
   const isHistorical=!!APP_historyDate;
   const role=APP.user?.role||'Opérateur';
@@ -7504,6 +7506,27 @@ async function saveBassinRow(i){
     console.error(e);
   }
 }
+
+function openBassinNoteModal(i){
+  var b=APP.state.bassins[i];
+  var existing=document.getElementById('bassin-note-modal');if(existing)existing.remove();
+  var div=document.createElement('div');
+  div.id='bassin-note-modal';
+  div.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  div.innerHTML='<div style="background:var(--card);border:1px solid var(--b2);border-radius:12px;padding:20px;max-width:380px;width:90%">'
+    +'<div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:.75rem">📝 Note — '+(b.name||'Bassin '+i)+'</div>'
+    +'<div style="font-size:10px;color:var(--t3);margin-bottom:4px">Note du jour (explication écart, traitement, observation…)</div>'
+    +'<textarea id="bassin-note-text" style="width:100%;min-height:80px;background:var(--inp);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:11px;padding:8px;resize:vertical;box-sizing:border-box" placeholder="Ex: pH bas ce matin suite à forte pluie. Ajout CaCO₃ 200g.">'+(b.note||'')+'</textarea>'
+    +'<div style="display:flex;gap:.5rem;margin-top:.6rem">'
+    +'<button onclick="(function(){var v=document.getElementById(\'bassin-note-text\').value.trim();APP.state.bassins['+i+'].note=v;saveBassinRow('+i+');document.getElementById(\'bassin-note-modal\').remove();})()" style="flex:1;background:var(--gold);color:#000;border:none;border-radius:6px;padding:8px;font-weight:700;cursor:pointer;font-size:12px">💾 Enregistrer</button>'
+    +'<button onclick="document.getElementById(\'bassin-note-modal\').remove()" style="flex:1;background:var(--inp);border:1px solid var(--b2);border-radius:6px;padding:8px;color:var(--t2);cursor:pointer;font-size:12px">Annuler</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(div);
+  div.addEventListener('click',function(e){if(e.target===div)div.remove();});
+  setTimeout(function(){var ta=document.getElementById('bassin-note-text');if(ta){ta.focus();ta.selectionStart=ta.value.length;}},50);
+}
+window.openBassinNoteModal=openBassinNoteModal;
 
 function showToast(msg, type='acc'){
   const toast=document.createElement('div');
@@ -7726,7 +7749,9 @@ function buildBTable(){
 
       <td style="white-space:nowrap">
         <button onclick="saveBassinRow(${i})" style="background:var(--acc);color:#FFFFFF;border:none;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;font-weight:700;margin-right:2px" title="Enregistrer">💾</button>
+        <button onclick="openBassinNoteModal(${i})" style="background:${b.note?'rgba(251,191,36,.2)':'var(--inp)'};border:1px solid ${b.note?'rgba(251,191,36,.5)':'var(--b2)'};border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;margin-right:2px" title="${b.note?'Note: '+b.note.substring(0,40):'Ajouter une note'}">📝</button>
         ${canDelete?`<button class="dbtn" onclick="removeBassin(${i})" title="Supprimer">🗑</button>`:`<button style="background:none;border:1px solid var(--b2);border-radius:4px;padding:3px 6px;font-size:10px;cursor:not-allowed;opacity:.4" title="Suppression réservée au Responsable">🔒</button>`}
+        ${b._savedAt?`<div style="font-size:8px;color:var(--t3);margin-top:2px">${new Date(b._savedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div>`:''}
       </td>`;
     tb.appendChild(tr);
   });
@@ -8119,14 +8144,15 @@ function popSelects(){
 // ═══════════════════════════════════════════════
 function addSuivi(){
   const date=G('sc-date').value,bassin=G('sc-bassin').value,poids=parseFloat(G('sc-poids').value),mort=parseInt(G('sc-mort').value)||0;
+  const note=(G('sc-note')?.value||'').trim();
   if(!date||!bassin||isNaN(poids)){alert('Date, Bassin et Poids requis.');return;}
   const existing=APP.state.suivi.find(r=>r.bassin===bassin&&r.date===date);
   if(existing)deleteSuiviDoc(existing.id);
   APP.state.suivi=APP.state.suivi.filter(r=>!(r.bassin===bassin&&r.date===date));
-  const nr={id:APP.state.suiviId++,date,bassin,poids,mort};
+  const nr={id:APP.state.suiviId++,date,bassin,poids,mort,...(note?{note}:{})};
   APP.state.suivi.push(nr);
   APP.state.suivi.sort((a,b)=>a.date.localeCompare(b.date)||a.bassin.localeCompare(b.bassin));
-  G('sc-poids').value='';G('sc-mort').value='';saveSuiviDoc(nr);renderSuivi();renderChart();
+  G('sc-poids').value='';G('sc-mort').value='';if(G('sc-note'))G('sc-note').value='';saveSuiviDoc(nr);renderSuivi();renderChart();
 }
 function removeSuivi(id){APP.state.suivi=APP.state.suivi.filter(r=>r.id!==id);deleteSuiviDoc(id);renderSuivi();renderChart();}
 function renderSuivi(){
