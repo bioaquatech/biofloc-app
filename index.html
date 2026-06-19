@@ -1681,7 +1681,11 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
 
       <!-- ═══ PANNEAU BASIFIANTS TAC ═══ -->
       <div id="lp-basifiant" class="log-pane" style="display:none">
-        <div style="font-size:13px;font-weight:700;color:var(--acc2);margin-bottom:.75rem">🧪 Calculateur Basifiant — Ajustement TAC</div>
+        <div style="font-size:13px;font-weight:700;color:var(--acc2);margin-bottom:.5rem">🧪 Calculateur Basifiant — Ajustement TAC</div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:.6rem">Formules conformes Mémo ICHTUS Juin 2026 · CaCO₃ : ×0,75 · NaHCO₃ : ×0,84 · Remesurer avant chaque dose suivante</div>
+
+        <!-- Bannière rappels -->
+        <div id="bas-rappels-banner" style="display:none;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.4);border-radius:8px;padding:.6rem .75rem;margin-bottom:.75rem"></div>
 
         <!-- 3 colonnes horizontales -->
         <div style="display:flex;gap:.75rem;align-items:flex-start;flex-wrap:wrap">
@@ -1706,15 +1710,15 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.6rem">
               <div>
                 <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Taux dissolution d</div>
-                <input id="tac-d" type="number" class="form-inp" step="0.01" min="0.01" max="1" placeholder="0.85" style="font-size:11px" oninput="renderBasifiantResult()">
+                <input id="tac-d" type="number" class="form-inp" step="0.01" min="0.01" max="1" placeholder="auto" style="font-size:11px;background:var(--inp)" readonly>
               </div>
               <div>
                 <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Facteur stoéch. f</div>
-                <input id="tac-f" type="number" class="form-inp" step="0.01" min="0.01" placeholder="1.0" style="font-size:11px" oninput="renderBasifiantResult()">
+                <input id="tac-f" type="number" class="form-inp" step="0.01" min="0.01" placeholder="auto" style="font-size:11px;background:var(--inp)" readonly>
               </div>
             </div>
 
-            <div style="font-size:10px;color:var(--t3);margin-bottom:3px">Nombre d'applications (n)</div>
+            <div style="font-size:10px;color:var(--t3);margin-bottom:3px">Nombre d'applications planifiées (n)</div>
             <div style="display:flex;gap:.3rem;margin-bottom:.75rem">
               <button onclick="setBasN(1)" id="bas-n1" class="sbtn" style="flex:1;font-size:11px;background:var(--acc)">1×</button>
               <button onclick="setBasN(2)" id="bas-n2" class="sbtn" style="flex:1;font-size:11px">2×</button>
@@ -1722,8 +1726,10 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
             </div>
             <input type="hidden" id="bas-n-val" value="1">
 
-            <div style="font-size:9px;color:var(--t3);background:var(--inp);border:1px solid var(--b1);border-radius:6px;padding:6px;margin-bottom:.5rem;font-family:monospace">
-              x = ΔTAC × V(m³) × (1/d) × (1/f) × (1/n)
+            <div style="font-size:9px;color:var(--t2);background:var(--inp);border:1px solid var(--b1);border-radius:6px;padding:6px;margin-bottom:.5rem">
+              <strong style="color:var(--acc2)">CaCO₃</strong> : x = ΔTAC × V × <strong>0,75</strong> g/apport<br>
+              <strong style="color:var(--acc2)">NaHCO₃</strong> : x = ΔTAC × V × <strong>0,84</strong> g/apport<br>
+              <span style="color:var(--t3)">Mémo ICHTUS · 1ʳᵉ apport maintenant · remesurer avant chaque dose suivante</span>
             </div>
             <div id="bas-result" style="font-size:11px;color:var(--t2)">
               <span style="color:var(--t3)">Sélectionnez un bassin et un basifiant.</span>
@@ -1733,26 +1739,33 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           <!-- COL 3 : Orientations -->
           <div style="flex:1;min-width:220px;background:var(--card);border:1px solid var(--b1);border-radius:10px;padding:.85rem">
             <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.5rem">③ Orientations — Quel basifiant choisir ?</div>
-            <div style="font-size:10px;line-height:1.7;color:var(--t2)">
-              <div style="background:rgba(0,201,167,.08);border-left:3px solid var(--acc);padding:.4rem .6rem;border-radius:0 6px 6px 0;margin-bottom:.5rem">
-                <strong style="color:var(--acc)">CaCO₃ — Carbonate de calcium</strong><br>
-                <span style="color:var(--t3)">d=0.85 · f=1.0</span><br>
-                Basifiant de fond. Action lente (12–24h). Idéal en maintenance régulière ou déficit modéré (ΔTAC &lt; 50 mg/L). Peu soluble — saupoudrer pendant aération.
+            <div style="font-size:10px;line-height:1.6;color:var(--t2)">
+              <!-- Tableau alertes §6 mémo -->
+              <table style="width:100%;border-collapse:collapse;font-size:9px;margin-bottom:.5rem">
+                <thead><tr style="background:var(--inp)">
+                  <th style="padding:3px 5px;color:var(--t3);text-align:left">Signal</th>
+                  <th style="padding:3px 5px;color:var(--t3)">TAC</th>
+                  <th style="padding:3px 5px;color:var(--t3)">Produit</th>
+                  <th style="padding:3px 5px;color:var(--t3);text-align:left">Action</th>
+                </tr></thead>
+                <tbody>
+                  <tr style="border-top:1px solid var(--b1)"><td style="padding:3px 5px;font-weight:700;color:#10B981">Prévention</td><td style="padding:3px 5px;text-align:center">100–149</td><td style="padding:3px 5px;text-align:center;color:var(--acc2)">CaCO₃</td><td style="padding:3px 5px">×0,75 · 1–2 apports · remesure H+24</td></tr>
+                  <tr style="border-top:1px solid var(--b1);background:rgba(245,158,11,.04)"><td style="padding:3px 5px;font-weight:700;color:var(--warn)">Correction</td><td style="padding:3px 5px;text-align:center">80–99</td><td style="padding:3px 5px;text-align:center;color:var(--warn)">CaCO₃ ou NaHCO₃</td><td style="padding:3px 5px">2 apports · remesure H+6</td></tr>
+                  <tr style="border-top:1px solid var(--b1);background:rgba(239,68,68,.04)"><td style="padding:3px 5px;font-weight:700;color:#EF4444">⚠️ Urgence</td><td style="padding:3px 5px;text-align:center">50–79</td><td style="padding:3px 5px;text-align:center;color:#EF4444">NaHCO₃ prioritaire</td><td style="padding:3px 5px">×0,84 · bullage max · arrêt alim. · TAN+pH /2h</td></tr>
+                  <tr style="border-top:1px solid var(--b1);background:rgba(239,68,68,.08)"><td style="padding:3px 5px;font-weight:700;color:#EF4444">🚨 Critique</td><td style="padding:3px 5px;text-align:center">&lt;50</td><td style="padding:3px 5px;text-align:center;color:#EF4444">NaHCO₃ ×2</td><td style="padding:3px 5px">2 doses H+6 · arrêt total · vidange 10% si TAN&gt;2 · DO horaire</td></tr>
+                </tbody>
+              </table>
+              <div style="background:rgba(0,201,167,.07);border-left:3px solid var(--acc);padding:.35rem .5rem;border-radius:0 5px 5px 0;margin-bottom:.4rem">
+                <strong style="color:var(--acc)">CaCO₃</strong> · K=0,75 · d=65% · Action lente 12–24h<br>
+                Prédissoudre au vinaigre blanc 5–8 ml/g · arrosoir pendant aération · 2–3 apports max/correction
               </div>
-              <div style="background:rgba(61,142,245,.08);border-left:3px solid var(--acc2);padding:.4rem .6rem;border-radius:0 6px 6px 0;margin-bottom:.5rem">
-                <strong style="color:var(--acc2)">NaHCO₃ — Bicarbonate de sodium</strong><br>
-                <span style="color:var(--t3)">d=0.95 · f=1.68</span><br>
-                Action rapide (2–4h). Recommandé en urgence (ΔTAC &gt; 50 mg/L ou pH &lt; 6.5). Plus coûteux — réserver aux situations critiques.
+              <div style="background:rgba(61,142,245,.07);border-left:3px solid var(--acc2);padding:.35rem .5rem;border-radius:0 5px 5px 0;margin-bottom:.4rem">
+                <strong style="color:var(--acc2)">NaHCO₃</strong> · K=0,84 · d=100% · Action rapide 2–4h<br>
+                Dissoudre dans 2L eau bassin · verser lentement en pluie · 1–2 apports max
               </div>
-              <div style="background:rgba(239,68,68,.06);border-left:3px solid #EF4444;padding:.4rem .6rem;border-radius:0 6px 6px 0;margin-bottom:.5rem">
-                <strong style="color:#EF4444">⚠️ Protocole d'application</strong><br>
-                • Fractionner si ΔTAC &gt; 50 mg/L (n≥2, espacer 12h)<br>
-                • Verser en plusieurs points pendant aération maximale<br>
-                • Remesurer TAC 2h après chaque application<br>
-                • Ne PAS dépasser 100 g/m³/application de CaCO₃
-              </div>
-              <div style="font-size:9px;color:var(--t3);border-top:1px solid var(--b1);padding-top:.4rem">
-                Réf : Mémo ICHTUS v1.0 — TAC optimal biofloc tilapia : 150–250 mg/L
+              <div style="font-size:9px;color:var(--t3);border-top:1px solid var(--b1);padding-top:.35rem">
+                ⚠️ Règle absolue : mesurer le TAC AVANT tout ajout · jamais sur calendrier fixe<br>
+                Mémo ICHTUS Juin 2026 · TAC cible biofloc tilapia ≥ 150 mg/L
               </div>
             </div>
           </div>
@@ -5002,9 +5015,11 @@ const DEFAULT_INTRANTS=[
   {id:'k4',name:'Aliment K4 Granulé 2mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
   {id:'k5',name:'Aliment K5 Granulé 3mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
   {id:'k6',name:'Aliment K6 Granulé 4.5mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
-  // Basifiants
-  {id:'caco3',name:'CaCO₃ — Carbonate de calcium',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'basifiant',isDefault:true,tauxDissolution:0.85,facteurStoech:1.0},
-  {id:'nahco3',name:'NaHCO₃ — Bicarbonate de sodium',unit:'kg',conditionnement:'1 kg/paquet',monitoringType:'strategic',category:'basifiant',isDefault:true,tauxDissolution:0.95,facteurStoech:1.68},
+  // Basifiants — facteurK = facteur direct de la formule mémo ICHTUS
+  // CaCO₃ : K=0.75 (dissolution réelle 65% × fraction prudente 50%) · remesure H+24
+  // NaHCO₃ : K=0.84 (stoéch ×1.68 × fraction prudente 50%) · remesure H+4–6
+  {id:'caco3',name:'CaCO₃ — Carbonate de calcium',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'basifiant',isDefault:true,tauxDissolution:0.65,facteurStoech:1.0,facteurK:0.75,intervalle:'H+24'},
+  {id:'nahco3',name:'NaHCO₃ — Bicarbonate de sodium',unit:'kg',conditionnement:'1 kg/paquet',monitoringType:'strategic',category:'basifiant',isDefault:true,tauxDissolution:1.0,facteurStoech:1.68,facteurK:0.84,intervalle:'H+4–6'},
   // Carbohydrates
   {id:'melasse',name:'Mélasse de canne',unit:'L',conditionnement:'25 L/bidon',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
   {id:'farine_ble',name:'Farine de blé',unit:'kg',conditionnement:'50 kg/sac',monitoringType:'strategic',category:'carbohydrate',isDefault:true},
@@ -5044,7 +5059,7 @@ function swLog(panel){
   if(panel==='intrants')renderIntrants();
   if(panel==='aliments'){renderFeed();if(typeof renderFeedMetrics==='function')renderFeedMetrics();}
   if(panel==='stock')renderStockEntries();
-  if(panel==='basifiant')setTimeout(function(){if(typeof renderBasifiantCalc==='function')renderBasifiantCalc();},50);
+  if(panel==='basifiant')setTimeout(function(){if(typeof renderBasifiantCalc==='function')renderBasifiantCalc();if(typeof renderBasRappelsBanner==='function')renderBasRappelsBanner();},50);
   if(panel==='inventaire')renderInventairePanel();
   if(panel==='seuils')renderSeuilsPanel();
   if(panel==='analyse')loadAnalyseStock();
@@ -10425,6 +10440,42 @@ function openThemeModal(){
 // Formule : x = ΔTAC × V(m³) × (1/d) × (1/f) × (1/n)
 // ═══════════════════════════════════════════════
 
+// ─── helpers rappels ────────────────────────────
+var BAS_RAPPELS_KEY='biofloc_bas_rappels';
+function getBasRappels(){try{return JSON.parse(localStorage.getItem(BAS_RAPPELS_KEY)||'[]');}catch(e){return[];}}
+function saveBasRappels(r){try{localStorage.setItem(BAS_RAPPELS_KEY,JSON.stringify(r));}catch(e){}}
+function addBasRappel(bassinName,appNo,totalN,produitName,intervalle,doseG){
+  var r=getBasRappels();
+  var now=new Date();
+  // Calculer heure cible (simplifiée : intervalle en heure, ex: "H+24" → 24h)
+  var heures=parseInt((intervalle||'H+24').replace(/[^0-9]/g,''))||24;
+  var echeance=new Date(now.getTime()+heures*60*60*1000);
+  r.push({bassinName,appNo,totalN,produitName,intervalle,doseG:doseG.toFixed(0),echeance:echeance.toISOString(),created:now.toISOString(),done:false});
+  saveBasRappels(r);
+}
+function dismissBasRappel(idx){var r=getBasRappels();if(r[idx])r[idx].done=true;saveBasRappels(r);renderBasRappelsBanner();}
+function renderBasRappelsBanner(){
+  var r=getBasRappels().filter(function(x){return !x.done;});
+  var banner=document.getElementById('bas-rappels-banner');
+  if(!banner)return;
+  if(!r.length){banner.style.display='none';return;}
+  var now=new Date();
+  var html=r.map(function(x,idx){
+    var ech=new Date(x.echeance);
+    var isDue=ech<=now;
+    var diff=Math.round((ech-now)/60000);
+    var timeStr=isDue?'<strong style="color:#EF4444">MAINTENANT</strong>':'dans '+(diff<60?diff+'min':Math.round(diff/60)+'h');
+    return '<div style="display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;background:'+(isDue?'rgba(239,68,68,.1)':'rgba(251,191,36,.08)')+';border-radius:6px;margin-bottom:.25rem">'
+      +'<span style="font-size:16px">'+(isDue?'🔔':'⏰')+'</span>'
+      +'<span style="font-size:10px;flex:1"><strong style="color:var(--t1)">'+x.bassinName+'</strong> — '+x.produitName+' application <strong>'+x.appNo+'/'+x.totalN+'</strong> · <strong style="color:var(--gold)">'+x.doseG+' g</strong> · '+timeStr+'</span>'
+      +'<button onclick="dismissBasRappel('+idx+')" style="background:none;border:1px solid var(--b2);border-radius:4px;font-size:9px;color:var(--t3);padding:1px 6px;cursor:pointer">✓ Fait</button>'
+      +'</div>';
+  }).join('');
+  banner.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:.3rem">⏰ Rappels application basifiant</div>'+html;
+  banner.style.display='block';
+}
+// ────────────────────────────────────────────────
+
 function renderBasifiantCalc(){
   var cible=parseFloat(document.getElementById('tac-cible')?.value)||150;
   var bassins=APP.state.bassins||[];
@@ -10433,38 +10484,55 @@ function renderBasifiantCalc(){
   var sel=document.getElementById('bas-produit');
   if(sel){
     var basisIntrants=APP_INTRANTS.filter(function(i){return i.category==='basifiant';});
-    if(!basisIntrants.length)basisIntrants=[{id:'caco3',name:'CaCO₃ — Carbonate de calcium',tauxDissolution:0.85,facteurStoech:1.0},{id:'nahco3',name:'NaHCO₃ — Bicarbonate de sodium',tauxDissolution:0.95,facteurStoech:1.68}];
+    if(!basisIntrants.length)basisIntrants=[
+      {id:'caco3',name:'CaCO₃ — Carbonate de calcium',facteurK:0.75,intervalle:'H+24'},
+      {id:'nahco3',name:'NaHCO₃ — Bicarbonate de sodium',facteurK:0.84,intervalle:'H+4–6'}
+    ];
     var prevVal=sel.value;
     sel.innerHTML=basisIntrants.map(function(p){return '<option value="'+p.id+'">'+p.name+'</option>';}).join('');
     if(prevVal)sel.value=prevVal;
-    // Auto-fill d and f from selected intrant
-    var chosen=basisIntrants.find(function(p){return p.id===sel.value;})||basisIntrants[0];
-    if(chosen){
-      var dInp=document.getElementById('tac-d'),fInp=document.getElementById('tac-f');
-      if(dInp&&!dInp.value)dInp.value=chosen.tauxDissolution||0.85;
-      if(fInp&&!fInp.value)fInp.value=chosen.facteurStoech||1.0;
-    }
   }
+
+  // Rappels en attente
+  renderBasRappelsBanner();
 
   // Remplir la liste des bassins
   var list=document.getElementById('bas-bassins-list');
   if(!list)return;
   if(!bassins.length){list.innerHTML='<div style="color:var(--t3);font-size:10px;padding:.5rem">Aucun bassin.</div>';return;}
+
   var rows=bassins.map(function(b,i){
     var tac=b.TAC;
     var delta=tac!==null&&tac!==undefined?Math.max(0,cible-tac):null;
     var hasDeficit=delta!==null&&delta>0;
-    var urgColor=delta===null?'var(--t3)':delta>50?'#EF4444':delta>20?'var(--warn)':'#10B981';
-    return '<label style="display:flex;align-items:center;gap:.4rem;padding:.35rem .4rem;border-radius:6px;margin-bottom:.3rem;background:'+(hasDeficit?'rgba(239,68,68,.05)':'var(--inp)')+';border:1px solid '+(hasDeficit?'rgba(239,68,68,.2)':'var(--b1)')+';cursor:pointer">'
+    // Classe d'alerte selon mémo §6
+    var urgColor='#10B981',urgLabel='';
+    if(delta===null){urgColor='var(--t3)';}
+    else if(delta>100){urgColor='#EF4444';urgLabel='URGENCE ABSOLUE';}
+    else if(delta>70){urgColor='#EF4444';urgLabel='URGENCE';}
+    else if(delta>50){urgColor='#EF4444';urgLabel='URGENCE';}
+    else if(delta>30){urgColor='var(--warn)';urgLabel='CORRECTION';}
+    else if(delta>0){urgColor='#F59E0B';urgLabel='PRÉVENTION';}
+    return '<label style="display:flex;align-items:center;gap:.35rem;padding:.35rem .4rem;border-radius:6px;margin-bottom:.3rem;background:'+(hasDeficit?'rgba(239,68,68,.05)':'var(--inp)')+';border:1px solid '+(hasDeficit?'rgba(239,68,68,.2)':'var(--b1)')+';cursor:pointer;flex-wrap:wrap">'
       +'<input type="checkbox" data-i="'+i+'" class="bas-cb"'+(hasDeficit?' checked':'')+(b.statut!=='Actif'?' disabled':'')+' onchange="renderBasifiantResult()" style="cursor:pointer">'
-      +'<span style="font-weight:700;font-size:11px;color:var(--acc);min-width:70px">'+b.name+'</span>'
-      +'<span style="font-size:10px;color:var(--t3)">Vol: <strong style="color:var(--t1)">'+(b.vol||'?')+' m³</strong></span>'
-      +'<span style="font-size:10px;margin-left:auto">TAC: <strong style="color:'+(tac!==null&&tac!==undefined?urgColor:'var(--t3)')+'">'+( tac!==null&&tac!==undefined?tac+' mg/L':'—')+'</strong></span>'
-      +(hasDeficit?'<span style="font-size:10px;color:'+urgColor+';font-weight:700">ΔTAC:'+delta+'</span>':'')
+      +'<span style="font-weight:700;font-size:11px;color:var(--acc);min-width:65px">'+b.name+'</span>'
+      +'<span style="font-size:10px;color:var(--t3)"><strong style="color:var(--t1)">'+(b.vol||'?')+' m³</strong></span>'
+      +'<span style="font-size:10px;margin-left:auto">TAC: <strong style="color:'+(tac!==null&&tac!==undefined?urgColor:'var(--t3)')+'">'+( tac!==null&&tac!==undefined?tac:'—')+'</strong></span>'
+      +(hasDeficit?'<span style="font-size:9px;font-weight:700;color:'+urgColor+';background:'+urgColor+'18;padding:1px 5px;border-radius:4px">Δ'+delta+' '+urgLabel+'</span>':'')
       +'</label>';
   }).join('');
   list.innerHTML=rows;
   renderBasifiantResult();
+}
+
+function _getChosenBasifiant(){
+  var sel=document.getElementById('bas-produit');
+  if(!sel||!sel.value)return null;
+  var found=APP_INTRANTS.find(function(p){return p.id===sel.value&&p.category==='basifiant';});
+  if(found)return found;
+  // fallback defaults
+  var defaults={caco3:{id:'caco3',name:'CaCO₃',facteurK:0.75,intervalle:'H+24'},nahco3:{id:'nahco3',name:'NaHCO₃',facteurK:0.84,intervalle:'H+4–6'}};
+  return defaults[sel.value]||null;
 }
 
 function setBasN(n){
@@ -10475,65 +10543,100 @@ function setBasN(n){
 
 function renderBasifiantResult(){
   var cible=parseFloat(document.getElementById('tac-cible')?.value)||150;
-  var d=parseFloat(document.getElementById('tac-d')?.value)||0;
-  var f=parseFloat(document.getElementById('tac-f')?.value)||0;
   var n=parseInt(document.getElementById('bas-n-val')?.value)||1;
   var res=document.getElementById('bas-result');
   if(!res)return;
 
-  // Auto-fill d and f from selected product if still empty
-  var sel=document.getElementById('bas-produit');
-  if(sel&&sel.value&&(!d||!f)){
-    var chosen=APP_INTRANTS.find(function(p){return p.id===sel.value;});
-    if(chosen){
-      if(!d&&chosen.tauxDissolution){d=chosen.tauxDissolution;var dI=document.getElementById('tac-d');if(dI)dI.value=d;}
-      if(!f&&chosen.facteurStoech){f=chosen.facteurStoech;var fI=document.getElementById('tac-f');if(fI)fI.value=f;}
-    }
-  }
-  if(!d||!f){res.innerHTML='<span style="color:var(--t3)">Renseignez les facteurs d et f (ou sélectionnez un basifiant).</span>';return;}
+  var prod=_getChosenBasifiant();
+  if(!prod){res.innerHTML='<span style="color:var(--t3)">Sélectionnez un basifiant.</span>';return;}
+
+  // Mise à jour affichage K dans l'UI
+  var dInp=document.getElementById('tac-d'),fInp=document.getElementById('tac-f');
+  if(dInp)dInp.value=prod.tauxDissolution||'';
+  if(fInp)fInp.value=prod.facteurStoech||'';
+  var K=prod.facteurK;
+  if(!K){res.innerHTML='<span style="color:var(--t3)">Facteur K manquant pour ce produit.</span>';return;}
 
   var checks=document.querySelectorAll('.bas-cb:checked');
   if(!checks.length){res.innerHTML='<span style="color:var(--t3)">Cochez au moins un bassin.</span>';return;}
 
   var rows='';
-  var totalDose=0;
+  var totalPerApp=0;
   checks.forEach(function(cb){
     var i=parseInt(cb.dataset.i);
     var b=APP.state.bassins[i];if(!b)return;
     var tac=b.TAC;
-    if(tac===null||tac===undefined){rows+='<div style="font-size:10px;color:var(--t3);margin-bottom:.3rem">'+b.name+' — TAC non renseigné</div>';return;}
+    if(tac===null||tac===undefined){rows+='<div style="font-size:10px;color:var(--t3);margin-bottom:.3rem">'+b.name+' — TAC non renseigné dans la ligne bassins</div>';return;}
+    if(tac>=cible){rows+='<div style="font-size:10px;color:#10B981;margin-bottom:.3rem">✅ '+b.name+' — TAC suffisant ('+tac+' ≥ '+cible+' mg/L) — ne pas ajouter</div>';return;}
     var delta=cible-tac;
-    if(delta<=0){rows+='<div style="font-size:10px;color:#10B981;margin-bottom:.3rem">✅ '+b.name+' — TAC suffisant ('+tac+' ≥ '+cible+' mg/L)</div>';return;}
     var vol=b.vol||3.8;
-    var x=delta*vol*(1/d)*(1/f)*(1/n);
-    var xTot=x*n;
-    totalDose+=xTot;
-    var urgColor=delta>50?'#EF4444':delta>20?'var(--warn)':'var(--t2)';
-    rows+='<div style="background:var(--inp);border:1px solid var(--b1);border-radius:7px;padding:.45rem .6rem;margin-bottom:.4rem">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center">'
+    // Formule mémo ICHTUS : x = ΔTAC × V × K (dose par application)
+    var doseApp=delta*vol*K; // en grammes
+    totalPerApp+=doseApp;
+    var urgColor=tac<50?'#EF4444':tac<80?'#EF4444':tac<100?'var(--warn)':'#F59E0B';
+
+    // Nb applications recommandées selon mémo §4
+    var nReco;
+    if(prod.id==='caco3'){nReco=delta<30?'1–2':delta<50?'2–3':'3';}
+    else{nReco=delta<50?'1':'1–2';}
+
+    rows+='<div style="background:var(--inp);border:1px solid var(--b1);border-radius:7px;padding:.5rem .65rem;margin-bottom:.4rem">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">'
         +'<strong style="font-size:11px;color:var(--acc)">'+b.name+'</strong>'
-        +'<span style="font-size:10px;color:'+urgColor+'">ΔTAC = '+delta.toFixed(0)+' mg/L</span>'
+        +'<span style="font-size:10px;background:'+urgColor+'18;color:'+urgColor+';border:1px solid '+urgColor+'44;border-radius:4px;padding:1px 6px;font-weight:700">TAC '+tac+' · Δ'+delta.toFixed(0)+' mg/L</span>'
       +'</div>'
-      +'<div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.25rem">'
-        +'<span style="font-size:10px;color:var(--t3)">V = <strong style="color:var(--t1)">'+vol+' m³</strong></span>'
-        +'<span style="font-size:10px;color:var(--t3)">Par apport : <strong style="color:var(--purp)">'+(x*1000).toFixed(1)+' g</strong></span>'
-        +'<span style="font-size:10px;color:var(--t3)">Total ('+n+'×) : <strong style="color:var(--gold)">'+(xTot*1000).toFixed(1)+' g</strong></span>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem;margin-bottom:.3rem">'
+        +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Volume</div><strong style="font-size:11px;color:var(--t1)">'+vol+' m³</strong></div>'
+        +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Dose / apport</div><strong style="font-size:12px;color:var(--purp)">'+doseApp.toFixed(0)+' g</strong></div>'
+        +'<div style="background:var(--card);border-radius:5px;padding:.3rem .4rem;text-align:center"><div style="font-size:8px;color:var(--t3)">Nbre apports</div><strong style="font-size:11px;color:var(--gold)">'+n+'× (reco: '+nReco+')</strong></div>'
       +'</div>'
-      +(n>1?'<div style="font-size:9px;color:var(--t3);margin-top:2px">Espacer chaque application de 12h · Remesurer avant d\'appliquer la dose suivante</div>':'')
+      +(n>1?'<div style="font-size:9px;color:var(--acc2);background:rgba(61,142,245,.07);border-radius:5px;padding:.3rem .5rem">'
+        +'⏰ Intervalle entre apports : <strong>'+prod.intervalle+'</strong> · Remesurer le TAC avant chaque dose suivante'
+        +'</div>':'')
       +'</div>';
   });
 
-  if(totalDose>0){
-    rows='<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:.4rem .6rem;margin-bottom:.5rem;display:flex;justify-content:space-between">'
-      +'<span style="font-size:11px;color:var(--t2)">Total toutes applications</span>'
-      +'<strong style="font-size:13px;color:var(--gold)">'+(totalDose*1000).toFixed(0)+' g</strong>'
-      +'</div>'+rows;
+  // Bouton "Enregistrer rappels" si n>1
+  var btnRappel='';
+  if(n>1&&checks.length){
+    btnRappel='<button onclick="enregistrerRappelsBas()" style="width:100%;margin-top:.5rem;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:7px;padding:7px;font-size:11px;font-weight:700;color:var(--gold);cursor:pointer">⏰ Enregistrer les rappels d\'application</button>';
+  }
+
+  if(totalPerApp>0){
+    rows='<div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:.4rem .65rem;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center">'
+      +'<div><div style="font-size:9px;color:var(--t3)">Dose par application (tous bassins)</div><strong style="font-size:13px;color:var(--gold)">'+totalPerApp.toFixed(0)+' g</strong></div>'
+      +'<div style="font-size:9px;color:var(--t3);text-align:right">Formule : ΔTAC × V × '+K+'<br><span style="font-size:8px">(Mémo ICHTUS v1.0)</span></div>'
+      +'</div>'+rows+btnRappel;
   }
   res.innerHTML=rows||'<span style="color:var(--t3)">Aucun déficit détecté.</span>';
 }
 
+function enregistrerRappelsBas(){
+  var n=parseInt(document.getElementById('bas-n-val')?.value)||1;
+  var cible=parseFloat(document.getElementById('tac-cible')?.value)||150;
+  var prod=_getChosenBasifiant();
+  if(!prod||n<=1)return;
+  var K=prod.facteurK;
+  var checks=document.querySelectorAll('.bas-cb:checked');
+  checks.forEach(function(cb){
+    var i=parseInt(cb.dataset.i);
+    var b=APP.state.bassins[i];if(!b)return;
+    var tac=b.TAC;if(tac===null||tac===undefined||tac>=cible)return;
+    var delta=cible-tac;var vol=b.vol||3.8;var doseApp=delta*vol*K;
+    // Enregistrer n-1 rappels (le 1er apport est maintenant, les suivants sont des rappels)
+    for(var j=2;j<=n;j++){
+      addBasRappel(b.name,j,n,prod.name,prod.intervalle,doseApp);
+    }
+  });
+  showToast('⏰ '+(n-1)+' rappel(s) enregistré(s)','acc');
+  renderBasRappelsBanner();
+}
+
 window.renderBasifiantCalc=renderBasifiantCalc;
 window.renderBasifiantResult=renderBasifiantResult;
+window.renderBasRappelsBanner=renderBasRappelsBanner;
+window.dismissBasRappel=dismissBasRappel;
+window.enregistrerRappelsBas=enregistrerRappelsBas;
 window.setBasN=setBasN;
 
 // ═══════════════════════════════════════════════
