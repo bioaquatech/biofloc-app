@@ -4876,6 +4876,7 @@ function openAnalyse(){
             </div>`).join('')}
           </div>`}
         ${ok.length>0&&alerts.length>0?`<div style="padding:.3rem 1rem .5rem;font-size:9px;color:var(--t3)">✓ Normaux : ${ok.map(p=>ANALYSE_RULES[p]?.label||p).join(' · ')}</div>`:''}
+        ${bassin.note?`<div style="padding:.4rem 1rem .6rem;display:flex;align-items:flex-start;gap:6px;border-top:1px solid var(--b1)"><span style="font-size:12px;margin-top:1px">📝</span><div style="font-size:10px;color:var(--t2);font-style:italic;line-height:1.5">${esc(bassin.note)}</div></div>`:''}
       </div>`;
     }).join('');
 }
@@ -7607,7 +7608,7 @@ function _autoRappelBasifiant(b){
       } else {
         showToast('⏰ Apport '+plan.appFaites+'/'+plan.n+' enregistré','acc');
       }
-      if(typeof renderBasRappelsBanner==='function')setTimeout(renderBasRappelsBanner,200);
+      if(typeof renderBasRappelsBanner==='function'){if(window._rbbTimeout)clearTimeout(window._rbbTimeout);window._rbbTimeout=setTimeout(renderBasRappelsBanner,200);}
     }
     return;
   }
