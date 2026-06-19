@@ -94,6 +94,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100
 /* ── TABS ── */
 .tabnav{background:var(--panel);border-bottom:1px solid var(--b1);display:flex;overflow-x:auto;flex-shrink:0}
 .tabnav::-webkit-scrollbar{height:0}
+.subnav-scroll::-webkit-scrollbar{height:0}
+.subnav-scroll .tb{flex-shrink:0}
 .tb{padding:0 1rem;height:40px;font-size:11px;font-weight:500;color:var(--t2);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:4px}
 .tb:hover{color:var(--t1);background:var(--hov)}
 .tb.active{color:var(--acc);border-bottom-color:var(--acc)}
@@ -1276,11 +1278,11 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <div id="t1" class="pane">
       <div class="card" style="padding:.65rem .8rem;margin-bottom:.75rem">
         <div class="ctitle"><span class="dot"></span>Production piscicole</div>
-        <div style="display:flex;gap:.35rem;flex-wrap:wrap">
-          <button class="tb active" onclick="sw('t1')" style="font-size:11px">⚙️ Bassins & qualité d'eau</button>
-          <button class="tb" onclick="sw('t3')" style="font-size:11px">📈 Croissance & FCR</button>
-          <button class="tb" onclick="sw('t12')" style="font-size:11px">🍽️ Rationnement</button>
-          <button class="tb" onclick="sw('t7')" style="font-size:11px">🏆 Récoltes</button>
+        <div style="display:flex;gap:.35rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none" class="subnav-scroll">
+          <button class="tb active" onclick="sw('t1')" style="font-size:11px;flex-shrink:0">⚙️ Bassins & qualité d'eau</button>
+          <button class="tb" onclick="sw('t3')" style="font-size:11px;flex-shrink:0">📈 Croissance & FCR</button>
+          <button class="tb" onclick="sw('t12')" style="font-size:11px;flex-shrink:0">🍽️ Rationnement</button>
+          <button class="tb" onclick="sw('t7')" style="font-size:11px;flex-shrink:0">🏆 Récoltes</button>
         </div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin-bottom:.7rem">
@@ -1424,7 +1426,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <!-- T4 LOGISTIQUE (fusionné Aliments + Logistique) -->
     <div id="t4" class="pane">
       <!-- Sous-navigation Logistique -->
-      <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem">
+      <div style="display:flex;gap:.3rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem;scrollbar-width:none" class="subnav-scroll">
         <button class="tb active" id="lt-intrants" onclick="swLog('intrants')" style="font-size:11px">📦 Catalogue intrants</button>
         <button class="tb" id="lt-stock" onclick="swLog('stock')" style="font-size:11px">📥 Réceptions</button>
         <button class="tb" id="lt-consommations" onclick="swLog('consommations')" style="font-size:11px">📤 Consommations</button>
@@ -1734,6 +1736,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
             <div id="bas-result" style="font-size:11px;color:var(--t2)">
               <span style="color:var(--t3)">Sélectionnez un bassin et un basifiant.</span>
             </div>
+            <button onclick="exportBasifiantPDF()" style="width:100%;margin-top:.6rem;background:var(--dng);color:#fff;border:none;border-radius:7px;padding:7px;font-size:11px;font-weight:700;cursor:pointer">📄 Exporter tableau de distribution PDF</button>
           </div>
 
           <!-- COL 3 : Orientations -->
@@ -1779,7 +1782,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <!-- T5 COMPTABILITÉ -->
     <div id="t5" class="pane">
       <!-- Sous-nav Comptabilité -->
-      <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem" class="no-print">
+      <div style="display:flex;gap:.3rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1rem;border-bottom:1px solid var(--b2);padding-bottom:.5rem;scrollbar-width:none" class="no-print subnav-scroll">
         <button class="tb active" id="ct-tab-saisie" onclick="swCompta('saisie')" style="font-size:11px">✅ Validation achats</button>
         <button class="tb" id="ct-tab-charges" onclick="swCompta('charges')" style="font-size:11px">📋 Charges exploitation</button>
         <button class="tb" id="ct-tab-synthese" onclick="swCompta('synthese')" style="font-size:11px">📊 Tableau financier</button>
@@ -3443,7 +3446,7 @@ function saveBassins(){
     APP.state.bassins.forEach((b,i)=>{
       batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});
     });
-    batch.commit().then(()=>{showSynced();checkVolumeLimit();}).catch(showSyncErr);
+    batch.commit().then(()=>{showSynced();setTimeout(checkVolumeLimit,0);}).catch(showSyncErr);
   },600);
 }
 async function saveBassinsNow(){
@@ -3452,7 +3455,7 @@ async function saveBassinsNow(){
   showSyncing();
   const batch=db.batch();
   APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});});
-  await batch.commit().then(()=>{showSynced();checkVolumeLimit();}).catch(showSyncErr);
+  await batch.commit().then(()=>{showSynced();setTimeout(checkVolumeLimit,0);}).catch(showSyncErr);
 }
 // Sync ERP bassins (localStorage bassins_ref) → APP.state.bassins → Firebase
 // Call after any ERP bassin save/create/delete
@@ -7120,6 +7123,7 @@ function onT12Show(){initRatSelect();renderRationnement();}
 
 // Stockées dans Firestore : platform/params
 // ═══════════════════════════════════════════════
+const _BAS_BLACKLIST=['javel','Javel','eau de javel','Eau de Javel','hypochlorite','Hypochlorite'];
 let PARAM_LISTS={
   basifiants:[
     {label:'CaCO₃',unit:'g'},{label:'NaHCO₃',unit:'g'},
@@ -7133,8 +7137,14 @@ let PARAM_LISTS={
 async function loadParamLists(){
   try{
     const snap=await db.collection('platform').doc('params').get();
-    if(snap.exists&&snap.data().lists)PARAM_LISTS={...PARAM_LISTS,...snap.data().lists};
+    if(snap.exists&&snap.data().lists){
+      var loaded=snap.data().lists;
+      if(loaded.basifiants)loaded.basifiants=loaded.basifiants.filter(function(x){return !_BAS_BLACKLIST.includes(x.label);});
+      PARAM_LISTS={...PARAM_LISTS,...loaded};
+    }
   }catch(e){console.warn('ParamLists:',e);}
+  // Toujours s'assurer que Javel n'est pas dans la liste en mémoire
+  PARAM_LISTS.basifiants=PARAM_LISTS.basifiants.filter(function(x){return !_BAS_BLACKLIST.includes(x.label);});
   renderAdminParamLists();
 }
 
@@ -7599,7 +7609,7 @@ async function saveBassinRow(i){
     // Mise à jour locale après commit réussi
     pendingMovs.forEach(m=>{const idx=APP_STOCK_MOVEMENTS.findIndex(x=>x.id===m.id);if(idx>=0)APP_STOCK_MOVEMENTS[idx]=m;else APP_STOCK_MOVEMENTS.push(m);});
     showSynced();
-    checkVolumeLimit();
+    setTimeout(checkVolumeLimit,0);
     if(isHistorical&&role==='Opérateur'){
       await saveNotification(i,dateStr,b);
       logAudit('modification',`Modification historique ${b.name}`,`Date: ${dateStr}`);
@@ -10490,7 +10500,8 @@ function renderBasifiantCalc(){
     ];
     var prevVal=sel.value;
     sel.innerHTML=basisIntrants.map(function(p){return '<option value="'+p.id+'">'+p.name+'</option>';}).join('');
-    if(prevVal)sel.value=prevVal;
+    if(prevVal&&basisIntrants.find(function(p){return p.id===prevVal;}))sel.value=prevVal;
+    else if(basisIntrants.length)sel.value=basisIntrants[0].id;
   }
 
   // Rappels en attente
@@ -10631,6 +10642,75 @@ function enregistrerRappelsBas(){
   showToast('⏰ '+(n-1)+' rappel(s) enregistré(s)','acc');
   renderBasRappelsBanner();
 }
+
+function exportBasifiantPDF(){
+  var cible=parseFloat(document.getElementById('tac-cible')?.value)||150;
+  var n=parseInt(document.getElementById('bas-n-val')?.value)||1;
+  var prod=_getChosenBasifiant();
+  var K=prod?prod.facteurK:0.75;
+  var prodName=prod?prod.name:'CaCO₃';
+  var intervalle=prod?prod.intervalle:'H+24';
+  var bassins=APP.state.bassins||[];
+  var date=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  var farmName=(APP&&APP.farmName)||APP.farmCode||'';
+
+  var rows=bassins.filter(function(b){return b.statut==='Actif';}).map(function(b){
+    var tac=b.TAC;
+    var tacStr=(tac!==null&&tac!==undefined)?tac+' mg/L':'—';
+    var delta=(tac!==null&&tac!==undefined)?Math.max(0,cible-tac):null;
+    var deltaStr=delta!==null?(delta>0?delta.toFixed(0):'0 ✅'):'—';
+    var doseApp=delta&&delta>0?(delta*(b.vol||3.8)*K).toFixed(0)+'g':'—';
+    var doseTotal=delta&&delta>0?((delta*(b.vol||3.8)*K)*n).toFixed(0)+'g':'—';
+    var urgColor=delta&&delta>70?'#c0392b':delta&&delta>50?'#e67e22':delta&&delta>0?'#f39c12':'#27ae60';
+    var bgRow=delta&&delta>70?'#fff5f5':delta&&delta>50?'#fff9f0':delta&&delta>0?'#fffef0':'';
+    return '<tr style="background:'+bgRow+';border-bottom:1px solid #e0e0e0">'
+      +'<td style="padding:6px 10px;font-weight:700;color:#1a5276">'+b.name+'</td>'
+      +'<td style="padding:6px 10px;text-align:center">'+( b.vol||'?')+' m³</td>'
+      +'<td style="padding:6px 10px;text-align:center;color:'+(tac!==null&&tac!==undefined?urgColor:'#888')+'"><strong>'+tacStr+'</strong></td>'
+      +'<td style="padding:6px 10px;text-align:center;color:'+urgColor+';font-weight:700">'+deltaStr+'</td>'
+      +'<td style="padding:6px 10px;text-align:center;color:#6c3483;font-weight:700">'+doseApp+'</td>'
+      +'<td style="padding:6px 10px;text-align:center">'+n+'×</td>'
+      +'<td style="padding:6px 10px;text-align:center;font-weight:700;color:#1a5276">'+doseTotal+'</td>'
+      +'<td style="padding:6px 10px;font-size:9px;color:#666">'+(delta&&delta>0?'Remesurer '+intervalle+' après':'TAC OK')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var html='<div style="font-family:Arial,sans-serif;max-width:900px;margin:0 auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1a5276;padding-bottom:10px;margin-bottom:16px">'
+      +'<div>'
+        +'<div style="font-size:18px;font-weight:700;color:#1a5276">🧪 Distribution Basifiant — Ajustement TAC</div>'
+        +'<div style="font-size:11px;color:#666;margin-top:2px">'+farmName+' · '+date+' · Cible TAC : '+cible+' mg/L</div>'
+      +'</div>'
+      +'<div style="text-align:right;font-size:10px;color:#888">Mémo ICHTUS Juin 2026</div>'
+    +'</div>'
+    +'<div style="background:#eaf4fb;border:1px solid #aed6f1;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11px">'
+      +'<strong style="color:#1a5276">Produit : '+prodName+'</strong> · '
+      +'Formule : Dose/apport (g) = ΔTAC × V(m³) × '+K+' · '
+      +'Nombre d\'apports : <strong>'+n+'×</strong> (espacer '+intervalle+' entre apports) · '
+      +'Remesurer TAC avant chaque dose suivante'
+    +'</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
+      +'<thead><tr style="background:#1a5276;color:white">'
+        +'<th style="padding:8px 10px;text-align:left">Bassin</th>'
+        +'<th style="padding:8px 10px;text-align:center">Volume</th>'
+        +'<th style="padding:8px 10px;text-align:center">TAC mesuré</th>'
+        +'<th style="padding:8px 10px;text-align:center">ΔTAC</th>'
+        +'<th style="padding:8px 10px;text-align:center">Dose / apport</th>'
+        +'<th style="padding:8px 10px;text-align:center">Nb apports</th>'
+        +'<th style="padding:8px 10px;text-align:center">Total à préparer</th>'
+        +'<th style="padding:8px 10px;text-align:left">Remesure</th>'
+      +'</tr></thead>'
+      +'<tbody>'+rows+'</tbody>'
+    +'</table>'
+    +(prod&&prod.id==='caco3'?'<div style="margin-top:12px;font-size:10px;color:#555;border-top:1px solid #ddd;padding-top:8px">⚗️ CaCO₃ : Prédissoudre au vinaigre blanc 5–8 ml/g · Verser à l\'arrosoir pendant aération maximale · 2–3 apports max/correction</div>':'')
+    +(prod&&prod.id==='nahco3'?'<div style="margin-top:12px;font-size:10px;color:#555;border-top:1px solid #ddd;padding-top:8px">💧 NaHCO₃ : Dissoudre dans 2L eau du bassin · Verser progressivement en pluie · 1–2 apports max</div>':'')
+    +'<div style="margin-top:16px;font-size:9px;color:#aaa;text-align:center">ICHTUS · Aquaculture Biofloc · Lomé, Togo · Mémo Régulation TAC Juin 2026</div>'
+    +'</div>';
+
+  if(typeof openPDF==='function')openPDF(html,'Distribution Basifiant — '+date);
+  else{var w=window.open('','_blank');if(w){w.document.write('<html><head><title>Distribution Basifiant</title><style>body{font-family:Arial;margin:20px}</style></head><body>'+html+'</body></html>');w.document.close();w.print();}}
+}
+window.exportBasifiantPDF=exportBasifiantPDF;
 
 window.renderBasifiantCalc=renderBasifiantCalc;
 window.renderBasifiantResult=renderBasifiantResult;
@@ -11858,7 +11938,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 
 <style id="ichtus-v23-clean-styles">
-.erp-tabs{display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.8rem}.erp-tabs button{background:var(--panel);border:1px solid var(--b1);border-radius:8px;color:var(--t2);font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer}.erp-tabs button.active{background:var(--acc2);color:white;border-color:var(--acc2)}
+.erp-tabs{display:flex;gap:.45rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:.8rem}.erp-tabs::-webkit-scrollbar{height:0}.erp-tabs button{background:var(--panel);border:1px solid var(--b1);border-radius:8px;color:var(--t2);font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer;flex-shrink:0;white-space:nowrap}.erp-tabs button.active{background:var(--acc2);color:white;border-color:var(--acc2)}
 .erp-note{background:rgba(0,212,180,.06);border:1px solid rgba(0,212,180,.18);border-radius:8px;padding:.65rem .8rem;font-size:11px;color:var(--t2);line-height:1.7;margin-bottom:.75rem}.erp-chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--b2);border-radius:12px;padding:2px 8px;font-size:9px;color:var(--t2);margin:1px 2px}.erp-chip.ok{border-color:rgba(0,212,180,.35);color:var(--acc)}.erp-chip.warn{border-color:rgba(255,179,71,.35);color:var(--warn)}.erp-actions{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}.erp-checkgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.35rem;max-height:170px;overflow:auto;background:var(--inp);border:1px solid var(--b1);border-radius:8px;padding:.55rem}.erp-checkgrid label{font-size:10px;color:var(--t2);display:flex;gap:6px;align-items:center}.erp-input{background:var(--inp);border:1px solid var(--b2);border-radius:6px;color:var(--t1);font-size:11px;padding:4px 7px;outline:none}.erp-input:focus{border-color:var(--acc)}.tw{clear:both}.card+.tw,.tw+.card{margin-top:.75rem}.erp-small{font-size:9px;color:var(--t3);line-height:1.4;margin-top:2px}
 </style>
 <script id="ichtus-v23-clean-modules">
