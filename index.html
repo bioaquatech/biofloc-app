@@ -2793,9 +2793,11 @@ const secondaryAuth=secondaryApp.auth();
 // ═══════════════════════════════════════════════
 // AUTO-RESTORE SESSION ON REFRESH
 // ═══════════════════════════════════════════════
+var _authRestoreInProgress=false; // garde contre la race condition login manuel + auto-restore
 auth.onAuthStateChanged(async function(firebaseUser){
   if(!firebaseUser)return; // pas de session Firebase → landing page normale
-  if(APP.user)return;      // déjà connecté (login manuel en cours)
+  if(APP.user||_authRestoreInProgress)return; // déjà connecté ou restore en cours
+  _authRestoreInProgress=true;
   const farmCode=localStorage.getItem('ichtus_last_farmCode');
   if(!farmCode)return;     // farmCode inconnu → impossible de restaurer
   try{
@@ -2827,6 +2829,8 @@ auth.onAuthStateChanged(async function(firebaseUser){
   }catch(e){
     hideLoader();
     console.warn('Auto-restore session failed:',e);
+  }finally{
+    _authRestoreInProgress=false;
   }
 });
 
@@ -3172,11 +3176,12 @@ loadPlatformSettings();
 // OPERATOR LOGIN
 // ═══════════════════════════════════════════════
 async function doLogin(){
+  _authRestoreInProgress=true; // bloquer l'auto-restore pendant le login manuel
   const farmCode=(G('b-farm').value||'').trim().toUpperCase();
   const username=(G('b-user').value||'').trim().toLowerCase();
   const password=(G('b-pass').value||'').trim();
   const errEl=G('boot-err');
-  if(!farmCode||!username||!password){errEl.textContent='⚠️ Tous les champs sont obligatoires';errEl.classList.add('show');return;}
+  if(!farmCode||!username||!password){errEl.textContent='⚠️ Tous les champs sont obligatoires';errEl.classList.add('show');_authRestoreInProgress=false;return;}
   errEl.classList.remove('show');
   showLoader('Étape 1/4 — Authentification…');
   try{
@@ -3230,6 +3235,8 @@ async function doLogin(){
     errEl.classList.add('show');
     errEl.style.display='block';
     G('b-pass').value='';
+  }finally{
+    _authRestoreInProgress=false;
   }
 }
 
@@ -4088,9 +4095,15 @@ async function renderSubscriptions(){
     // Compteurs pour tableau de bord
     var nbActif=0,nbExpire=0,nbEssai=0,nbAucun=0,revMensuel=0,revAnnuel=0,nbAlerte=0;
 
-    for(var i=0;i<snap.docs.length;i++){
-      var fd=snap.docs[i].data();
-      var fc=snap.docs[i].id;
+    // Chargement parallèle des bassins pour toutes les fermes (évite N+1 séquentiel)
+    var farmDocs=snap.docs.map(function(d){return {id:d.id,data:d.data()};});
+    var bassinSnaps=await Promise.all(farmDocs.map(function(f){
+      return db.collection('farms').doc(f.id).collection('bassins').get().catch(function(){return {forEach:function(){}};});
+    }));
+
+    for(var i=0;i<farmDocs.length;i++){
+      var fd=farmDocs[i].data;
+      var fc=farmDocs[i].id;
       var sub=fd.subscription||{};
       var status=sub.status||'none';
       var plan=sub.plan||null;
@@ -4100,7 +4113,7 @@ async function renderSubscriptions(){
 
       var volTotal=0;
       try{
-        var bSnap=await db.collection('farms').doc(fc).collection('bassins').get();
+        var bSnap=bassinSnaps[i];
         bSnap.forEach(function(bd){var b=bd.data();volTotal+=Number(b.vol||b.volume||b.volumeMaxM3||0);});
       }catch(e){}
       var suggestedPlan=getPlanForVolume(volTotal);
@@ -4238,6 +4251,7 @@ function updateSubExpiry(farmCode){
 
 async function saveSubscription(farmCode){
   var plan=parseInt(document.getElementById('sub-plan').value);
+  if(!Number.isFinite(plan)||plan<0){showToast('❌ Plan invalide','dng');return;}
   var type=document.getElementById('sub-type').value;
   var status=document.getElementById('sub-status').value;
   var start=document.getElementById('sub-start').value;
@@ -7583,7 +7597,7 @@ async function renameBassin(i, newName){
     if(!suiviToUpdate.empty){
       const batch=db.batch();
       suiviToUpdate.docs.forEach(d=>batch.update(d.ref,{bassin:newName}));
-      await batch.commit();
+      await batch.commit().catch(e=>console.warn('[renameBassin] Batch suivi:',e));
     }
     await logAudit('modification',`Renommage bassin`,`"${oldName}" → "${newName}"`);
     buildBTable();
@@ -7690,7 +7704,7 @@ async function saveBassinRow(i){
       }
     }
 
-    await batch.commit();
+    await batch.commit().catch(e=>{showSyncErr();throw e;});
     showSynced();
     setTimeout(checkVolumeLimit,0);
 
@@ -12247,7 +12261,8 @@ function load(k,d){try{return JSON.parse(localStorage.getItem('ichtus_'+k)||JSON
 function save(k,v){localStorage.setItem('ichtus_'+k,JSON.stringify(v))}
 function money(v){var cur=(load('finance_cfg',{currency:'XOF'}).currency)||'XOF';return n(v).toLocaleString('fr-FR')+' '+cur;}
 function toast(msg,type){if(window.showToast)showToast(msg,type||'ok');else alert(msg)}
-function saveBassins(a){save('bassins_ref',a)}
+function saveERPBassinsLocal(a){save('bassins_ref',a)}
+// NB: saveBassins() ici = localStorage uniquement (scope ERP). Pour Firestore, utiliser window.saveBassins()
 function cycles(){return load('cycles',[])} function saveCycles(a){save('cycles',a)}
 function clients(){return load('clients',[])} function saveClients(a){save('clients',a)}
 function harvests(){return load('harvests',[])} function saveHarvests(a){save('harvests',a)}
@@ -12267,7 +12282,7 @@ function syncBassins(){
     // Normaliser seulement les anciens statuts obsolètes ; préserver Récolté/Quarantaine/Réserve
     if(!b.statut||b.statut==='Libre'||b.statut==='Occupé'||VALID_STATUTS.indexOf(b.statut)<0){b.statut='Actif';}
   });
-  saveBassins(bs);
+  saveERPBassinsLocal(bs);
 }
 function fishStockByHarvest(hid){var h=harvests().find(function(x){return x.id===hid});var base=n(h&&h.kg);var vend=sales().filter(function(s){return s.harvestId===hid}).reduce(function(a,s){return a+n(s.kg)},0);var outs=fishOuts().filter(function(o){return o.harvestId===hid}).reduce(function(a,o){return a+n(o.kg)},0);return Math.max(0,base-vend-outs)}
 function totalFishStock(){return harvests().reduce(function(a,h){return a+fishStockByHarvest(h.id)},0)}
@@ -12345,7 +12360,7 @@ window.saveBassinERP=function(i){
   if(code!==b.id&&bs.some(function(x,j){return j!==i&&x.id===code}))return alert('Ce code existe déjà.');
   if(code!==b.id){var old=b.id;cycles().forEach(function(c){c.bassins=(c.bassins||[]).map(function(x){return x===old?code:x})});saveCycles(cycles());b.id=code;}
   b.name=name;b.volumeMaxM3=vol;b.volumeM3=vol;b.vol=vol;b.statut=statut;
-  saveBassins(bs);syncBassins();
+  saveERPBassinsLocal(bs);syncBassins();
   if(window.syncERPBassinsToProduction)syncERPBassinsToProduction(false);
   if(window.fillPwaBassinSelect)fillPwaBassinSelect();
   toast('✅ Bassin enregistré','ok');renderParamERP('bassins');
@@ -12356,7 +12371,7 @@ window.addBassinERP=function(){
   var bs=bassins();
   if(bs.some(function(b){return b.id===code}))return alert('Ce code existe déjà.');
   bs.push({id:code,name:name,volumeMaxM3:vol,volumeM3:vol,vol:vol,statut:statut,cycleId:''});
-  saveBassins(bs);syncBassins();
+  saveERPBassinsLocal(bs);syncBassins();
   if(window.syncERPBassinsToProduction)syncERPBassinsToProduction(false);
   if(window.fillPwaBassinSelect)fillPwaBassinSelect();
   toast('✅ Bassin "'+name+'" créé — visible dans PWA','ok');renderParamERP('bassins');
@@ -12607,7 +12622,8 @@ function bassins(){
   if(changed)save('bassins_ref',a);
   return a;
 }
-function saveBassins(a){save('bassins_ref',a)}
+function saveERPBassinsLocal(a){save('bassins_ref',a)}
+// NB: saveERPBassinsLocal() = localStorage ERP uniquement. window.saveBassins() = Firestore global.
 window.bassins=bassins; // expose globally for PWA select and other modules
 function cycles(){return load('cycles',[])} function saveCycles(a){save('cycles',a)}
 function clients(){return load('clients',[])}
@@ -12623,7 +12639,7 @@ function seedLiveState(bid){var live=liveStates();if(!live[bid]){var b=bassins()
 function setLiveState(bid,pop,bio){var live=liveStates();live[bid]={population:Math.max(0,n(pop)),biomasse:Math.max(0,n(bio)),updatedAt:new Date().toISOString()};saveLiveStates(live)}
 function removeBassinFromCycle(cycleId,bassinId){if(!cycleId||!bassinId)return;var cs=cycles();var c=cs.find(function(x){return x.id===cycleId});if(c){c.bassins=(c.bassins||[]).filter(function(x){return x!==bassinId});saveCycles(cs)}}
 function addBassinToCycle(cycleId,bassinId){if(!cycleId||!bassinId)return;var cs=cycles();var c=cs.find(function(x){return x.id===cycleId});if(c){c.bassins=c.bassins||[];if(c.bassins.indexOf(bassinId)<0)c.bassins.push(bassinId);saveCycles(cs)}}
-function updateBassinStatus(bid,status){var bs=bassins();var b=bs.find(function(x){return x.id===bid});if(b){b.statut=status;saveBassins(bs)}}
+function updateBassinStatus(bid,status){var bs=bassins();var b=bs.find(function(x){return x.id===bid});if(b){b.statut=status;saveERPBassinsLocal(bs)}}
 function fishStockByHarvest(hid){var h=harvests().find(function(x){return x.id===hid});var base=n(h&&h.kg);var vend=sales().filter(function(s){return s.harvestId===hid}).reduce(function(a,s){return a+n(s.kg)},0);var outs=fishOuts().filter(function(o){return o.harvestId===hid}).reduce(function(a,o){return a+n(o.kg)},0);return Math.max(0,base-vend-outs)}
 function totalFishStock(){return harvests().reduce(function(a,h){return a+fishStockByHarvest(h.id)},0)}
 function hasHarvestMovement(id){return sales().some(function(s){return s.harvestId===id})||fishOuts().some(function(o){return o.harvestId===id})}
@@ -13396,28 +13412,44 @@ if(window.fillPwaBassinSelect)window.fillPwaBassinSelect();
 
 // ── FILE D'ATTENTE HORS-LIGNE ────────────────────────────────────────
 const OFFLINE_QUEUE_KEY='ichtus_offline_queue';
+const OFFLINE_QUEUE_MAX=500;
 function queueOfflineWrite(collection,docId,data){
-  const q=JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)||'[]');
-  q.push({collection,docId,data,ts:Date.now()});
-  localStorage.setItem(OFFLINE_QUEUE_KEY,JSON.stringify(q));
+  try{
+    const q=JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)||'[]');
+    if(q.length>=OFFLINE_QUEUE_MAX){
+      console.warn('[OfflineQueue] File saturée ('+q.length+' entrées) — écriture ignorée:',docId);
+      showToast('⚠️ File hors-ligne saturée — connectez-vous pour synchroniser','warn');
+      return false;
+    }
+    q.push({collection,docId,data,ts:Date.now()});
+    localStorage.setItem(OFFLINE_QUEUE_KEY,JSON.stringify(q));
+    return true;
+  }catch(e){console.warn('[OfflineQueue] Erreur enqueue:',e);return false;}
 }
 async function checkOfflineQueue(){
   if(!navigator.onLine)return;
   if(!APP.farmCode)return;
-  const q=JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)||'[]');
+  let q;
+  try{q=JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)||'[]');}catch(e){localStorage.removeItem(OFFLINE_QUEUE_KEY);return;}
   if(!q.length)return;
   let synced=0;
+  const failed=[];
   for(const item of q){
     try{
       if(item.collection&&item.docId&&db){
         await farmCol(item.collection).doc(item.docId).set(item.data,{merge:true});
         synced++;
       }
-    }catch(e){break;}
+    }catch(e){
+      // Erreur réseau → arrêter (connexion perdue en cours de sync)
+      if(e.code==='unavailable'||e.code==='network-request-failed'){break;}
+      // Entrée corrompue → la supprimer et continuer
+      console.warn('[OfflineQueue] Entrée invalide supprimée:',item.docId,e.message);
+    }
   }
   if(synced>0){
     localStorage.setItem(OFFLINE_QUEUE_KEY,JSON.stringify(q.slice(synced)));
-    showToast(`✅ ${synced} écriture(s) synchronisée(s) depuis le mode hors-ligne`,'ok');
+    showToast('✅ '+synced+' écriture(s) synchronisée(s) depuis le mode hors-ligne','ok');
   }
 }
 window.addEventListener('online',()=>{showToast('📶 Connexion rétablie — synchronisation en cours…','ok');setTimeout(checkOfflineQueue,1000);});
