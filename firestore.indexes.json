@@ -1,0 +1,59 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "suivi",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "suivi",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "bassin", "order": "ASCENDING"},
+        {"fieldPath": "date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "stock_entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "intrantId", "order": "ASCENDING"},
+        {"fieldPath": "date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "stock_entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "validated", "order": "ASCENDING"},
+        {"fieldPath": "date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "charges",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "date", "order": "DESCENDING"},
+        {"fieldPath": "category", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "daily",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "__name__", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "read", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
