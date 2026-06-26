@@ -2844,10 +2844,29 @@ const xof=v=>isNaN(v)?'—':Math.round(v).toLocaleString('fr-FR')+' XOF';
 const pct=v=>(v*100).toFixed(1)+'%';
 const today=()=>new Date().toISOString().split('T')[0];
 
+// Sections disponibles pour la matrice de permissions
+const FARM_SECTIONS=[
+  {id:'t1',label:'Production'},
+  {id:'t4',label:'Logistique'},
+  {id:'t5',label:'Comptabilité'},
+  {id:'t7',label:'Récoltes'},
+  {id:'t8',label:'Rapports'},
+  {id:'t9',label:'IoT'},
+  {id:'t10',label:'Administration'},
+  {id:'t12',label:'Rationnement'},
+  {id:'t13',label:'Analyse'},
+];
+const DEFAULT_FARM_PERMISSIONS={
+  'Opérateur':    {t1:true,  t4:true,  t5:false, t7:false, t8:true,  t9:false, t10:false, t12:true,  t13:false},
+  'Responsable':  {t1:true,  t4:true,  t5:true,  t7:true,  t8:true,  t9:false, t10:true,  t12:true,  t13:true},
+  'Administrateur':{t1:true, t4:true,  t5:true,  t7:true,  t8:true,  t9:true,  t10:true,  t12:true,  t13:true},
+};
+
 let APP={
   user:null,
   farmCode:null,
   farmName:null,
+  farmPermissions:null,
   sessionMin:10,
   sessionTimer:null,
   warnTimer:null,
@@ -3317,6 +3336,11 @@ async function showFarmApp(){
       APP.user.role=ud.role||APP.user.role||'Opérateur';
     }
   }catch(e){console.warn('User profile:',e.message);}
+  // Charger les permissions configurées pour cette ferme
+  try{
+    const pSnap=await withTimeout(db.collection('farms').doc(APP.farmCode).collection('config').doc('permissions').get(),5000);
+    APP.farmPermissions=pSnap.exists?pSnap.data():null;
+  }catch(e){APP.farmPermissions=null;}
   // Afficher immédiatement — ne pas attendre d\'autres Firestore
   try{G('sc-date').value=today();}catch(e){}
   try{G('cons-d').value=today();}catch(e){}
@@ -3353,43 +3377,44 @@ async function showFarmApp(){
 function applyRoleRestrictions(){
   const role=APP.user?.role||'Opérateur';
   const canBackup=APP.user?.canBackup||false;
-  // Rôles reconnus — 'Responsable ferme' est un alias de 'Responsable' dans certaines fermes
   const isOp=role==='Opérateur';
   const isResp=role==='Responsable'||role==='Responsable ferme';
   const isAdmin=role==='Administrateur'||role==='SuperAdmin'||role==='superadmin';
   const hasBackupRight=isResp||isAdmin||canBackup;
 
-  // ── Réinitialiser TOUS les boutons d\'abord (évite les états figés) ──
+  // Résoudre les permissions effectives pour ce rôle
+  const normRole=isAdmin?'Administrateur':isResp?'Responsable':'Opérateur';
+  const basePerms=DEFAULT_FARM_PERMISSIONS[normRole]||DEFAULT_FARM_PERMISSIONS['Opérateur'];
+  const farmPerms=APP.farmPermissions?APP.farmPermissions[normRole]:null;
+  const perms=farmPerms?Object.assign({},basePerms,farmPerms):basePerms;
+
+  // ── Réinitialiser TOUS les boutons d\'abord ──
   document.querySelectorAll('#screen-farm .tb').forEach(btn=>{
     btn.style.opacity='1';
     btn.style.cursor='pointer';
     btn.title='';
-    // Restaurer le onclick original (sw() ou sw('tX'))
     const id=btn.getAttribute('onclick')?.match(/sw\('(t\d+)'\)/)?.[1];
     if(id)btn.onclick=()=>sw(id);
   });
 
-  // ── Appliquer les restrictions Opérateur uniquement ──
-  document.querySelectorAll('#screen-farm .tb').forEach((btn,i)=>{
-    const tabId=['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11','t12'][i];
-    if(isOp){
-      if(tabId==='t5'){
-        // Comptabilité — réservé Responsable
-        btn.style.opacity='0.35';btn.style.cursor='not-allowed';
-        btn.title='Accès réservé au Responsable';
-        btn.onclick=(e)=>{e.stopPropagation();alert('🔒 Comptabilité réservée au Responsable.');};
-      } else if(tabId==='t7'&&!canBackup){
-        // Récoltes sans droit backup
-        btn.style.opacity='0.35';btn.style.cursor='not-allowed';
-        btn.title='Accès réservé au Responsable';
-        btn.onclick=(e)=>{e.stopPropagation();alert('🔒 Récoltes réservées au Responsable.');};
-      }
+  // ── Appliquer les restrictions par permissions ──
+  document.querySelectorAll('#screen-farm .tb').forEach(btn=>{
+    const tabId=btn.getAttribute('onclick')?.match(/sw\('(t\d+)'\)/)?.[1];
+    if(!tabId||tabId==='t0')return; // t0 toujours accessible
+    // t10 géré séparément ci-dessous
+    if(tabId==='t10')return;
+    const allowed=perms[tabId]!==undefined?perms[tabId]:true;
+    if(!allowed){
+      btn.style.opacity='0.35';btn.style.cursor='not-allowed';
+      btn.title='Accès restreint pour votre profil';
+      btn.onclick=(e)=>{e.stopPropagation();alert('🔒 Cette section est restreinte pour votre profil.');};
     }
   });
 
-  // ── Onglet Espace Responsable (t10) — visible Responsable + Admin ──
+  // ── Onglet Administration (t10) — selon permissions ──
   const tabT10=G('tab-t10');
-  if(tabT10)tabT10.style.display=(isResp||isAdmin)?'flex':'none';
+  const t10allowed=perms['t10']!==undefined?perms['t10']:(isResp||isAdmin);
+  if(tabT10)tabT10.style.display=t10allowed?'flex':'none';
 
   // ── Backup bar ──
   const bar=G('farm-backup-bar');
@@ -3652,10 +3677,14 @@ window.renderAdminERPFarms=function(){
   var farms=window._farms||[];
   var esc2=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
   var btns=G('ta5-farm-btns');
-  if(btns)btns.innerHTML='<div style="display:flex;gap:.5rem;flex-wrap:wrap">'+farms.map(function(f){
-    var fc=f.code||f.id;
-    return '<button class="sbtn" style="font-size:11px" onclick="loadFarmERP(\''+fc+'\',\''+esc2(f.name||fc)+'\')">'+esc2(f.name||fc)+'</button>';
-  }).join('')+'</div>';
+  if(btns)btns.innerHTML='<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">'
+    +farms.map(function(f){
+      var fc=f.code||f.id;var fn=esc2(f.name||fc);
+      return '<span style="display:inline-flex;gap:3px;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:2px 4px">'
+        +'<button class="sbtn" style="font-size:11px;margin:0" onclick="loadFarmERP(\''+fc+'\',\''+fn+'\')">'+fn+'</button>'
+        +'<button class="sbtn" style="font-size:10px;margin:0;padding:4px 7px;opacity:.8;border-color:rgba(61,142,245,.4);color:var(--acc2)" title="Gérer les permissions" onclick="openPermissionsEditor(\''+fc+'\',\''+fn+'\')">🔐</button>'
+        +'</span>';
+    }).join('')+'</div>';
   if(farms.length===1)loadFarmERP(farms[0].code||farms[0].id,farms[0].name||farms[0].id);
 };
 
@@ -3712,6 +3741,68 @@ window.loadFarmERP=async function(farmCode,farmName){
     }
     el.innerHTML=html;
   }catch(e){el.innerHTML='<div style="color:var(--dng);padding:1rem">❌ Erreur : '+e.message+'</div>';}
+};
+
+// ═══════════════════════════════════════════════
+// ADMIN — ÉDITEUR DE PERMISSIONS PAR FERME
+// ═══════════════════════════════════════════════
+window.openPermissionsEditor=async function(farmCode,farmName){
+  var esc2=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var el=G('ta5-erp-content');if(!el)return;
+  el.innerHTML='<div style="color:var(--t3);text-align:center;padding:1.5rem">⏳ Chargement des permissions…</div>';
+  var saved={};
+  try{
+    var ps=await db.collection('farms').doc(farmCode).collection('config').doc('permissions').get();
+    if(ps.exists)saved=ps.data();
+  }catch(e){}
+  var roles=['Opérateur','Responsable','Administrateur'];
+  var html='<div class="card" style="border-color:rgba(61,142,245,.3)">'
+    +'<div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Permissions — '+esc2(farmName)+'</div>'
+    +'<p style="color:var(--t3);font-size:12px;margin:0 0 .8rem">Cochez les sections accessibles par rôle. Les modifications s\'appliquent à la prochaine connexion des opérateurs.</p>'
+    +'<div class="tw"><table><thead><tr><th>Section</th>';
+  roles.forEach(function(r){html+='<th style="text-align:center">'+r+'</th>';});
+  html+='</tr></thead><tbody>';
+  FARM_SECTIONS.forEach(function(sec){
+    html+='<tr><td>'+esc2(sec.label)+'</td>';
+    roles.forEach(function(r){
+      var def=DEFAULT_FARM_PERMISSIONS[r]||{};
+      var farmRole=saved[r]||{};
+      var val=farmRole[sec.id]!==undefined?farmRole[sec.id]:def[sec.id];
+      if(val===undefined)val=true;
+      var chk=val?'checked':'';
+      html+='<td style="text-align:center"><input type="checkbox" data-farm="'+esc2(farmCode)+'" data-role="'+esc2(r)+'" data-tab="'+esc2(sec.id)+'" '+chk+' style="width:16px;height:16px;cursor:pointer"></td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>'
+    +'<div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap">'
+    +'<button class="sbtn ok" onclick="savePermissionsEditor(\''+esc2(farmCode)+'\',\''+esc2(farmName)+'\')">💾 Enregistrer</button>'
+    +'<button class="sbtn" onclick="resetPermissionsEditor(\''+esc2(farmCode)+'\',\''+esc2(farmName)+'\')">↩ Réinitialiser défauts</button>'
+    +'</div></div>';
+  el.innerHTML=html;
+};
+
+window.savePermissionsEditor=async function(farmCode,farmName){
+  var perms={'Opérateur':{},'Responsable':{},'Administrateur':{}};
+  document.querySelectorAll('#ta5-erp-content input[type=checkbox][data-farm]').forEach(function(cb){
+    var r=cb.dataset.role;var t=cb.dataset.tab;
+    if(perms[r])perms[r][t]=cb.checked;
+  });
+  try{
+    await db.collection('farms').doc(farmCode).collection('config').doc('permissions').set(perms);
+    alert('✅ Permissions enregistrées pour '+farmName);
+    if(APP.farmCode===farmCode){APP.farmPermissions=perms;applyRoleRestrictions();}
+  }catch(e){alert('❌ Erreur : '+e.message);}
+};
+
+window.resetPermissionsEditor=async function(farmCode,farmName){
+  if(!confirm('Remettre les permissions par défaut pour '+farmName+' ?'))return;
+  try{
+    await db.collection('farms').doc(farmCode).collection('config').doc('permissions').delete();
+    alert('✅ Permissions réinitialisées');
+    openPermissionsEditor(farmCode,farmName);
+    if(APP.farmCode===farmCode){APP.farmPermissions=null;applyRoleRestrictions();}
+  }catch(e){alert('❌ Erreur : '+e.message);}
 };
 
 function updateAdminStats(){
