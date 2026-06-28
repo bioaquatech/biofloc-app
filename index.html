@@ -3411,9 +3411,9 @@ function applyRoleRestrictions(){
     }
   });
 
-  // ── Onglet Administration (t10) — selon permissions ──
+  // ── Onglet Administration (t10) — Administrateur toujours autorisé ──
   const tabT10=G('tab-t10');
-  const t10allowed=perms['t10']!==undefined?perms['t10']:(isResp||isAdmin);
+  const t10allowed=isAdmin||( perms['t10']!==undefined?perms['t10']:(isResp) );
   if(tabT10)tabT10.style.display=t10allowed?'flex':'none';
 
   // ── Backup bar ──
@@ -3751,10 +3751,11 @@ window.openPermissionsEditor=async function(farmCode,farmName){
   var el=G('ta5-erp-content');if(!el)return;
   el.innerHTML='<div style="color:var(--t3);text-align:center;padding:1.5rem">⏳ Chargement des permissions…</div>';
   var saved={};
+  var loadError=false;
   try{
     var ps=await db.collection('farms').doc(farmCode).collection('config').doc('permissions').get();
     if(ps.exists)saved=ps.data();
-  }catch(e){}
+  }catch(e){loadError=true;el.innerHTML='<div style="color:var(--dng);padding:1rem">❌ Erreur chargement permissions : '+e.message+'</div>';return;}
   var roles=['Opérateur','Responsable','Administrateur'];
   var html='<div class="card" style="border-color:rgba(61,142,245,.3)">'
     +'<div class="ctitle"><span class="dot" style="background:var(--acc2)"></span>Permissions — '+esc2(farmName)+'</div>'
@@ -3784,7 +3785,7 @@ window.openPermissionsEditor=async function(farmCode,farmName){
 
 window.savePermissionsEditor=async function(farmCode,farmName){
   var perms={'Opérateur':{},'Responsable':{},'Administrateur':{}};
-  document.querySelectorAll('#ta5-erp-content input[type=checkbox][data-farm]').forEach(function(cb){
+  document.querySelectorAll('#ta5-erp-content input[type=checkbox][data-role][data-tab]').forEach(function(cb){
     var r=cb.dataset.role;var t=cb.dataset.tab;
     if(perms[r])perms[r][t]=cb.checked;
   });
