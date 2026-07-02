@@ -1519,6 +1519,10 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           </div>
         </div>
         <div id="seuils-list"></div>
+        <div style="margin-top:12px">
+          <button onclick="calcCommandeAuto()" style="padding:10px 18px;background:#0f766e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">🛒 Calculer commande automatique</button>
+          <div id="commande-auto-result" style="margin-top:12px"></div>
+        </div>
         <div id="seuils-validate-bar" style="display:none;position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--b1);padding:.75rem;margin-top:.75rem;border-radius:0 0 8px 8px;display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap">
           <div style="font-size:11px;color:var(--t2)" id="seuils-pending-count"></div>
           <div style="display:flex;gap:.4rem">
@@ -2286,6 +2290,29 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           <button class="sbtn" onclick="sw('t5');swCompta('saisie')">✅ Validation achats / CUMP</button>
           <button class="sbtn" onclick="sw('t5');swCompta('charges')">📋 Charges exploitation</button>
           <button class="sbtn" onclick="sw('t5');swCompta('synthese')">📊 Tableau financier</button>
+        </div>
+      </div>
+      <div id="analyse-bassins-charts" style="margin-top:20px">
+        <h3 style="color:#38bdf8;margin-bottom:12px">📈 Évolution par bassin</h3>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <select id="chart-bassin-select" onchange="renderBassinChart()" style="padding:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px">
+            <option value="">-- Choisir un bassin --</option>
+          </select>
+          <select id="chart-metric-select" onchange="renderBassinChart()" style="padding:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px">
+            <option value="poids">Poids moyen (g)</option>
+            <option value="ph">pH</option>
+            <option value="o2">O₂ (mg/L)</option>
+            <option value="temp">Température (°C)</option>
+            <option value="turbidite">Turbidité (cm)</option>
+          </select>
+          <select id="chart-period-select" onchange="renderBassinChart()" style="padding:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px">
+            <option value="30">30 jours</option>
+            <option value="60">60 jours</option>
+            <option value="90">90 jours</option>
+          </select>
+        </div>
+        <div style="background:#1e2d3d;border-radius:12px;padding:16px">
+          <canvas id="bassin-chart-canvas" height="300"></canvas>
         </div>
       </div>
     </div>
@@ -3372,6 +3399,10 @@ async function showFarmApp(){
   setTimeout(()=>logAudit('connexion','Connexion réussie',`Rôle: ${role} — Ferme: ${APP.farmCode}`),1000);
   // Appliquer changement de mot de passe en attente
   applyPendingPasswordChange();
+  // Feature 2: schedule push notifications
+  setTimeout(()=>{try{scheduleAppNotifications();}catch(e){}},2000);
+  // Feature 3: populate bassin chart select
+  setTimeout(()=>{try{populateBassinChartSelect();}catch(e){}},2000);
 }
 
 function applyRoleRestrictions(){
@@ -8250,6 +8281,15 @@ function renderDashboardKPIs(){
   const nh3Critique=actifs.filter(b=>b.NH3!==null&&b.NH3>(sp().nh3Alerte||0.5)).length;
   const tanHaut=actifs.filter(b=>b.TAN!==null&&b.TAN>=1).length;
   const lowStock=APP_INTRANTS.filter(i=>!i.amortissable&&i.seuil&&i.seuil>0&&getItemCurrentStock(i.id)<i.seuil).length;
+  // Solde comptabilité: sum of all validated prices
+  const soldeCompta=Object.values(window.COMPTA_PRIX||{}).reduce((s,v)=>s+(Number(v)||0),0);
+  // Prochaine rotation PWA: look in bassins for earliest scheduled rotation
+  const today_=today();
+  let prochaineRotation='—';
+  (APP.state.bassins||[]).forEach(b=>{
+    const rot=b.prochaineRotation||b.dateRotation||b.rotation;
+    if(rot&&rot>=today_&&(prochaineRotation==='—'||rot<prochaineRotation))prochaineRotation=rot;
+  });
   const kpis=[
     {ico:'🐠',lbl:'Bassins actifs',val:actifs.length,tot:bassins.length,color:'var(--acc)',alert:false},
     {ico:'⚖️',lbl:'Biomasse totale',val:fmt(totalBio,1)+' kg',color:'var(--acc)',alert:false},
@@ -8257,6 +8297,8 @@ function renderDashboardKPIs(){
     {ico:'⚗️',lbl:'NH₃ critique',val:nh3Critique,color:nh3Critique>0?'var(--dng)':'var(--acc)',alert:nh3Critique>0},
     {ico:'🧪',lbl:'TAN ≥ 1 mg/L',val:tanHaut,color:tanHaut>0?'var(--warn)':'var(--acc)',alert:tanHaut>0},
     {ico:'📦',lbl:'Alertes stock',val:lowStock,color:lowStock>0?'var(--warn)':'var(--acc)',alert:lowStock>0},
+    {ico:'💰',lbl:'Solde comptabilité',val:(soldeCompta>0?'+':'')+Math.round(soldeCompta).toLocaleString()+' XOF',color:'var(--acc)',alert:false},
+    {ico:'🔄',lbl:'Prochaine rotation',val:prochaineRotation,color:'var(--warn)',alert:prochaineRotation!=='—'},
   ];
   el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.5rem;margin-bottom:.75rem">'
     +kpis.map(k=>`<div style="background:var(--card);border:1px solid ${k.alert?k.color:'var(--b1)'};border-radius:8px;padding:.55rem .7rem;text-align:center">
@@ -13578,6 +13620,112 @@ function checkAndNotify(){
   });
   const lowStock=APP_INTRANTS.filter(i=>!i.amortissable&&i.seuil&&getItemCurrentStock(i.id)<i.seuil);
   if(lowStock.length)sendLocalNotif('📦 Stock bas',lowStock.map(i=>i.name).join(', '),'stock_low');
+}
+
+// ── FEATURE 3: GRAPHIQUES PAR BASSIN ─────────────────────────────────
+async function renderBassinChart(){
+  const bassinId=document.getElementById('chart-bassin-select')?.value;
+  const metric=document.getElementById('chart-metric-select')?.value||'poids';
+  const period=parseInt(document.getElementById('chart-period-select')?.value||'30');
+  const canvas=document.getElementById('bassin-chart-canvas');
+  if(!canvas||!bassinId)return;
+  const cutoff=new Date();
+  cutoff.setDate(cutoff.getDate()-period);
+  try{
+    const snap=await db.collection('farms').doc(APP.farmCode)
+      .collection('bassins').doc(bassinId)
+      .collection('suivi')
+      .where('date','>=',cutoff.toISOString().slice(0,10))
+      .orderBy('date','asc')
+      .get();
+    const labels=[],values=[];
+    snap.forEach(doc=>{
+      const d=doc.data();
+      labels.push(d.date||'');
+      const val=metric==='poids'?(d.poidsMoyen||d.poids||0)
+        :metric==='ph'?(d.ph||0)
+        :metric==='o2'?(d.o2||d.oxygene||0)
+        :metric==='temp'?(d.temperature||d.temp||0)
+        :(d.turbidite||0);
+      values.push(parseFloat(val)||0);
+    });
+    if(window._bassinChart)window._bassinChart.destroy();
+    const metricLabels={poids:'Poids moyen (g)',ph:'pH',o2:'O₂ (mg/L)',temp:'Température (°C)',turbidite:'Turbidité (cm)'};
+    window._bassinChart=new Chart(canvas,{
+      type:'line',
+      data:{labels,datasets:[{label:metricLabels[metric]||metric,data:values,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,0.1)',tension:0.3,fill:true,pointRadius:4,pointBackgroundColor:'#38bdf8'}]},
+      options:{responsive:true,plugins:{legend:{labels:{color:'#e2e8f0'}}},scales:{x:{ticks:{color:'#94a3b8'},grid:{color:'#1e3a5f'}},y:{ticks:{color:'#94a3b8'},grid:{color:'#1e3a5f'}}}}
+    });
+  }catch(e){console.error('Chart error:',e);}
+}
+
+function populateBassinChartSelect(){
+  const sel=document.getElementById('chart-bassin-select');
+  if(!sel)return;
+  const bassins=APP.state.bassins||[];
+  sel.innerHTML='<option value="">-- Choisir un bassin --</option>'+
+    bassins.map(b=>`<option value="${b.id}">${b.nom||b.name||b.id}</option>`).join('');
+}
+
+// ── FEATURE 4: CALCUL COMMANDE AUTO ──────────────────────────────────
+function calcCommandeAuto(){
+  const result=document.getElementById('commande-auto-result');
+  if(!result)return;
+  const intrants=APP_INTRANTS||[];
+  if(!intrants.length){result.innerHTML='<p style="color:#f59e0b">Aucun intrant configuré. Ajoutez des intrants dans le catalogue.</p>';return;}
+  const commandes=intrants.filter(i=>{
+    const stockActuel=parseFloat(getItemCurrentStock?getItemCurrentStock(i.id):0)||0;
+    const seuilMin=parseFloat(i.seuil||i.seuilMin||0);
+    return seuilMin>0&&stockActuel<=seuilMin*1.5;
+  }).map(i=>{
+    const stockActuel=parseFloat(getItemCurrentStock?getItemCurrentStock(i.id):0)||0;
+    const seuilMin=parseFloat(i.seuil||i.seuilMin||0);
+    const qteCommande=Math.max(0,seuilMin*3-stockActuel);
+    return{nom:i.name||i.nom||i.id,stockActuel,seuilMin,qteCommande,unite:i.unit||i.unite||'kg'};
+  });
+  if(!commandes.length){result.innerHTML='<p style="color:#22c55e">✅ Tous les stocks sont suffisants.</p>';return;}
+  result.innerHTML=`<h4 style="color:#f59e0b;margin-bottom:8px">🛒 Commande recommandée (${commandes.length} produits)</h4>
+    <table style="width:100%;border-collapse:collapse;font-size:.85em">
+      <thead><tr style="background:#1e3a5f;color:#94a3b8">
+        <th style="padding:8px;text-align:left">Produit</th>
+        <th style="padding:8px;text-align:right">Stock actuel</th>
+        <th style="padding:8px;text-align:right">Seuil min</th>
+        <th style="padding:8px;text-align:right;color:#38bdf8">Qté à commander</th>
+      </tr></thead>
+      <tbody>${commandes.map((c,i)=>`<tr style="background:${i%2?'#0f1923':'#0a1628'}">
+        <td style="padding:8px">${c.nom}</td>
+        <td style="padding:8px;text-align:right">${c.stockActuel} ${c.unite}</td>
+        <td style="padding:8px;text-align:right">${c.seuilMin} ${c.unite}</td>
+        <td style="padding:8px;text-align:right;color:#38bdf8;font-weight:700">${c.qteCommande.toFixed(1)} ${c.unite}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+function scheduleAppNotifications(){
+  if(Notification.permission!=='granted')return;
+  const now=new Date();
+  const h=now.getHours();
+  // Morning briefing if between 7 and 9
+  if(h>=7&&h<9){
+    const bassins=APP.state.bassins||[];
+    const actifs=bassins.filter(b=>b.statut==='Actif').length;
+    sendLocalNotif('☀️ BioFloc — Briefing matin',`${actifs} bassin(s) actif(s) — Bonne journée !`,'morning');
+  }
+  // Schedule rationnement reminder in 8 hours for bassins needing it today
+  const t=today();
+  (APP.state.bassins||[]).filter(b=>b.statut==='Actif'&&b.dateRationnement===t&&!b.rationnementFait).forEach(b=>{
+    setTimeout(()=>{
+      if(Notification.permission==='granted')
+        sendLocalNotif('🐟 Rationnement en attente','Bassin '+( b.nom||b.name||b.id)+' — rationnement prévu aujourd\'hui non effectué','rat_'+b.id);
+    },8*60*60*1000);
+  });
+  checkAndNotifyLowStock();
+}
+
+function checkAndNotifyLowStock(){
+  if(Notification.permission!=='granted')return;
+  const low=APP_INTRANTS.filter(i=>!i.amortissable&&i.seuil&&i.seuil>0&&getItemCurrentStock(i.id)<i.seuil);
+  if(low.length)sendLocalNotif('⚠️ Stock critique',low.map(i=>i.name||i.nom||i.id).join(', '),'stock_critique');
 }
 
 // ── FEATURE 9: GESTION MULTI-FERME ───────────────────────────────────
