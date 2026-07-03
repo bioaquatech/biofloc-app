@@ -87,12 +87,16 @@ service cloud.firestore {
 
       match /stock_entries/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin());
+        allow create, update: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin())
+                              && request.resource.data.quantity is number;
+        allow delete: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin());
       }
 
       match /stock_movements/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow create, update: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin())
+                              && request.resource.data.quantity is number;
+        allow delete: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
       }
 
       match /inventaires/{docId} {
@@ -103,7 +107,11 @@ service cloud.firestore {
       // ── Charges & ERP — responsable minimum ─────────────────────────
       match /charges/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin());
+        allow create, update: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin())
+                              && request.resource.data.amount is number
+                              && request.resource.data.amount >= 0
+                              && (!('quantity' in request.resource.data) || request.resource.data.quantity is number);
+        allow delete: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin());
       }
 
       // ── Config — responsable lecture, superadmin écriture ────────────
