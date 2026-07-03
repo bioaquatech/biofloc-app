@@ -21,10 +21,37 @@ service cloud.firestore {
     function isOperateur(farmCode) {
       return isSameFarm(farmCode);
     }
+    // Ferme active ? (abonnement / activation gérés côté serveur)
+    // NOTE: ajoute un get() par écriture (facturé + latence) — acceptable en écriture.
+    // NE PAS utiliser en lecture (une ferme désactivée doit pouvoir lire/exporter ses données).
+    function farmActive(farmCode) {
+      return get(/databases/$(database)/documents/farms/$(farmCode)).data.active != false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // POSTURE SÉCURITÉ — provisioning & identité (NE PAS ASSOUPLIR)
+    // Les collections `superadmin`, `logins` et l'écriture de `users`
+    // NE DOIVENT PAS être écrites depuis le navigateur. Ces écritures
+    // doivent transiter par des Cloud Functions (ou être faites par un
+    // superadmin authentifié). Si le panneau d'administration écrit
+    // actuellement ces documents côté client, ces écritures ÉCHOUERONT
+    // (comportement correct) sauf si l'utilisateur agissant est superadmin.
+    // TODO(sécurité): déplacer la création d'utilisateurs / la table
+    // logins email↔uid vers des Cloud Functions (Admin SDK) — voir
+    // CRITICAL #5. Conserver la posture `if false` / superadmin-only.
+    // ─────────────────────────────────────────────────────────────────
 
     // ── Superadmin — Cloud Functions uniquement ──────────────────────
     match /superadmin/{doc} {
       allow read, write: if false;
+    }
+
+    // ── Audit centralisé — écrit uniquement par la Cloud Function
+    // mirrorAudit (Admin SDK, ignore ces règles). Lecture superadmin,
+    // aucune écriture cliente possible. Immuable.
+    match /auditCentral/{doc} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
     }
 
     // ── Platform params — lecture responsable, écriture superadmin ───
@@ -56,68 +83,90 @@ service cloud.firestore {
       // ── Sous-collections partagées (lecture = tous les opérateurs de la ferme)
       match /bassins/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       match /suivi/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       match /feed/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       match /daily/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       match /notifications/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       // ── Stock & intrants — opérateurs lecture, responsable écriture ─
       match /intrants/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       match /stock_entries/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow create, update: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin())
+        allow create, update: if isAuth() && ((isResponsable() && isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin())
                               && request.resource.data.quantity is number;
-        allow delete: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin());
+        allow delete: if isAuth() && ((isResponsable() && isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       match /stock_movements/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow create, update: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin())
+        allow create, update: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin())
                               && request.resource.data.quantity is number;
-        allow delete: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow delete: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       match /inventaires/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isResponsable() && isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       // ── Charges & ERP — responsable minimum ─────────────────────────
       match /charges/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow create, update: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin())
+        allow create, update: if isAuth() && ((isResponsable() && isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin())
                               && request.resource.data.amount is number
                               && request.resource.data.amount >= 0
                               && (!('quantity' in request.resource.data) || request.resource.data.quantity is number);
-        allow delete: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin());
+        allow delete: if isAuth() && ((isResponsable() && isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
       }
 
       // ── Config — responsable lecture, superadmin écriture ────────────
       match /config/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isResponsable() && isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isResponsable() && isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
+      }
+
+      // ── Sensors (capteurs) — lecture ferme, écriture ferme active ────
+      match /sensors/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
+      }
+
+      // ── Fournisseurs — lecture ferme, écriture ferme active ──────────
+      match /suppliers/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isSameFarm(farmCode) && farmActive(farmCode)) || isSuperAdmin());
+      }
+
+      // ── Journal d'audit — append-only, attribution serveur ───────────
+      // Immuable : ni modification ni suppression. Chaque entrée doit
+      // porter uid == auth.uid (le client le fait via logAudit ~9695,
+      // champ `uid`). Lecture : ferme ou superadmin.
+      match /audit/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow create: if isSameFarm(farmCode) && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if false;
       }
 
       // ── Erreurs (logging) — écriture tous, lecture superadmin ────────
