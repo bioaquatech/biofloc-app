@@ -1,16 +1,25 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Logos des fermes — lecture publique, écriture responsable de la ferme
+    // Logos des fermes — lecture authentifiée, écriture ferme, suppression admin
     match /logos/{farmCode}/{file} {
-      allow read: if true;
+      // Lecture : authentifié uniquement (choix par défaut plus sûr).
+      // Tradeoff : si l'écran de connexion (non authentifié) doit afficher
+      // le logo de la ferme, cette règle le bloquera — dans ce cas repasser
+      // à `if true` en acceptant l'exposition publique du logo.
+      allow read: if request.auth != null;
+      // NOTE: request.resource.contentType est fourni par le client et n'est
+      // PAS une garantie d'authenticité — un client malveillant peut le
+      // falsifier. La limite de taille reste appliquée par Storage.
       allow write: if request.auth != null
         && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.farmCode == farmCode
         && request.resource.size < 2 * 1024 * 1024  // max 2MB
         && request.resource.contentType.matches('image/.*');
+      // Suppression : même ferme ET rôle admin/superadmin (un opérateur
+      // simple ne peut pas supprimer). Liste des rôles alignée sur firestore.rules.
       allow delete: if request.auth != null
-        && (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.farmCode == farmCode
-            || firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['Administrateur','SuperAdmin']);
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.farmCode == farmCode
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['Administrateur','SuperAdmin','superadmin'];
     }
     // Tout le reste — refusé
     match /{allPaths=**} {
