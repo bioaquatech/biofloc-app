@@ -2300,10 +2300,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           </select>
           <select id="chart-metric-select" onchange="renderBassinChart()" style="padding:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px">
             <option value="poids">Poids moyen (g)</option>
-            <option value="ph">pH</option>
-            <option value="o2">O₂ (mg/L)</option>
-            <option value="temp">Température (°C)</option>
-            <option value="turbidite">Turbidité (cm)</option>
+            <option value="mort">Mortalité</option>
           </select>
           <select id="chart-period-select" onchange="renderBassinChart()" style="padding:8px;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:8px">
             <option value="30">30 jours</option>
@@ -3766,7 +3763,7 @@ window.loadFarmERP=async function(farmCode,farmName){
     if(harvs.length){
       html+='<div class="card"><div class="ctitle"><span class="dot"></span>Récoltes</div>';
       html+=tbl(['Date','Cycle','Bassin','Type','Biomasse kg'],harvs.slice(0,20).map(function(h){
-        return '<tr><td>'+(h.date||'')+'</td><td>'+(h.cycleName||h.cycle||'')+'</td><td>'+(h.bassinName||h.bassin||'')+'</td><td>'+(h.type||'')+'</td><td class="cn"><b>'+Number(h.kg||h.biomass||0).toFixed(1)+'</b></td></tr>';
+        return '<tr><td>'+esc2(h.date||'')+'</td><td>'+esc2(h.cycleName||h.cycle||'')+'</td><td>'+esc2(h.bassinName||h.bassin||'')+'</td><td>'+esc2(h.type||'')+'</td><td class="cn"><b>'+Number(h.kg||h.biomass||0).toFixed(1)+'</b></td></tr>';
       }).join(''));
       html+='</div>';
     }
@@ -4913,8 +4910,8 @@ function renderBassinCheckboxes(){
   const bassins=APP.state.bassins.filter(b=>b.statut==='Actif');
   container.innerHTML=bassins.map((b,i)=>`
     <label style="display:flex;align-items:center;gap:4px;background:var(--inp);border:1px solid var(--b2);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:10px;font-weight:700">
-      <input type="checkbox" class="bassin-check" data-name="${b.name}" style="accent-color:var(--acc2)" checked>
-      ${b.name}
+      <input type="checkbox" class="bassin-check" data-name="${escapeHtml(b.name)}" style="accent-color:var(--acc2)" checked>
+      ${escapeHtml(b.name)}
     </label>`).join('');
 }
 
@@ -4995,7 +4992,7 @@ function openAnalyse(){
       <div style="margin-bottom:.9rem;border:2px solid ${borderColor};border-radius:12px;overflow:hidden">
         <div style="background:${urgCount>0?'rgba(255,61,87,.1)':warnCount>0?'rgba(245,166,35,.1)':'rgba(0,201,167,.06)'};padding:.6rem 1rem;display:flex;align-items:center;gap:.75rem">
           <div style="font-size:16px">${urgCount>0?'🚨':warnCount>0?'⚠️':'✅'}</div>
-          <div style="flex:1"><div style="font-size:13px;font-weight:800;color:${borderColor}">${bassin.name}</div></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:800;color:${borderColor}">${escapeHtml(bassin.name)}</div></div>
           <div style="font-size:10px;font-weight:700;color:${borderColor};padding:3px 10px;background:rgba(0,0,0,.1);border-radius:8px">${statusLabel}</div>
         </div>
         ${alerts.length===0
@@ -5381,7 +5378,7 @@ function openSaisieRapide(){
     const opt=(field,step,w,extra='')=>
       `<input type="number" class="ci${b[field]!=null?' ':' opt'}" value="${v(b[field])}" step="${step}" style="width:${w}px" data-field="${field}" data-mode="optional"${extra} placeholder="—" title="Effacer = supprimer la mesure du jour">`;
     return `<tr data-idx="${idx}">
-      <td style="font-weight:700;color:var(--acc);padding:3px 5px;white-space:nowrap">${b.name}</td>
+      <td style="font-weight:700;color:var(--acc);padding:3px 5px;white-space:nowrap">${escapeHtml(b.name)}</td>
       <td>${obl('mort','1','45')}</td>
       <td>${opt('poids','0.1','55')}</td>
       <td>${obl('alimReel','0.001','65',' oninput="srAutoCN(this,'+idx+')"')}</td>
@@ -7658,7 +7655,7 @@ async function loadHistoriqueMensuel(monthStr){
         ${bassinNames.map(name=>{
           const s=stats[name];if(!s)return'';
           return `<tr style="border-bottom:1px solid var(--b1)">
-            <td style="padding:6px 10px;font-weight:700;color:var(--acc)">${name}</td>
+            <td style="padding:6px 10px;font-weight:700;color:var(--acc)">${escapeHtml(name)}</td>
             <td style="padding:6px 10px;text-align:center">${s.jours}</td>
             <td style="padding:6px 10px;text-align:center;font-weight:700;color:var(--acc2)">${s.alimTotal}</td>
             <td style="padding:6px 10px;text-align:center">${s.tempMoy||'—'}</td>
@@ -7930,7 +7927,7 @@ function showNotifModal(notifs){
     const d=n.data||{};
     return `<div style="background:var(--panel);border:1px solid var(--b2);border-radius:6px;padding:.7rem;margin-bottom:.5rem">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
-        <div style="font-size:11px;font-weight:700;color:var(--t1)">👤 ${n.operatorName} — ${n.bassinName}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--t1)">👤 ${escapeHtml(n.operatorName)} — ${escapeHtml(n.bassinName)}</div>
         <div style="font-size:10px;color:var(--t3)">${date}</div>
       </div>
       <div style="font-size:10px;color:var(--t2)">Date modifiée : <strong style="color:var(--warn)">${n.dateModified}</strong></div>
@@ -8281,14 +8278,25 @@ function renderDashboardKPIs(){
   const nh3Critique=actifs.filter(b=>b.NH3!==null&&b.NH3>(sp().nh3Alerte||0.5)).length;
   const tanHaut=actifs.filter(b=>b.TAN!==null&&b.TAN>=1).length;
   const lowStock=APP_INTRANTS.filter(i=>!i.amortissable&&i.seuil&&i.seuil>0&&getItemCurrentStock(i.id)<i.seuil).length;
-  // Solde comptabilité: sum of all validated prices
+  // Total achats: sum of all validated stock purchase prices
   const soldeCompta=Object.values(window.COMPTA_PRIX||{}).reduce((s,v)=>s+(Number(v)||0),0);
-  // Prochaine rotation PWA: look in bassins for earliest scheduled rotation
+  // Prochaine rotation PWA: earliest future admin date from the PWA plan (rotation = recurring 7-day cycle, admins at J+0 and J+3)
   const today_=today();
   let prochaineRotation='—';
-  (APP.state.bassins||[]).forEach(b=>{
-    const rot=b.prochaineRotation||b.dateRotation||b.rotation;
-    if(rot&&rot>=today_&&(prochaineRotation==='—'||rot<prochaineRotation))prochaineRotation=rot;
+  const DAY_MS=86400000;
+  (window.PWA_PLAN||[]).filter(e=>e.activity==='rotation'&&(e.j1||e.dateDebut)).forEach(e=>{
+    const j1=new Date(e.j1||e.dateDebut);j1.setHours(0,0,0,0);
+    if(isNaN(j1))return;
+    for(let week=0;week<60;week++){
+      for(const off of [0,3]){
+        const d=new Date(j1.getTime()+(week*7+off)*DAY_MS);
+        const ds=d.toISOString().slice(0,10);
+        if(ds>=today_){
+          if(prochaineRotation==='—'||ds<prochaineRotation)prochaineRotation=ds;
+          week=60;break;
+        }
+      }
+    }
   });
   const kpis=[
     {ico:'🐠',lbl:'Bassins actifs',val:actifs.length,tot:bassins.length,color:'var(--acc)',alert:false},
@@ -8297,7 +8305,7 @@ function renderDashboardKPIs(){
     {ico:'⚗️',lbl:'NH₃ critique',val:nh3Critique,color:nh3Critique>0?'var(--dng)':'var(--acc)',alert:nh3Critique>0},
     {ico:'🧪',lbl:'TAN ≥ 1 mg/L',val:tanHaut,color:tanHaut>0?'var(--warn)':'var(--acc)',alert:tanHaut>0},
     {ico:'📦',lbl:'Alertes stock',val:lowStock,color:lowStock>0?'var(--warn)':'var(--acc)',alert:lowStock>0},
-    {ico:'💰',lbl:'Solde comptabilité',val:(soldeCompta>0?'+':'')+Math.round(soldeCompta).toLocaleString()+' XOF',color:'var(--acc)',alert:false},
+    {ico:'💰',lbl:'Total achats (XOF)',val:Math.round(soldeCompta).toLocaleString()+' XOF',color:'var(--acc)',alert:false},
     {ico:'🔄',lbl:'Prochaine rotation',val:prochaineRotation,color:'var(--warn)',alert:prochaineRotation!=='—'},
   ];
   el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.5rem;margin-bottom:.75rem">'
@@ -9127,7 +9135,7 @@ function renderRecoltes(){
     const cTotal=cAlim+cProbio+cElec,marge=rev-cTotal;
     tBio+=c.biomasse;tRev+=rev;tCout+=cTotal;tM+=marge;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="cn">${b.name}</td><td class="cf">${b.harvestDate||'—'}</td><td class="cf">${fmt(b.vol,1)}</td>
+    tr.innerHTML=`<td class="cn">${escapeHtml(b.name)}</td><td class="cf">${escapeHtml(b.harvestDate||'—')}</td><td class="cf">${fmt(b.vol,1)}</td>
       <td class="cf">${Math.round(duree)}</td><td class="cf">${b.nbInit}</td><td class="cf">${b.mort}</td>
       <td class="cf" style="color:${survie>85?'var(--acc)':'var(--warn)'}">${fmt(survie,1)}%</td>
       <td class="cf">${fmt(b.poids,1)}</td><td class="cf" style="color:var(--acc);font-weight:700">${fmt(c.biomasse,3)}</td>
@@ -9540,17 +9548,17 @@ function buildIoTTable(){
     const isConnected=!!(cfg.tempId||cfg.phId||cfg.doId||cfg.nh3Id);
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td class="cn">${b.name}</td>
+      <td class="cn">${escapeHtml(b.name)}</td>
       <td><input class="ci" style="width:110px;border-color:rgba(167,139,250,.35);color:var(--purp)" type="text"
-        id="iot-temp-${b.name}" value="${cfg.tempId||''}" placeholder="ex: esp32_b01_t"></td>
+        id="iot-temp-${escapeHtml(b.name)}" value="${escapeHtml(cfg.tempId||'')}" placeholder="ex: esp32_b01_t"></td>
       <td><input class="ci" style="width:110px;border-color:rgba(167,139,250,.35);color:var(--purp)" type="text"
-        id="iot-ph-${b.name}" value="${cfg.phId||''}" placeholder="ex: esp32_b01_p"></td>
+        id="iot-ph-${escapeHtml(b.name)}" value="${escapeHtml(cfg.phId||'')}" placeholder="ex: esp32_b01_p"></td>
       <td><input class="ci" style="width:110px;border-color:rgba(167,139,250,.35);color:var(--purp)" type="text"
-        id="iot-do-${b.name}" value="${cfg.doId||''}" placeholder="ex: esp32_b01_d"></td>
+        id="iot-do-${escapeHtml(b.name)}" value="${escapeHtml(cfg.doId||'')}" placeholder="ex: esp32_b01_d"></td>
       <td><input class="ci" style="width:110px;border-color:rgba(167,139,250,.35);color:var(--purp)" type="text"
-        id="iot-nh3-${b.name}" value="${cfg.nh3Id||''}" placeholder="ex: esp32_b01_n"></td>
+        id="iot-nh3-${escapeHtml(b.name)}" value="${escapeHtml(cfg.nh3Id||'')}" placeholder="ex: esp32_b01_n"></td>
       <td><input class="ci" style="width:55px" type="number" min="1" max="60"
-        id="iot-freq-${b.name}" value="${cfg.freq||15}" placeholder="15"></td>
+        id="iot-freq-${escapeHtml(b.name)}" value="${cfg.freq||15}" placeholder="15"></td>
       <td><span class="badge ${isConnected?'b-purp':'b-warn'}">${isConnected?'⚙️ Configuré':'⏳ En attente'}</span></td>
       <td style="font-size:10px;color:var(--t3)">${lastStr}</td>`;
     tb.appendChild(tr);
@@ -9812,9 +9820,9 @@ window.exportJournalPDF=function exportJournalPDF(){
   <tbody>${rows.map(e=>{
     const dt=e.timestamp?.toDate?.()?.toLocaleString('fr-FR')||e.timestampLocal?.replace('T',' ').substring(0,19)||'—';
     const tc=typeColor(e.type);
-    return `<tr><td>${dt}</td><td><strong>${e.userName||'—'}</strong></td><td>${e.userRole||'—'}</td>
-      <td><span class="badge ${tc}">${e.type||'—'}</span></td>
-      <td>${e.action||'—'}</td><td>${e.detail||'—'}</td><td>${e.device||'—'}</td></tr>`;
+    return `<tr><td>${dt}</td><td><strong>${escapeHtml(e.userName||'—')}</strong></td><td>${escapeHtml(e.userRole||'—')}</td>
+      <td><span class="badge ${tc}">${escapeHtml(e.type||'—')}</span></td>
+      <td>${escapeHtml(e.action||'—')}</td><td>${escapeHtml(e.detail||'—')}</td><td>${escapeHtml(e.device||'—')}</td></tr>`;
   }).join('')}</tbody></table>
   
 </body></html>`;
@@ -9929,15 +9937,10 @@ async function respDeleteOperator(uid,name){
 // SuperAdmin → tous | Responsable → ses opérateurs
 // ═══════════════════════════════════════════════
 async function changePasswordSecondary(uid,newPass){
-  // Méthode : stocker dans passwordResets, appliqué à la prochaine connexion
-  // + notifier via Firestore
-  await db.collection('passwordResets').doc(uid).set({
-    newPass,
-    requestedBy:APP.user?.name||'Admin',
-    requestedByRole:APP.user?.role||'—',
-    requestedAt:firebase.firestore.FieldValue.serverTimestamp(),
-    applied:false
-  });
+  // SÉCURITÉ : l'ancienne méthode stockait le mot de passe en clair dans
+  // Firestore (passwordResets/{uid}). Cette pratique est supprimée.
+  alert('Le changement de mot de passe par un tiers n\'est plus supporté pour raison de sécurité. L\'utilisateur doit changer son mot de passe lui-même après connexion.');
+  return;
 }
 
 // Vérification au login : appliquer le changement de mdp en attente
@@ -10024,12 +10027,12 @@ async function renderAdminJournal(){
     return `<tr>
       <td class="cf" style="white-space:nowrap">${dt}</td>
       <td><span class="badge b-gold" style="font-size:9px">${e.farmCode||'—'}</span></td>
-      <td class="cn">${e.userName||'—'}</td>
-      <td style="font-size:10px">${e.userRole||'—'}</td>
-      <td><span class="badge ${typeColor(e.type)}" style="font-size:9px">${e.type||'—'}</span></td>
-      <td style="font-size:11px;color:var(--t1)">${e.action||'—'}</td>
-      <td style="font-size:10px;color:var(--t2);max-width:180px">${e.detail||'—'}</td>
-      <td style="font-size:10px;color:var(--t3)">${e.device||'—'}</td>
+      <td class="cn">${escapeHtml(e.userName||'—')}</td>
+      <td style="font-size:10px">${escapeHtml(e.userRole||'—')}</td>
+      <td><span class="badge ${typeColor(e.type)}" style="font-size:9px">${escapeHtml(e.type||'—')}</span></td>
+      <td style="font-size:11px;color:var(--t1)">${escapeHtml(e.action||'—')}</td>
+      <td style="font-size:10px;color:var(--t2);max-width:180px">${escapeHtml(e.detail||'—')}</td>
+      <td style="font-size:10px;color:var(--t3)">${escapeHtml(e.device||'—')}</td>
     </tr>`;
   }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:1rem">Aucun événement pour ces critères</td></tr>';
 
@@ -10092,10 +10095,10 @@ window.exportAdminJournalPDF=function exportAdminJournalPDF(){
   <tbody>${rows.map(e=>{
     const dt=e.timestamp?.toDate?.()?.toLocaleString('fr-FR')||e.timestampLocal?.replace('T',' ').substring(0,19)||'—';
     const tc=typeColor(e.type);
-    return `<tr><td>${dt}</td><td><strong>${e.farmCode||'—'}</strong></td>
-      <td><strong>${e.userName||'—'}</strong></td><td>${e.userRole||'—'}</td>
-      <td><span class="badge ${tc}">${e.type||'—'}</span></td>
-      <td>${e.action||'—'}</td><td>${e.detail||'—'}</td><td>${e.device||'—'}</td></tr>`;
+    return `<tr><td>${dt}</td><td><strong>${escapeHtml(e.farmCode||'—')}</strong></td>
+      <td><strong>${escapeHtml(e.userName||'—')}</strong></td><td>${escapeHtml(e.userRole||'—')}</td>
+      <td><span class="badge ${tc}">${escapeHtml(e.type||'—')}</span></td>
+      <td>${escapeHtml(e.action||'—')}</td><td>${escapeHtml(e.detail||'—')}</td><td>${escapeHtml(e.device||'—')}</td></tr>`;
   }).join('')}</tbody></table>
   
 </body></html>`;
@@ -13623,34 +13626,26 @@ function checkAndNotify(){
 }
 
 // ── FEATURE 3: GRAPHIQUES PAR BASSIN ─────────────────────────────────
-async function renderBassinChart(){
-  const bassinId=document.getElementById('chart-bassin-select')?.value;
+function renderBassinChart(){
+  const bassinName=document.getElementById('chart-bassin-select')?.value;
   const metric=document.getElementById('chart-metric-select')?.value||'poids';
   const period=parseInt(document.getElementById('chart-period-select')?.value||'30');
   const canvas=document.getElementById('bassin-chart-canvas');
-  if(!canvas||!bassinId)return;
+  if(!canvas||!bassinName)return;
+  if(window._bassinChart){window._bassinChart.destroy();window._bassinChart=null;}
   const cutoff=new Date();
   cutoff.setDate(cutoff.getDate()-period);
+  const cutoffStr=cutoff.toISOString().slice(0,10);
   try{
-    const snap=await db.collection('farms').doc(APP.farmCode)
-      .collection('bassins').doc(bassinId)
-      .collection('suivi')
-      .where('date','>=',cutoff.toISOString().slice(0,10))
-      .orderBy('date','asc')
-      .get();
+    const records=(APP.state.suivi||[])
+      .filter(r=>r.bassin===bassinName&&r.date&&r.date>=cutoffStr)
+      .sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
     const labels=[],values=[];
-    snap.forEach(doc=>{
-      const d=doc.data();
+    records.forEach(d=>{
       labels.push(d.date||'');
-      const val=metric==='poids'?(d.poidsMoyen||d.poids||0)
-        :metric==='ph'?(d.ph||0)
-        :metric==='o2'?(d.o2||d.oxygene||0)
-        :metric==='temp'?(d.temperature||d.temp||0)
-        :(d.turbidite||0);
-      values.push(parseFloat(val)||0);
+      values.push(metric==='poids'?(parseFloat(d.poids)||0):(parseFloat(d.mort)||0));
     });
-    if(window._bassinChart)window._bassinChart.destroy();
-    const metricLabels={poids:'Poids moyen (g)',ph:'pH',o2:'O₂ (mg/L)',temp:'Température (°C)',turbidite:'Turbidité (cm)'};
+    const metricLabels={poids:'Poids moyen (g)',mort:'Mortalité'};
     window._bassinChart=new Chart(canvas,{
       type:'line',
       data:{labels,datasets:[{label:metricLabels[metric]||metric,data:values,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,0.1)',tension:0.3,fill:true,pointRadius:4,pointBackgroundColor:'#38bdf8'}]},
@@ -13664,7 +13659,7 @@ function populateBassinChartSelect(){
   if(!sel)return;
   const bassins=APP.state.bassins||[];
   sel.innerHTML='<option value="">-- Choisir un bassin --</option>'+
-    bassins.map(b=>`<option value="${b.id}">${b.nom||b.name||b.id}</option>`).join('');
+    bassins.map(b=>`<option value="${escapeHtml(b.name)}">${escapeHtml(b.name)}</option>`).join('');
 }
 
 // ── FEATURE 4: CALCUL COMMANDE AUTO ──────────────────────────────────
@@ -13693,15 +13688,17 @@ function calcCommandeAuto(){
         <th style="padding:8px;text-align:right;color:#38bdf8">Qté à commander</th>
       </tr></thead>
       <tbody>${commandes.map((c,i)=>`<tr style="background:${i%2?'#0f1923':'#0a1628'}">
-        <td style="padding:8px">${c.nom}</td>
-        <td style="padding:8px;text-align:right">${c.stockActuel} ${c.unite}</td>
-        <td style="padding:8px;text-align:right">${c.seuilMin} ${c.unite}</td>
-        <td style="padding:8px;text-align:right;color:#38bdf8;font-weight:700">${c.qteCommande.toFixed(1)} ${c.unite}</td>
+        <td style="padding:8px">${escapeHtml(c.nom)}</td>
+        <td style="padding:8px;text-align:right">${c.stockActuel} ${escapeHtml(c.unite)}</td>
+        <td style="padding:8px;text-align:right">${c.seuilMin} ${escapeHtml(c.unite)}</td>
+        <td style="padding:8px;text-align:right;color:#38bdf8;font-weight:700">${c.qteCommande.toFixed(1)} ${escapeHtml(c.unite)}</td>
       </tr>`).join('')}</tbody>
     </table>`;
 }
 
 function scheduleAppNotifications(){
+  (window._appNotifTimers||[]).forEach(clearTimeout);
+  window._appNotifTimers=[];
   if(Notification.permission!=='granted')return;
   const now=new Date();
   const h=now.getHours();
@@ -13711,21 +13708,6 @@ function scheduleAppNotifications(){
     const actifs=bassins.filter(b=>b.statut==='Actif').length;
     sendLocalNotif('☀️ BioFloc — Briefing matin',`${actifs} bassin(s) actif(s) — Bonne journée !`,'morning');
   }
-  // Schedule rationnement reminder in 8 hours for bassins needing it today
-  const t=today();
-  (APP.state.bassins||[]).filter(b=>b.statut==='Actif'&&b.dateRationnement===t&&!b.rationnementFait).forEach(b=>{
-    setTimeout(()=>{
-      if(Notification.permission==='granted')
-        sendLocalNotif('🐟 Rationnement en attente','Bassin '+( b.nom||b.name||b.id)+' — rationnement prévu aujourd\'hui non effectué','rat_'+b.id);
-    },8*60*60*1000);
-  });
-  checkAndNotifyLowStock();
-}
-
-function checkAndNotifyLowStock(){
-  if(Notification.permission!=='granted')return;
-  const low=APP_INTRANTS.filter(i=>!i.amortissable&&i.seuil&&i.seuil>0&&getItemCurrentStock(i.id)<i.seuil);
-  if(low.length)sendLocalNotif('⚠️ Stock critique',low.map(i=>i.name||i.nom||i.id).join(', '),'stock_critique');
 }
 
 // ── FEATURE 9: GESTION MULTI-FERME ───────────────────────────────────
