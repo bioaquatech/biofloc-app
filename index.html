@@ -24,6 +24,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js"></script>
 <style>
 :root{
   --bg:#060F1E;
@@ -2813,6 +2814,9 @@ let secondaryApp;
 try{secondaryApp=firebase.app('secondary');}
 catch(e){secondaryApp=firebase.initializeApp(firebaseConfig,'secondary');}
 const secondaryAuth=secondaryApp.auth();
+// Cloud Functions (Admin SDK) — provisioning, reset, désactivation, audit central.
+// Voir functions/index.js et README-CLOUD-FUNCTIONS.md.
+const fns=firebase.app().functions('europe-west1');
 
 // ═══════════════════════════════════════════════
 // AUTO-RESTORE SESSION ON REFRESH
@@ -3188,7 +3192,7 @@ function updateSessionBadge(){
 // ═══════════════════════════════════════════════
 function openWhatsApp(){
   if(!APP.whatsapp){alert('Numéro WhatsApp non configuré.\nContactez l\'administrateur.');return;}
-  window.open('https://wa.me/'+APP.whatsapp.replace(/\D/g,''),'_blank');
+  window.open('https://wa.me/'+APP.whatsapp.replace(/\D/g,''),'_blank','noopener,noreferrer');
 }
 
 // ═══════════════════════════════════════════════
@@ -3858,7 +3862,7 @@ function renderAdminOverview(){
       </div>
       ${f.responsable?`<div style="font-size:10px;color:var(--t3);margin-top:.3rem">👤 ${f.responsable}</div>`:''}
       ${f.localisation?`<div style="font-size:10px;color:var(--t3)">📍 ${f.localisation}</div>`:''}
-      <button onclick="adminEnterFarm('${f.code||f.id}')" style="margin-top:.5rem;width:100%;background:var(--acc2);color:#fff;border:none;border-radius:6px;padding:4px 0;font-size:10px;font-weight:700;cursor:pointer">🔑 Accéder à la ferme</button>
+      <button onclick="adminEnterFarm('${escapeHtml(f.code||f.id)}')" style="margin-top:.5rem;width:100%;background:var(--acc2);color:#fff;border:none;border-radius:6px;padding:4px 0;font-size:10px;font-weight:700;cursor:pointer">🔑 Accéder à la ferme</button>
     </div>`;
   }).join('');
   // Metrics
@@ -3887,10 +3891,10 @@ function renderFarmsTable(){
       <td>${spBadge}</td>
       <td><span class="badge ${farmActive?'b-ok':'b-dng'}">${farmActive?'✅ Active':'🔴 Désactivée'}</span></td>
       <td class="cf">${fu}</td>
-      <td><button class="dbtn" onclick="deleteFarm('${fc}')">Supprimer</button>
-          <button class="ebtn" onclick="adminEnterFarm('${fc}')" style="margin-left:4px;background:var(--acc2);color:#fff;border:none">🔑 Accéder</button>
-          <button onclick="toggleFarmActivation('${fc}',${farmActive})" style="margin-left:4px;background:${farmActive?'rgba(255,61,87,.15)':'rgba(0,201,167,.15)'};color:${farmActive?'var(--dng)':'var(--acc)'};border:1px solid ${farmActive?'var(--dng)':'var(--acc)'};border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer">${farmActive?'🔴 Désactiver':'✅ Activer'}</button>
-          <button onclick="openFarmMsgModal('${fc}')" style="margin-left:4px;background:rgba(255,179,71,.12);color:var(--warn);border:1px solid rgba(255,179,71,.3);border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer" title="Gérer les messages de la ferme">📢 Messages</button></td>
+      <td><button class="dbtn" onclick="deleteFarm('${escapeHtml(fc)}')">Supprimer</button>
+          <button class="ebtn" onclick="adminEnterFarm('${escapeHtml(fc)}')" style="margin-left:4px;background:var(--acc2);color:#fff;border:none">🔑 Accéder</button>
+          <button onclick="toggleFarmActivation('${escapeHtml(fc)}',${farmActive})" style="margin-left:4px;background:${farmActive?'rgba(255,61,87,.15)':'rgba(0,201,167,.15)'};color:${farmActive?'var(--dng)':'var(--acc)'};border:1px solid ${farmActive?'var(--dng)':'var(--acc)'};border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer">${farmActive?'🔴 Désactiver':'✅ Activer'}</button>
+          <button onclick="openFarmMsgModal('${escapeHtml(fc)}')" style="margin-left:4px;background:rgba(255,179,71,.12);color:var(--warn);border:1px solid rgba(255,179,71,.3);border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer" title="Gérer les messages de la ferme">📢 Messages</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" style="color:var(--t3);padding:.75rem;text-align:center">Aucune ferme</td></tr>';
 }
@@ -3911,8 +3915,8 @@ function renderUsersTable(){
       <td class="cf">${u.createdAt?new Date(u.createdAt.seconds*1000).toLocaleDateString('fr-FR'):'—'}</td>
       <td style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
         <button class="ebtn" onclick='openEditUser(${JSON.stringify({uid:u.id,email:u.email,name:u.name,role:u.role,canBackup:u.canBackup||false})})'>Modifier</button>
-        <button onclick="adminForceResetPassword('${u.id}','${u.username||u.name}','${u.farmCode||''}')" style="background:rgba(245,166,35,.15);color:var(--warn);border:1px solid rgba(245,166,35,.3);border-radius:4px;padding:3px 7px;font-size:10px;cursor:pointer" title="Réinitialiser le mot de passe">🔑 Reset</button>
-        <button class="dbtn" onclick="deleteUser('${u.id}','${u.email||''}')">Supprimer</button>
+        <button onclick="adminForceResetPassword('${escapeHtml(u.id)}','${escapeHtml(u.username||u.name)}','${escapeHtml(u.farmCode||'')}')" style="background:rgba(245,166,35,.15);color:var(--warn);border:1px solid rgba(245,166,35,.3);border-radius:4px;padding:3px 7px;font-size:10px;cursor:pointer" title="Réinitialiser le mot de passe">🔑 Reset</button>
+        <button class="dbtn" onclick="deleteUser('${escapeHtml(u.id)}','${escapeHtml(u.email||'')}')">Supprimer</button>
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" style="color:var(--t3);padding:.75rem;text-align:center">Aucun utilisateur</td></tr>';
@@ -4009,26 +4013,17 @@ async function createOperator(){
   const msg=G('nu-msg');
   if(!farmCode||!name||!username||!password){msg.style.color='var(--dng)';msg.textContent='⚠️ Tous les champs sont obligatoires';return;}
   if(password.length<6){msg.style.color='var(--dng)';msg.textContent='⚠️ Mot de passe minimum 6 caractères';return;}
-  const email=`${username.toLowerCase().replace(/[^a-z0-9]/g,'')}_${farmCode.toLowerCase().replace(/[^a-z0-9]/g,'')}@biofloc.app`;
   showLoader('Création de l\'utilisateur…');
   try{
-    const cred=await secondaryAuth.createUserWithEmailAndPassword(email,password);
-    const uid=cred.user.uid;
-    await secondaryAuth.signOut();
-    await db.collection('users').doc(uid).set({
-      uid,email,name,username,farmCode,role,
-      personalEmail:personalEmail||null,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    // Créer lookup par username pour reset mdp
-    await db.collection('logins').doc(`${farmCode}_${username}`).set({authEmail:email,personalEmail:personalEmail||null,uid,farmCode});
+    // Provisioning serveur (Cloud Function) — crée le compte auth + users + logins.
+    await fns.httpsCallable('provisionUser')({farmCode,name,username,password,role,personalEmail});
     G('nu-name').value='';G('nu-user').value='';G('nu-pass').value='';if(G('nu-email-perso'))G('nu-email-perso').value='';
     await logAudit('modification',`Création utilisateur admin`,`${name} (${role}) — ferme: ${farmCode}`);
     await loadAdminDashboard();
     msg.style.color='var(--acc)';msg.textContent=`✅ ${role} "${name}" créé sur ${farmCode}`;
   }catch(e){
     msg.style.color='var(--dng)';
-    msg.textContent=e.code==='auth/email-already-in-use'?'❌ Cet identifiant existe déjà pour cette ferme':'❌ Erreur : '+e.message;
+    msg.textContent=e.code==='already-exists'?'❌ Cet identifiant existe déjà pour cette ferme':'❌ Erreur : '+(e.message||e.code);
   }
   hideLoader();
 }
@@ -4074,11 +4069,12 @@ async function deleteUser(uid,email){
   showLoader('Suppression…');
   try{
     const u=(window._users||[]).find(x=>x.id===uid);
-    await db.collection('users').doc(uid).delete();
+    // Suppression serveur : compte auth + users + logins.
+    await fns.httpsCallable('deleteUserAccount')({uid});
     await logAudit('modification','Suppression utilisateur',`${u?.name||uid} (${u?.farmCode||'?'})`);
     await loadAdminDashboard();
   }
-  catch(e){alert('Erreur : '+e.message);}
+  catch(e){alert('Erreur : '+(e.message||e.code));}
   hideLoader();
 }
 
@@ -5022,9 +5018,9 @@ function exportAnalysePDF(){
   const content=G('analyse-results')?.innerHTML||'';
   const printWin=window.open('','_blank','width=800,height=600');
   const logoUrl=APP.state.logoUrl||'';
-  const logoHtml=logoUrl?`<img src="${logoUrl}" style="height:52px;width:auto;object-fit:contain">`:'<span style="font-size:28px">🐟</span>';
+  const logoHtml=logoUrl?`<img src="${escapeHtml(logoUrl)}" style="height:52px;width:auto;object-fit:contain">`:'<span style="font-size:28px">🐟</span>';
   printWin.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Analyse Paramètres — ${farmName}</title>
+    <title>Analyse Paramètres — ${escapeHtml(farmName)}</title>
     <style>
       *{box-sizing:border-box}
       body{font-family:Arial,sans-serif;padding:24px;background:#ffffff;color:#1e293b;font-size:12px;margin:0}
@@ -5052,7 +5048,7 @@ function exportAnalysePDF(){
     </style></head><body>
     <div class="doc-header">
       ${logoHtml}
-      <div><h1>${farmName} — Rapport d'Analyse des Paramètres</h1><p class="sub">${date}</p></div>
+      <div><h1>${escapeHtml(farmName)} — Rapport d'Analyse des Paramètres</h1><p class="sub">${date}</p></div>
     </div>
     <div id="pdf-content">${content}</div>
 </body></html>`);
@@ -5120,25 +5116,18 @@ async function sendOperatorReset(){
 }
 
 async function adminForceResetPassword(uid, username, farmCode){
-  const newPassword=generateTempPassword();
-  if(!confirm(`Réinitialiser le mot de passe de "${username}" ?\n\nMot de passe temporaire : ${newPassword}\n\nCommuniquez ce mot de passe à l\'utilisateur via WhatsApp.`))return;
+  if(!confirm(`Réinitialiser le mot de passe de "${username}" ?\n\nUn mot de passe temporaire sera généré et affiché à l\'écran.`))return;
+  const newPassword=generateTempPassword(); // fallback d'affichage si la fonction ne renvoie rien
   showLoader('Réinitialisation en cours…');
   try{
-    const v=Date.now().toString().slice(-4);
-    const newEmail=`${username}_${farmCode.toLowerCase()}_r${v}@biofloc.app`;
-    const cred=await secondaryAuth.createUserWithEmailAndPassword(newEmail,newPassword);
-    const newUid=cred.user.uid;
-    await secondaryAuth.signOut();
-    const oldSnap=await db.collection('users').doc(uid).get();
-    const oldData=oldSnap.exists?oldSnap.data():{};
-    await db.collection('users').doc(newUid).set({...oldData,uid:newUid,email:newEmail,username,farmCode});
-    await db.collection('users').doc(uid).delete();
-    await db.collection('logins').doc(`${farmCode}_${username}`).set({authEmail:newEmail,personalEmail:oldData.personalEmail||null,uid:newUid,farmCode});
+    // Reset serveur : updateUser() garde le même UID et révoque les sessions.
+    const r=await fns.httpsCallable('forceResetPassword')({uid,farmCode});
+    const tempPass=(r&&r.data&&r.data.tempPassword)||newPassword;
     await logAudit('reset_mdp',`Reset mdp forcé`,`${username} — ferme: ${farmCode}`);
     hideLoader();
     await loadAdminDashboard();
-    alert(`✅ Mot de passe réinitialisé !\n\nIdentifiant : ${username}\nMot de passe temp. : ${newPassword}\n\nCommuniquez à l\'utilisateur via WhatsApp.`);
-  }catch(e){hideLoader();alert('❌ Erreur : '+e.message);}
+    alert(`✅ Mot de passe réinitialisé !\n\nIdentifiant : ${username}\nMot de passe temp. : ${tempPass}\n\nCommuniquez à l\'utilisateur via WhatsApp.`);
+  }catch(e){hideLoader();alert('❌ Erreur : '+(e.message||e.code));}
 }
 
 function generateTempPassword(){
@@ -5158,10 +5147,12 @@ async function toggleFarmActivation(farmCode, currentlyActive){
   if(!confirm(msg))return;
   showLoader(currentlyActive?'Désactivation…':'Activation…');
   try{
-    await db.collection('farms').doc(farmCode).set({active:!currentlyActive},{merge:true});
+    // Désactivation serveur : met à jour farms.active ET révoque les sessions actives.
+    const r=await fns.httpsCallable('setFarmActive')({farmCode,active:!currentlyActive});
+    const revoked=(r&&r.data&&r.data.sessionsRevoked)||0;
     await logAudit('ferme_toggle',`Ferme ${currentlyActive?'désactivée':'réactivée'}`,`farmCode: ${farmCode}`);
     await loadAdminDashboard();
-    alert(`✅ Ferme "${farmCode}" ${currentlyActive?'désactivée — utilisateurs bloqués':'réactivée — accès rétabli'}.`);
+    alert(`✅ Ferme "${farmCode}" ${currentlyActive?`désactivée — ${revoked} session(s) coupée(s)`:'réactivée — accès rétabli'}.`);
   }catch(e){alert('❌ '+e.message);}
   hideLoader();
 }
@@ -5761,7 +5752,7 @@ async function genRapportHebdo(){
           const bDO=br.filter(r=>r.DO!=null);const bTAN=br.filter(r=>r.TAN!=null);
           const avgDOv=bDO.length?(bDO.reduce((s,r)=>s+r.DO,0)/bDO.length).toFixed(1):'—';
           const avgTANv=bTAN.length?(bTAN.reduce((s,r)=>s+r.TAN,0)/bTAN.length).toFixed(2):'—';
-          return `<tr><td style="font-weight:700;color:var(--acc)">${name}</td><td>${br.length}</td><td>${fmt(bAlim,2)}</td><td>${bMort}</td><td>${bPro}</td><td>${avgDOv}</td><td>${avgTANv}</td></tr>`;
+          return `<tr><td style="font-weight:700;color:var(--acc)">${escapeHtml(name)}</td><td>${br.length}</td><td>${fmt(bAlim,2)}</td><td>${bMort}</td><td>${bPro}</td><td>${avgDOv}</td><td>${avgTANv}</td></tr>`;
         }).join('')}
       </tbody></table>
     </div>`;
@@ -5775,7 +5766,7 @@ function printRapportHebdo(){
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport hebdomadaire</title>
   <style>body{font-family:Arial,sans-serif;font-size:11px;padding:20px;background:#fff;color:#1e293b}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 8px}th{background:#1a5276;color:#fff}.card{border:1px solid #ccc;border-radius:6px;padding:8px;margin-bottom:8px}@media print{body{margin:0}}</style></head>
   <body><h2>Rapport d'activité — ${window._rapportHebdoData?.startStr||''} au ${window._rapportHebdoData?.endStr||''}</h2>
-  <p style="color:#666">Ferme : ${APP.farmName||APP.farmCode||'—'}</p>
+  <p style="color:#666">Ferme : ${escapeHtml(APP.farmName||APP.farmCode||'—')}</p>
   ${content}</body></html>`);
   w.document.close();setTimeout(()=>w.print(),500);
 }
@@ -6144,8 +6135,10 @@ async function editStockEntry(id){
   const entry=APP_STOCK_ENTRIES.find(e=>e.id===id);if(!entry)return;
   const role=APP.user?.role||'Opérateur';
   if(!(role==='Administrateur'||role==='Responsable')){showToast('❌ Réservé Responsable/Super Admin','dng');return;}
+  if(entry.locked===true){alert('Entrée verrouillée : correction possible uniquement via inventaire.');return;}
   const item=APP_INTRANTS.find(i=>i.id===entry.intrantId);
   const q=prompt('Quantité '+(item?.unit||'')+' :', entry.quantity); if(q===null)return;
+  const qNum=parseFloat(q); if(!isFinite(qNum)||qNum<0){alert('Quantité invalide.');return;}
   const d=prompt('Date (AAAA-MM-JJ) :', entry.date||today()); if(d===null)return;
   const supplier=prompt('Fournisseur :', entry.supplier||''); if(supplier===null)return;
   const lot=prompt('Lot :', entry.lot||''); if(lot===null)return;
@@ -6488,7 +6481,7 @@ function exportPWAPlanningPdf(){
   var rates=window.PWA_RATES||PWA_RATES||{};
   var farmName=(window.APP&&(APP.farmName||APP.farmCode))||'Ferme';
   var logoUrl=(window.APP&&APP.state&&APP.state.logoUrl)||'';
-  var logoHtml=logoUrl?'<img src="'+logoUrl+'" style="height:44px;width:auto;object-fit:contain;margin-right:10px">':'';
+  var logoHtml=logoUrl?'<img src="'+escapeHtml(logoUrl)+'" style="height:44px;width:auto;object-fit:contain;margin-right:10px">':'';
   var DAY=86400000;
   // Offsets relatifs à la date sélectionnée = premier jour d'administration
   // Entretien : selectedDate = J3 (premier admin) — NON RÉCURRENT
@@ -7005,7 +6998,7 @@ function exportPWAPdf(){
   if(!plan||!plan.length){alert('Aucune activité à exporter.');return;}
   var farmName=(window.APP&&(APP.farmName||APP.farmCode))||'Ferme';
   var logoUrl=(window.APP&&APP.state&&APP.state.logoUrl)||'';
-  var logoHtml2=logoUrl?'<img src="'+logoUrl+'" style="height:44px;width:auto;object-fit:contain;margin-right:10px">':'<span style="font-size:28px;margin-right:8px">🐟</span>';
+  var logoHtml2=logoUrl?'<img src="'+escapeHtml(logoUrl)+'" style="height:44px;width:auto;object-fit:contain;margin-right:10px">':'<span style="font-size:28px;margin-right:8px">🐟</span>';
   var dateExport=new Date().toLocaleDateString('fr-FR');
   var rows=plan.map(function(row){
     var rates=window.PWA_RATES||PWA_RATES||{};
@@ -7034,10 +7027,10 @@ function exportPWAPdf(){
     calDiv.innerHTML=buildEntretienCalendar(entRow.dateDebut,base/plan.length,entRow.coverVol||entRow.vol||3.8);
     calHtml=calDiv.innerHTML;
   }
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Planning PWA – '+farmName+'</title>'
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Planning PWA – '+escapeHtml(farmName)+'</title>'
     +'<style>body{font-family:sans-serif;font-size:12px;color:#111;padding:24px}h1{font-size:16px;margin-bottom:4px}h2{font-size:13px;color:#22d3ee;margin:16px 0 6px}table{width:100%;border-collapse:collapse}th{background:#0d9488;color:#fff;padding:6px 8px;text-align:left}td{vertical-align:top}.total{background:#0a2a1f;padding:12px;border-radius:6px;margin-top:12px;display:flex;gap:24px}.tot-val{font-size:20px;font-weight:800}.note{font-size:10px;color:#6b7280;margin-top:8px}@media print{button{display:none}}</style>'
     +'</head><body>'
-    +'<div style="display:flex;align-items:center;border-bottom:2px solid #22d3ee0d9488;padding-bottom:10px;margin-bottom:14px">'+logoHtml2+'<div><h1 style="font-size:15px;color:#22d3ee;margin-bottom:2px">'+farmName+' — Planning de préparation PWA</h1><p style="font-size:10px;color:#6b7280">Exporté le '+dateExport+'</p></div></div>'
+    +'<div style="display:flex;align-items:center;border-bottom:2px solid #22d3ee0d9488;padding-bottom:10px;margin-bottom:14px">'+logoHtml2+'<div><h1 style="font-size:15px;color:#22d3ee;margin-bottom:2px">'+escapeHtml(farmName)+' — Planning de préparation PWA</h1><p style="font-size:10px;color:#6b7280">Exporté le '+dateExport+'</p></div></div>'
     +'<h2>Activités planifiées</h2>'
     +'<table><thead><tr><th>Date début</th><th>Activité</th><th>Moment</th><th>Bassins</th><th>Volume</th><th>Dose PWA</th></tr></thead><tbody>'+rows+'</tbody></table>'
     +'<div class="total"><div><div style="font-size:10px;color:#6b7280">Total activités</div><div class="tot-val" style="color:#22d3ee">'+base.toFixed(2)+' L</div></div>'
@@ -8102,7 +8095,7 @@ function buildBTable(){
 
       <td style="white-space:nowrap">
         <button onclick="saveBassinRow(${i})" style="background:var(--acc);color:#FFFFFF;border:none;border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer;font-weight:700;margin-right:2px" title="Enregistrer">💾</button>
-        <button onclick="openBassinNoteModal(${i})" style="background:${b.note?'rgba(251,191,36,.2)':'var(--inp)'};border:1px solid ${b.note?'rgba(251,191,36,.5)':'var(--b2)'};border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;margin-right:2px" title="${b.note?'Note: '+b.note.substring(0,40):'Ajouter une note'}">📝</button>
+        <button onclick="openBassinNoteModal(${i})" style="background:${b.note?'rgba(251,191,36,.2)':'var(--inp)'};border:1px solid ${b.note?'rgba(251,191,36,.5)':'var(--b2)'};border-radius:4px;padding:3px 6px;font-size:10px;cursor:pointer;margin-right:2px" title="${b.note?'Note: '+escapeHtml(b.note.substring(0,40)):'Ajouter une note'}">📝</button>
         ${canDelete?`<button class="dbtn" onclick="removeBassin(${i})" title="Supprimer">🗑</button>`:`<button style="background:none;border:1px solid var(--b2);border-radius:4px;padding:3px 6px;font-size:10px;cursor:not-allowed;opacity:.4" title="Suppression réservée au Responsable">🔒</button>`}
         ${b._savedAt?`<div style="font-size:8px;color:var(--t3);margin-top:2px">${new Date(b._savedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div>`:''}
       </td>`;
@@ -8521,6 +8514,8 @@ function addSuivi(){
   const date=G('sc-date').value,bassin=G('sc-bassin').value,poids=parseFloat(G('sc-poids').value),mort=parseInt(G('sc-mort').value)||0;
   const note=(G('sc-note')?.value||'').trim();
   if(!date||!bassin||isNaN(poids)){alert('Date, Bassin et Poids requis.');return;}
+  if(!isFinite(poids)||poids<=0||poids>=100000){alert('Poids invalide (doit être supérieur à 0 et inférieur à 100000 g).');return;}
+  if(!Number.isInteger(mort)||mort<0){alert('Nombre de morts invalide (entier positif ou nul requis).');return;}
   const existing=APP.state.suivi.find(r=>r.bassin===bassin&&r.date===date);
   if(existing)deleteSuiviDoc(existing.id);
   APP.state.suivi=APP.state.suivi.filter(r=>!(r.bassin===bassin&&r.date===date));
@@ -8663,16 +8658,16 @@ function renderComptaPrix(){
     const hasPrix=COMPTA_PRIX[e.id]!==undefined;
     return '<div style="background:var(--card);border:1px solid '+(hasPrix?'var(--b2)':'rgba(245,166,35,.3)')+';border-radius:8px;padding:.5rem .7rem;margin-bottom:.3rem">'
       +'<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">'
-      +'<div style="flex:1;min-width:180px"><strong>'+(item?.name||e.intrantId)+'</strong>'
-      +' <span style="color:var(--acc);font-weight:700">'+e.quantity+' '+(item?.unit||'')+'</span>'
-      +(e.lot?' <span style="color:var(--t3);font-size:9px">Lot:'+e.lot+'</span>':'')
-      +(e.facture?' <span style="color:var(--t3);font-size:9px">Fact:'+e.facture+'</span>':'')
-      +'<div style="font-size:9px;color:var(--t3)">'+e.date+(e.supplier?' · '+e.supplier:'')+'</div></div>'
+      +'<div style="flex:1;min-width:180px"><strong>'+escapeHtml(item?.name||e.intrantId)+'</strong>'
+      +' <span style="color:var(--acc);font-weight:700">'+e.quantity+' '+escapeHtml(item?.unit||'')+'</span>'
+      +(e.lot?' <span style="color:var(--t3);font-size:9px">Lot:'+escapeHtml(e.lot)+'</span>':'')
+      +(e.facture?' <span style="color:var(--t3);font-size:9px">Fact:'+escapeHtml(e.facture)+'</span>':'')
+      +'<div style="font-size:9px;color:var(--t3)">'+escapeHtml(e.date)+(e.supplier?' · '+escapeHtml(e.supplier):'')+'</div></div>'
       +'<div style="display:flex;align-items:center;gap:.4rem">'
       +'<label style="font-size:10px;color:var(--t3)">Prix total (XOF):</label>'
       +'<input type="number" value="'+(COMPTA_PRIX[e.id]||'')+'" placeholder="Saisir prix" '
       +'style="width:120px;border:1px solid var(--b2);border-radius:4px;background:var(--bg);color:var(--t1);padding:3px 6px;font-size:11px" '
-      +'oninput="COMPTA_PRIX[\''+e.id+'\']=+this.value;renderComptaCUMP()">'
+      +'oninput="COMPTA_PRIX[\''+e.id+'\']=Math.max(0, +this.value||0);renderComptaCUMP()">'
       +(hasPrix?'<span style="color:var(--acc);font-size:10px">✅ '+(COMPTA_PRIX[e.id]/e.quantity).toFixed(0)+' XOF/'+item?.unit+'</span>':'<span style="color:var(--warn);font-size:10px">⚠ À saisir</span>')
       +'</div></div></div>';
   }).join('');
@@ -8688,7 +8683,7 @@ function renderComptaCUMP(){
     if(!entries.length){cumpMap[item.id]=null;return;}
     const totalQty=entries.reduce((s,e)=>s+e.quantity,0);
     const totalCost=entries.reduce((s,e)=>s+(COMPTA_PRIX[e.id]||0),0);
-    cumpMap[item.id]=totalCost/totalQty;
+    cumpMap[item.id]=totalQty>0?totalCost/totalQty:0;
   });
   const withCump=APP_INTRANTS.filter(i=>cumpMap[i.id]!==null);
   if(!withCump.length){container.innerHTML='<div style="color:var(--t3);font-size:11px;padding:.5rem">Saisissez les prix ci-dessus pour calculer les CUMP.</div>';return;}
@@ -8703,7 +8698,7 @@ function renderComptaCUMP(){
       const entries=APP_STOCK_ENTRIES.filter(e=>e.validated&&e.intrantId===item.id&&COMPTA_PRIX[e.id]!==undefined);
       const totalQty=entries.reduce((s,e)=>s+e.quantity,0);
       const totalCost=entries.reduce((s,e)=>s+(COMPTA_PRIX[e.id]||0),0);
-      const cump=totalCost/totalQty;
+      const cump=totalQty>0?totalCost/totalQty:0;
       return '<tr style="border-bottom:1px solid var(--b1)">'
         +'<td style="padding:4px 8px;font-weight:600">'+item.name+'</td>'
         +'<td style="padding:4px 8px;text-align:center;color:var(--t3)">'+item.unit+'</td>'
@@ -8722,7 +8717,7 @@ function getCUMP(intrantId){
   if(!entries.length)return 0;
   const totalQty=entries.reduce((s,e)=>s+e.quantity,0);
   const totalCost=entries.reduce((s,e)=>s+(COMPTA_PRIX[e.id]||0),0);
-  return totalCost/totalQty;
+  return totalQty>0?totalCost/totalQty:0;
 }
 
 function calcCharges(){
@@ -9395,9 +9390,25 @@ async function restoreBackupAdmin(input){
   try{
     const text=await file.text();
     const backup=JSON.parse(text);
+    // Cross-farm write guard : restreindre aux fermes autorisées de l'admin courant
+    const backupCodes=Object.keys(backup.farms||{});
+    if(!backupCodes.length){alert('❌ Aucune ferme trouvée dans la sauvegarde.');hideLoader();input.value='';return;}
+    const allowedList=(window._farms||[]).map(f=>f.code||f.id).filter(Boolean);
+    let allowedCodes;
+    if(allowedList.length){
+      allowedCodes=backupCodes.filter(c=>allowedList.includes(c));
+      const rejected=backupCodes.filter(c=>!allowedList.includes(c));
+      if(!allowedCodes.length){alert('❌ Aucune des fermes de la sauvegarde ne fait partie des fermes que vous êtes autorisé à modifier.');hideLoader();input.value='';return;}
+      if(!confirm('⚠️ Les fermes suivantes seront écrasées :\n\n'+allowedCodes.join(', ')+(rejected.length?('\n\nIgnorées (hors de votre périmètre) :\n'+rejected.join(', ')):'')+'\n\nContinuer ?')){hideLoader();input.value='';return;}
+    }else{
+      allowedCodes=backupCodes;
+      if(!confirm('⚠️ Les fermes suivantes seront écrasées :\n\n'+allowedCodes.join(', ')+'\n\nContinuer ?')){hideLoader();input.value='';return;}
+    }
+    const allowedSet=new Set(allowedCodes);
     const batch=db.batch();
     // Restore farms data
     for(const [code,data] of Object.entries(backup.farms||{})){
+      if(!allowedSet.has(code))continue;
       if(data.bassins){
         data.bassins.forEach((b,i)=>{
           batch.set(db.collection('farms').doc(code).collection('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});
@@ -9855,7 +9866,7 @@ function renderRespUsersTable(){
     <td><span class="badge ${u.canBackup?'b-purp':'b-warn'}">${u.canBackup?'✅ Oui':'❌ Non'}</span></td>
     <td style="display:flex;gap:4px;justify-content:center">
       <button class="ebtn" onclick='respOpenEditOperator(${JSON.stringify({uid:u.id,name:u.name,canBackup:u.canBackup||false})})'>Modifier</button>
-      <button class="dbtn" onclick="respDeleteOperator('${u.id}','${u.name}')">Supprimer</button>
+      <button class="dbtn" onclick="respDeleteOperator('${escapeHtml(u.id)}','${escapeHtml(u.name)}')">Supprimer</button>
     </td>
   </tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:.75rem">Aucun opérateur</td></tr>';
 }
@@ -9868,23 +9879,17 @@ async function respCreateOperator(){
   const msg=G('r-nu-msg');
   if(!name||!username||!password){msg.style.color='var(--dng)';msg.textContent='⚠️ Tous les champs sont obligatoires';return;}
   if(password.length<6){msg.style.color='var(--dng)';msg.textContent='⚠️ Mot de passe minimum 6 caractères';return;}
-  const email=`${username.replace(/[^a-z0-9]/g,'')}_${APP.farmCode.toLowerCase().replace(/[^a-z0-9]/g,'')}@biofloc.app`;
   showLoader('Création de l\'opérateur…');
   try{
-    const cred=await secondaryAuth.createUserWithEmailAndPassword(email,password);
-    const uid=cred.user.uid;
-    await secondaryAuth.signOut();
-    await db.collection('users').doc(uid).set({
-      uid,email,name,username,farmCode:APP.farmCode,role:'Opérateur',canBackup,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:APP.user?.name
-    });
+    // Provisioning serveur (Cloud Function). Le Responsable peut créer un Opérateur sur sa ferme.
+    await fns.httpsCallable('provisionUser')({farmCode:APP.farmCode,name,username,password,role:'Opérateur',canBackup});
     G('r-nu-name').value='';G('r-nu-user').value='';G('r-nu-pass').value='';G('r-nu-backup').checked=false;
     await logAudit('modification',`Création opérateur`,`${name} (${username}) sur ${APP.farmCode}`);
     await renderRespAdmin();
     msg.style.color='var(--acc)';msg.textContent=`✅ Opérateur "${name}" créé avec succès !`;
   }catch(e){
     msg.style.color='var(--dng)';
-    msg.textContent=e.code==='auth/email-already-in-use'?'❌ Cet identifiant existe déjà':'❌ Erreur : '+e.message;
+    msg.textContent=e.code==='already-exists'?'❌ Cet identifiant existe déjà':'❌ Erreur : '+(e.message||e.code);
   }
   hideLoader();
 }
@@ -11109,7 +11114,7 @@ function exportBasifiantPDF(){
     var prodShort=prod&&prod.id==='nahco3'?'NaHCO₃':'CaCO₃';
 
     return '<tr style="background:'+bgRow+';border-bottom:1px solid #e0e0e0">'
-      +'<td style="padding:6px 10px;font-weight:700;color:#1a5276">'+b.name+'</td>'
+      +'<td style="padding:6px 10px;font-weight:700;color:#1a5276">'+escapeHtml(b.name)+'</td>'
       +'<td style="padding:6px 10px;text-align:center">'+(b.vol||'?')+' m³</td>'
       +'<td style="padding:6px 10px;text-align:center;color:'+(tac!==null&&tac!==undefined?urgColor:'#888')+'"><strong>'+tacStr+'</strong></td>'
       +'<td style="padding:6px 10px;text-align:center;color:'+urgColor+';font-weight:700">'+deltaStr+'</td>'
@@ -11130,7 +11135,7 @@ function exportBasifiantPDF(){
     +'<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1a5276;padding-bottom:10px;margin-bottom:16px">'
       +'<div>'
         +'<div style="font-size:18px;font-weight:700;color:#1a5276">🧪 Distribution Basifiant — Ajustement TAC</div>'
-        +'<div style="font-size:11px;color:#666;margin-top:2px">'+farmName+' · '+date+' · Cible TAC : '+cible+' mg/L · '+n+' apport(s)</div>'
+        +'<div style="font-size:11px;color:#666;margin-top:2px">'+escapeHtml(farmName)+' · '+escapeHtml(date)+' · Cible TAC : '+cible+' mg/L · '+n+' apport(s)</div>'
       +'</div>'
       +'<div style="text-align:right;font-size:10px;color:#888">Référentiel Technique Juin 2026</div>'
     +'</div>'
@@ -11270,11 +11275,11 @@ function renderFCRModule(){
       <td style="color:var(--t3);font-weight:700">S${i+1}</td>
       <td style="font-size:9px;color:var(--t3)">${ref.phase}</td>
       <td><input type="number" class="ci" style="width:65px;font-size:10px" value="${w.poidsMoyen||''}" placeholder="—" step="0.1"
-        onchange="FCR_DATA['${bassin}'][${i}].poidsMoyen=this.value?+this.value:null;renderFCRModule()"></td>
+        onchange="FCR_DATA['${escapeHtml(bassin)}'][${i}].poidsMoyen=this.value?+this.value:null;renderFCRModule()"></td>
       <td><input type="number" class="ci" style="width:65px;font-size:10px" value="${w.alimKg||''}" placeholder="—" step="0.01"
-        onchange="FCR_DATA['${bassin}'][${i}].alimKg=this.value?+this.value:null;renderFCRModule()"></td>
+        onchange="FCR_DATA['${escapeHtml(bassin)}'][${i}].alimKg=this.value?+this.value:null;renderFCRModule()"></td>
       <td><input type="number" class="ci" style="width:45px;font-size:10px" value="${w.morts||0}" min="0"
-        onchange="FCR_DATA['${bassin}'][${i}].morts=+this.value||0;renderFCRModule()"></td>
+        onchange="FCR_DATA['${escapeHtml(bassin)}'][${i}].morts=+this.value||0;renderFCRModule()"></td>
       <td style="font-family:var(--mono);color:${survie<85?'var(--dng)':survie<90?'var(--warn)':'var(--acc)'}">${survie}%</td>
       <td style="font-family:var(--mono);color:${fcrColor}">${fcrC?fcrC.toFixed(2):'—'}</td>
       <td style="font-size:9px;color:var(--gold)">${ref.fcr.toFixed(2)}</td>
@@ -11761,7 +11766,7 @@ function validateCharge(c){
 }
 window.saveChargeFromForm=async function(){
  if(!canWrite()){alert('Création/modification réservée au Responsable ferme, Responsable administratif ou SuperAdmin.');return;}
- const c=readForm(); const miss=validateCharge(c); if(miss.length){alert('Champs obligatoires manquants : '+miss.join(', '));return;}
+ const c=readForm(); if(!(Number(c.amount)>=0)){alert('Montant invalide.');return;} const miss=validateCharge(c); if(miss.length){alert('Champs obligatoires manquants : '+miss.join(', '));return;}
  const now=new Date().toISOString(); c.modifiedAt=now; c.modifiedBy=(window.APP&&APP.user&&APP.user.name)||role()||'?'; if(!c.createdAt){c.createdAt=now;c.createdBy=c.modifiedBy;}
  try{ if(window.farmCol) await farmCol('charges').doc(c.id).set(c,{merge:true}); }catch(e){console.warn('Sauvegarde Firestore charge:',e);}
  const ix=(window.APP_CHARGES||[]).findIndex(x=>x.id===c.id); if(ix>=0)APP_CHARGES[ix]=c; else APP_CHARGES.unshift(c);
@@ -13288,7 +13293,7 @@ if(window.fillPwaBassinSelect)window.fillPwaBassinSelect();
   var pdfHeader=function(title,subtitle){
     var logoUrl=(window.APP&&APP.state&&APP.state.logoUrl)||'';
     var farm=(window.APP&&(APP.farmName||APP.farmCode))||'';
-    var logoHtml=logoUrl?'<img src="'+logoUrl+'" alt="logo">':'<div style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:28px;border-radius:8px;background:#f0f6ff">🐟</div>';
+    var logoHtml=logoUrl?'<img src="'+esc(logoUrl)+'" alt="logo">':'<div style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:28px;border-radius:8px;background:#f0f6ff">🐟</div>';
     return '<div class="doc-header">'+logoHtml+'<div class="doc-header-text"><h1>'+esc(farm)+(title?' — '+esc(title):'')+'</h1><p class="sub">'+(subtitle||new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}))+'</p></div></div>';
   };
 
@@ -13334,7 +13339,7 @@ if(window.fillPwaBassinSelect)window.fillPwaBassinSelect();
   var openPDF=function(html,title){
     var w=window.open('','_blank','width=960,height=720');
     if(!w)return alert('Autorisez les pop-ups pour exporter en PDF');
-    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+(title||'Export')+'</title>'+pdfCss+'</head><body>'+pdfHeader(title)+'<div>'+html+'</div><br><button onclick="window.print()" style="padding:6px 18px;background:#1a4fa0;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-top:8px">🖨️ Imprimer / Enregistrer PDF</button></body></html>');
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(title||'Export')+'</title>'+pdfCss+'</head><body>'+pdfHeader(title)+'<div>'+html+'</div><br><button onclick="window.print()" style="padding:6px 18px;background:#1a4fa0;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-top:8px">🖨️ Imprimer / Enregistrer PDF</button></body></html>');
     w.document.close();
   };
 
