@@ -11863,7 +11863,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function save(k,v){localStorage.setItem('ichtus_'+k,JSON.stringify(v));}
   function farmBassins(){
     var b=(window.APP&&APP.bassins)||window.BASSINS||load('bassins',[]);
-    if(!b||!b.length){b=[];for(var i=1;i<=16;i++)b.push({id:'B'+i,nom:'Bassin '+i,volume:12});}
+    if(!b)b=[]; // Pas de bassins fabriqués par défaut (évite la création de bassins fantômes)
     return b;
   }
   function cycles(){var a=load('cycles',[]);if(!a.length){a=[{id:'CYCLE-2026-01',nom:'Cycle GIFT 2026-01',debut:today(),fin:'',statut:'Actif'}];save('cycles',a);}return a;}
@@ -13954,7 +13954,8 @@ async function syncAllData(){
       syncStep('intrants','Intrants & mouvements','ok');
     }catch(e){syncStep('intrants','Intrants & mouvements','err');errors++;}
 
-    // Sync ERP bassins → Qualité eau
+    // Sync ERP bassins → Qualité eau (automatique).
+    // Ne fabrique plus de bassins par défaut : ne synchronise que les bassins réels.
     syncStep('qe','ERP Bassins → Qualité eau','pending');
     try{
       if(typeof syncERPBassinsToProduction==='function')syncERPBassinsToProduction(false);
