@@ -12286,22 +12286,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       +'</div>';
   }
 
-  window.calcPWA=function(){
-    // Délègue vers la fonction globale unifiée
-    if(typeof calcPWA==='function'){calcPWA();return;}
-  };
-    var pfa=base*0.04,total=base+pfa;
-    res.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">'
-      +'<div><div style="font-size:9px;color:var(--t3)">PWA activités</div><div style="font-size:18px;font-weight:800;color:var(--acc);font-family:var(--mono)">'+fmtNum(base,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Majoration PFA 4%</div><div style="font-size:18px;font-weight:800;color:var(--warn);font-family:var(--mono)">'+fmtNum(pfa,2)+' L</div></div>'
-      +'<div><div style="font-size:9px;color:var(--t3)">Total à préparer</div><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:var(--mono)">'+fmtNum(total,2)+' L</div></div></div>'
-      +'<div style="font-size:10px;color:var(--t2);line-height:1.6">Volume hebdomadaire. Entretien J3/J5/J7/J8/J10 = 5 administrations. Bullage 24h avant chaque séance. PFA +4% = réserve pour l\'alimentation des poissons.</div>'
-      +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⏱ Bullage 24h avant usage · Validité 48–72h · Stock ajusté par Réceptions et Inventaire uniquement.</div>'
-      +'<button class="sbtn" onclick="exportPWAPdf()" style="margin-top:.6rem;font-size:11px;width:100%">📄 Exporter le planning en PDF</button>';
-
-    // Calendrier mensuel PWA
-    setTimeout(function(){if(typeof window.renderPWAMonthlyCalendar==='function')window.renderPWAMonthlyCalendar();},50);
-  };
+  // calcPWA : on conserve la fonction globale unifiée définie plus haut (ligne ~6364),
+  // qui fait déjà tout le calcul PWA + le calendrier mensuel. Pas de redéfinition ici
+  // (l'ancienne redéfinition était mutilée et provoquait une erreur de syntaxe).
   window.updatePWAStock=function(){ toast('⚠️ Mise à jour manuelle supprimée : utilisez Réceptions pour une entrée PWA ou Inventaire pour corriger le stock.','warn'); };
 
   // Réceptions : verrouillage après validation, suppression libre avant validation selon les rôles définis.
