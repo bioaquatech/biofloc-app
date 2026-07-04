@@ -7895,6 +7895,9 @@ function showToast(msg, type='acc'){
   document.body.appendChild(toast);
   setTimeout(()=>{toast.style.opacity='0';setTimeout(()=>toast.remove(),400);},3000);
 }
+// Alias global : plusieurs fonctions du script principal appellent toast(...) ;
+// on le fait déléguer à showToast (les sous-modules ERP ont leur propre toast local).
+function toast(msg,type){return showToast(msg,type);}
 async function saveNotification(i,dateStr,b){
   const notif={
     farmCode:APP.farmCode,
