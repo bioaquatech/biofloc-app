@@ -24,7 +24,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js"></script>
 <style>
 :root{
   --bg:#060F1E;
@@ -2814,9 +2813,6 @@ let secondaryApp;
 try{secondaryApp=firebase.app('secondary');}
 catch(e){secondaryApp=firebase.initializeApp(firebaseConfig,'secondary');}
 const secondaryAuth=secondaryApp.auth();
-// Cloud Functions (Admin SDK) — provisioning, reset, désactivation, audit central.
-// Voir functions/index.js et README-CLOUD-FUNCTIONS.md.
-const fns=firebase.app().functions('europe-west1');
 
 // ═══════════════════════════════════════════════
 // AUTO-RESTORE SESSION ON REFRESH
@@ -4013,17 +4009,26 @@ async function createOperator(){
   const msg=G('nu-msg');
   if(!farmCode||!name||!username||!password){msg.style.color='var(--dng)';msg.textContent='⚠️ Tous les champs sont obligatoires';return;}
   if(password.length<6){msg.style.color='var(--dng)';msg.textContent='⚠️ Mot de passe minimum 6 caractères';return;}
+  const email=`${username.toLowerCase().replace(/[^a-z0-9]/g,'')}_${farmCode.toLowerCase().replace(/[^a-z0-9]/g,'')}@biofloc.app`;
   showLoader('Création de l\'utilisateur…');
   try{
-    // Provisioning serveur (Cloud Function) — crée le compte auth + users + logins.
-    await fns.httpsCallable('provisionUser')({farmCode,name,username,password,role,personalEmail});
+    const cred=await secondaryAuth.createUserWithEmailAndPassword(email,password);
+    const uid=cred.user.uid;
+    await secondaryAuth.signOut();
+    await db.collection('users').doc(uid).set({
+      uid,email,name,username,farmCode,role,
+      personalEmail:personalEmail||null,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // Créer lookup par username pour reset mdp
+    await db.collection('logins').doc(`${farmCode}_${username}`).set({authEmail:email,personalEmail:personalEmail||null,uid,farmCode});
     G('nu-name').value='';G('nu-user').value='';G('nu-pass').value='';if(G('nu-email-perso'))G('nu-email-perso').value='';
     await logAudit('modification',`Création utilisateur admin`,`${name} (${role}) — ferme: ${farmCode}`);
     await loadAdminDashboard();
     msg.style.color='var(--acc)';msg.textContent=`✅ ${role} "${name}" créé sur ${farmCode}`;
   }catch(e){
     msg.style.color='var(--dng)';
-    msg.textContent=e.code==='already-exists'?'❌ Cet identifiant existe déjà pour cette ferme':'❌ Erreur : '+(e.message||e.code);
+    msg.textContent=e.code==='auth/email-already-in-use'?'❌ Cet identifiant existe déjà pour cette ferme':'❌ Erreur : '+e.message;
   }
   hideLoader();
 }
@@ -4069,12 +4074,11 @@ async function deleteUser(uid,email){
   showLoader('Suppression…');
   try{
     const u=(window._users||[]).find(x=>x.id===uid);
-    // Suppression serveur : compte auth + users + logins.
-    await fns.httpsCallable('deleteUserAccount')({uid});
+    await db.collection('users').doc(uid).delete();
     await logAudit('modification','Suppression utilisateur',`${u?.name||uid} (${u?.farmCode||'?'})`);
     await loadAdminDashboard();
   }
-  catch(e){alert('Erreur : '+(e.message||e.code));}
+  catch(e){alert('Erreur : '+e.message);}
   hideLoader();
 }
 
@@ -5116,18 +5120,25 @@ async function sendOperatorReset(){
 }
 
 async function adminForceResetPassword(uid, username, farmCode){
-  if(!confirm(`Réinitialiser le mot de passe de "${username}" ?\n\nUn mot de passe temporaire sera généré et affiché à l\'écran.`))return;
-  const newPassword=generateTempPassword(); // fallback d'affichage si la fonction ne renvoie rien
+  const newPassword=generateTempPassword();
+  if(!confirm(`Réinitialiser le mot de passe de "${username}" ?\n\nMot de passe temporaire : ${newPassword}\n\nCommuniquez ce mot de passe à l\'utilisateur via WhatsApp.`))return;
   showLoader('Réinitialisation en cours…');
   try{
-    // Reset serveur : updateUser() garde le même UID et révoque les sessions.
-    const r=await fns.httpsCallable('forceResetPassword')({uid,farmCode});
-    const tempPass=(r&&r.data&&r.data.tempPassword)||newPassword;
+    const v=Date.now().toString().slice(-4);
+    const newEmail=`${username}_${farmCode.toLowerCase()}_r${v}@biofloc.app`;
+    const cred=await secondaryAuth.createUserWithEmailAndPassword(newEmail,newPassword);
+    const newUid=cred.user.uid;
+    await secondaryAuth.signOut();
+    const oldSnap=await db.collection('users').doc(uid).get();
+    const oldData=oldSnap.exists?oldSnap.data():{};
+    await db.collection('users').doc(newUid).set({...oldData,uid:newUid,email:newEmail,username,farmCode});
+    await db.collection('users').doc(uid).delete();
+    await db.collection('logins').doc(`${farmCode}_${username}`).set({authEmail:newEmail,personalEmail:oldData.personalEmail||null,uid:newUid,farmCode});
     await logAudit('reset_mdp',`Reset mdp forcé`,`${username} — ferme: ${farmCode}`);
     hideLoader();
     await loadAdminDashboard();
-    alert(`✅ Mot de passe réinitialisé !\n\nIdentifiant : ${username}\nMot de passe temp. : ${tempPass}\n\nCommuniquez à l\'utilisateur via WhatsApp.`);
-  }catch(e){hideLoader();alert('❌ Erreur : '+(e.message||e.code));}
+    alert(`✅ Mot de passe réinitialisé !\n\nIdentifiant : ${username}\nMot de passe temp. : ${newPassword}\n\nCommuniquez à l\'utilisateur via WhatsApp.`);
+  }catch(e){hideLoader();alert('❌ Erreur : '+e.message);}
 }
 
 function generateTempPassword(){
@@ -5147,12 +5158,10 @@ async function toggleFarmActivation(farmCode, currentlyActive){
   if(!confirm(msg))return;
   showLoader(currentlyActive?'Désactivation…':'Activation…');
   try{
-    // Désactivation serveur : met à jour farms.active ET révoque les sessions actives.
-    const r=await fns.httpsCallable('setFarmActive')({farmCode,active:!currentlyActive});
-    const revoked=(r&&r.data&&r.data.sessionsRevoked)||0;
+    await db.collection('farms').doc(farmCode).set({active:!currentlyActive},{merge:true});
     await logAudit('ferme_toggle',`Ferme ${currentlyActive?'désactivée':'réactivée'}`,`farmCode: ${farmCode}`);
     await loadAdminDashboard();
-    alert(`✅ Ferme "${farmCode}" ${currentlyActive?`désactivée — ${revoked} session(s) coupée(s)`:'réactivée — accès rétabli'}.`);
+    alert(`✅ Ferme "${farmCode}" ${currentlyActive?'désactivée — utilisateurs bloqués':'réactivée — accès rétabli'}.`);
   }catch(e){alert('❌ '+e.message);}
   hideLoader();
 }
@@ -9879,17 +9888,23 @@ async function respCreateOperator(){
   const msg=G('r-nu-msg');
   if(!name||!username||!password){msg.style.color='var(--dng)';msg.textContent='⚠️ Tous les champs sont obligatoires';return;}
   if(password.length<6){msg.style.color='var(--dng)';msg.textContent='⚠️ Mot de passe minimum 6 caractères';return;}
+  const email=`${username.replace(/[^a-z0-9]/g,'')}_${APP.farmCode.toLowerCase().replace(/[^a-z0-9]/g,'')}@biofloc.app`;
   showLoader('Création de l\'opérateur…');
   try{
-    // Provisioning serveur (Cloud Function). Le Responsable peut créer un Opérateur sur sa ferme.
-    await fns.httpsCallable('provisionUser')({farmCode:APP.farmCode,name,username,password,role:'Opérateur',canBackup});
+    const cred=await secondaryAuth.createUserWithEmailAndPassword(email,password);
+    const uid=cred.user.uid;
+    await secondaryAuth.signOut();
+    await db.collection('users').doc(uid).set({
+      uid,email,name,username,farmCode:APP.farmCode,role:'Opérateur',canBackup,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:APP.user?.name
+    });
     G('r-nu-name').value='';G('r-nu-user').value='';G('r-nu-pass').value='';G('r-nu-backup').checked=false;
     await logAudit('modification',`Création opérateur`,`${name} (${username}) sur ${APP.farmCode}`);
     await renderRespAdmin();
     msg.style.color='var(--acc)';msg.textContent=`✅ Opérateur "${name}" créé avec succès !`;
   }catch(e){
     msg.style.color='var(--dng)';
-    msg.textContent=e.code==='already-exists'?'❌ Cet identifiant existe déjà':'❌ Erreur : '+(e.message||e.code);
+    msg.textContent=e.code==='auth/email-already-in-use'?'❌ Cet identifiant existe déjà':'❌ Erreur : '+e.message;
   }
   hideLoader();
 }
