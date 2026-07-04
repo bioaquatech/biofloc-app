@@ -5229,7 +5229,7 @@ function swLog(panel){
   if(panel==='inventaire')renderInventairePanel();
   if(panel==='seuils')renderSeuilsPanel();
   if(panel==='analyse')loadAnalyseStock();
-  if(panel==='probio'){calcPWA();updateLactoStatus();}
+  if(panel==='probio'){var _li=G('lacto-seuil');var _lc=(window.APP_INTRANTS||[]).find(x=>x.id==='lacto_conc');if(_li&&_lc&&_lc.seuil!=null&&_lc.seuil!=='')_li.value=_lc.seuil;calcPWA();updateLactoStatus();}
   if(panel==='mouvements')renderMovementsHistory();
   if(panel==='rapportstock'){
     const el=G('rapport-week-start');
@@ -5969,6 +5969,8 @@ function openAddIntrant(){
   G('intrant-modal-title').textContent='Nouvel intrant';
   G('int-name').value='';G('int-cat').value='aliment';G('int-unit').value='kg';
   G('int-cond').value='';if(G('int-seuil'))G('int-seuil').value='0';G('int-msg').textContent='';
+  if(G('int-diss'))G('int-diss').value='';if(G('int-stoech'))G('int-stoech').value='';
+  var _bex=G('int-basifiant-extra');if(_bex)_bex.style.display='none';
   document.querySelector('[name="int-monitoring"][value="strategic"]').checked=true;
   G('intrant-modal').classList.remove('hidden');
 }
@@ -11776,7 +11778,10 @@ window.updateChargeXOF=function(){
 window.fillDefaultCharge=function(i){const d=window.DEFAULT_CHARGES_V9[i]; if(!d)return; setVal('chg-category',d.category); updateChargeSubcats(); setVal('chg-subcategory',d.subcategory); setVal('chg-label',d.subcategory); setVal('chg-type',d.type); setVal('chg-unit',d.unit); setVal('chg-currency','XOF'); setVal('chg-rate','1'); setVal('chg-qty','1'); setVal('chg-date',today()); updateChargeXOF(); const el=G('chg-label'); if(el)el.focus();};
 function readForm(){
  const amount=Number(getVal('chg-amount'))||0, rate=Number(getVal('chg-rate'))||0, cur=getVal('chg-currency')||'XOF';
- return {id:getVal('chg-id')||('charge_'+Date.now()), date:getVal('chg-date')||today(), cycle:getVal('chg-cycle'), category:getVal('chg-category'), subcategory:getVal('chg-subcategory'), label:getVal('chg-label'), name:getVal('chg-label'), type:getVal('chg-type')||'Variable', amount, currency:cur, exchangeRate:(cur.toUpperCase()==='XOF'?1:rate), amountXOF:amount*(cur.toUpperCase()==='XOF'?1:rate), quantity:Number(getVal('chg-qty'))||0, unit:getVal('chg-unit')||'forfait', affectation:getVal('chg-affectation'), affectationDetail:getVal('chg-affect-detail'), supplier:getVal('chg-supplier'), invoice:getVal('chg-invoice'), proof:getVal('chg-proof'), comment:getVal('chg-comment'), status:'Brouillon'};
+ const eid=getVal('chg-id'); const prev=eid?(window.APP_CHARGES||[]).find(x=>x.id===eid):null;
+ const c={id:eid||('charge_'+Date.now()), date:getVal('chg-date')||today(), cycle:getVal('chg-cycle'), category:getVal('chg-category'), subcategory:getVal('chg-subcategory'), label:getVal('chg-label'), name:getVal('chg-label'), type:getVal('chg-type')||'Variable', amount, currency:cur, exchangeRate:(cur.toUpperCase()==='XOF'?1:rate), amountXOF:amount*(cur.toUpperCase()==='XOF'?1:rate), quantity:Number(getVal('chg-qty'))||0, unit:getVal('chg-unit')||'forfait', affectation:getVal('chg-affectation'), affectationDetail:getVal('chg-affect-detail'), supplier:getVal('chg-supplier'), invoice:getVal('chg-invoice'), proof:getVal('chg-proof'), comment:getVal('chg-comment'), status:'Brouillon'};
+ if(prev){ c.status=prev.status||'Brouillon'; if(prev.createdAt)c.createdAt=prev.createdAt; if(prev.createdBy)c.createdBy=prev.createdBy; if(prev.validatedAt)c.validatedAt=prev.validatedAt; if(prev.validatedBy)c.validatedBy=prev.validatedBy; }
+ return c;
 }
 function validateCharge(c){
  const miss=[]; if(!c.date)miss.push('date'); if(!c.category)miss.push('catégorie'); if(!c.label)miss.push('désignation'); if(!c.amount)miss.push('montant'); if(!c.currency)miss.push('devise'); if(c.currency.toUpperCase()!=='XOF'&&!c.exchangeRate)miss.push('taux de change'); if(!c.quantity)miss.push('quantité'); if(!c.unit)miss.push('unité');
