@@ -2816,6 +2816,7 @@ const secondaryAuth=secondaryApp.auth();
 // Échappement HTML global (utilisé par les rendus du script principal).
 // Les blocs ERP (IIFE) ont leur propre copie locale ; celle-ci couvre le reste.
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
+console.log('%cBioFloc build 2026-07-04b (toast-fix + PWA + bassins)','color:#38bdf8;font-weight:700;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // AUTO-RESTORE SESSION ON REFRESH
