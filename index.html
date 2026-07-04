@@ -2813,6 +2813,9 @@ let secondaryApp;
 try{secondaryApp=firebase.app('secondary');}
 catch(e){secondaryApp=firebase.initializeApp(firebaseConfig,'secondary');}
 const secondaryAuth=secondaryApp.auth();
+// Échappement HTML global (utilisé par les rendus du script principal).
+// Les blocs ERP (IIFE) ont leur propre copie locale ; celle-ci couvre le reste.
+function escapeHtml(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
 
 // ═══════════════════════════════════════════════
 // AUTO-RESTORE SESSION ON REFRESH
