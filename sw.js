@@ -1,4 +1,4 @@
-const CACHE='ichtus-v1';
+const CACHE='ichtus-v2';
 const OFFLINE_URLS=['/','index.html'];
 
 self.addEventListener('install',e=>{
