@@ -2,33 +2,185 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Fonction qui vérifie si l'utilisateur connecté appartient bien à la ferme demandée
-    function isUserInFarm(farmCode) {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.farmCode == farmCode;
-    }
+    // ════════════════════════════════════════════════════════════════
+    //  FONCTIONS D'AIDE
+    // ════════════════════════════════════════════════════════════════
+    function isAuth() { return request.auth != null; }
 
-    // Fonction qui vérifie si l'utilisateur est Super Administrateur
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function hasProfile() {
+      return isAuth() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
     function isSuperAdmin() {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['SuperAdmin', 'Administrateur'];
+      return hasProfile() && userData().role in ['SuperAdmin', 'Administrateur', 'superadmin'];
+    }
+    function isResponsable() {
+      return hasProfile() && userData().role in ['Responsable', 'SuperAdmin', 'Administrateur', 'superadmin'];
+    }
+    // Authentifié ET membre de la ferme (farmCode du profil == farmCode de l'URL)
+    function isUserInFarm(farmCode) {
+      return hasProfile() && userData().farmCode == farmCode;
+    }
+    // Données écrites = objet (bloque l'injection de primitifs)
+    function isValidData() {
+      return request.resource.data is map;
     }
 
-    // Collection Utilisateurs
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId; // Un user ne lit que son propre profil
-      allow write: if false; // INTERDIT : Seul le backend peut écrire
+    // ════════════════════════════════════════════════════════════════
+    //  USERS — création côté navigateur avec garde-fous anti-escalade
+    // ════════════════════════════════════════════════════════════════
+    match /users/{uid} {
+      // Lecture : soi-même, ou responsable/superadmin de la même ferme
+      allow read: if isAuth() && (
+        request.auth.uid == uid
+        || isSuperAdmin()
+        || (isResponsable() && resource.data.farmCode == userData().farmCode)
+      );
+
+      // Création : superadmin (tout) ; responsable (Opérateur, dans SA ferme seulement)
+      allow create: if isSuperAdmin()
+        || (
+          isResponsable()
+          && isValidData()
+          && request.resource.data.farmCode == userData().farmCode
+          && request.resource.data.role == 'Opérateur'
+        );
+
+      // Modification : superadmin (tout) ; responsable (même ferme, SANS changer rôle ni ferme)
+      allow update: if isSuperAdmin()
+        || (
+          isResponsable()
+          && isValidData()
+          && resource.data.farmCode == userData().farmCode
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.farmCode == resource.data.farmCode
+        );
+
+      // Suppression : superadmin, ou responsable de la même ferme
+      allow delete: if isSuperAdmin()
+        || (isResponsable() && resource.data.farmCode == userData().farmCode);
     }
 
-    // Collection Fermes et toutes ses sous-collections (bassins, suivi, feed, config...)
-    match /farms/{farmCode}/{document=**} {
-      allow read: if isUserInFarm(farmCode); // Autorisé si le user appartient à cette ferme
-      allow write: if false; // INTERDIT : Seul le backend peut écrire
+    // ── Table logins (email↔uid) — gérée par responsable/superadmin ──
+    match /logins/{doc} {
+      allow read, write: if isResponsable();
     }
 
-    // Collection Super Admin
+    // ── Paramètres plateforme ────────────────────────────────────────
+    match /platform/{doc} {
+      allow read: if isResponsable();
+      allow write: if isSuperAdmin();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  SUPERADMIN — SuperAdmin / Administrateur uniquement
+    // ════════════════════════════════════════════════════════════════
     match /superadmin/{document=**} {
-      allow read, write: if isSuperAdmin(); // Réservé aux admins
+      allow read, write: if isSuperAdmin();
     }
+
+    // ════════════════════════════════════════════════════════════════
+    //  FARMS
+    // ════════════════════════════════════════════════════════════════
+    match /farms/{farmCode} {
+      // Document ferme : lecture membre, écriture superadmin
+      allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+      allow write: if isSuperAdmin();
+
+      // ── COLLECTIONS COURANTES : membre + données valides ───────────
+      // (bassins, suivi, feed, daily, notifications, intrants, sensors,
+      //  suppliers, stock_movements)
+      match /bassins/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if (isUserInFarm(farmCode) || isSuperAdmin()) && isValidData();
+        allow delete: if isUserInFarm(farmCode) || isSuperAdmin();
+      }
+      match /suivi/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if (isUserInFarm(farmCode) || isSuperAdmin()) && isValidData();
+        allow delete: if isUserInFarm(farmCode) || isSuperAdmin();
+      }
+      match /feed/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if (isUserInFarm(farmCode) || isSuperAdmin()) && isValidData();
+        allow delete: if isUserInFarm(farmCode) || isSuperAdmin();
+      }
+      match /daily/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if (isUserInFarm(farmCode) || isSuperAdmin()) && isValidData();
+        allow delete: if isUserInFarm(farmCode) || isSuperAdmin();
+      }
+      match /notifications/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if (isUserInFarm(farmCode) || isSuperAdmin()) && isValidData();
+        allow delete: if isUserInFarm(farmCode) || isSuperAdmin();
+      }
+      match /intrants/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if (isUserInFarm(farmCode) || isSuperAdmin()) && isValidData();
+        allow delete: if isUserInFarm(farmCode) || isSuperAdmin();
+      }
+      match /sensors/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if (isUserInFarm(farmCode) || isSuperAdmin()) && isValidData();
+        allow delete: if isUserInFarm(farmCode) || isSuperAdmin();
+      }
+      match /suppliers/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if (isUserInFarm(farmCode) || isSuperAdmin()) && isValidData();
+        allow delete: if isUserInFarm(farmCode) || isSuperAdmin();
+      }
+      match /stock_movements/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if (isUserInFarm(farmCode) || isSuperAdmin())
+                              && isValidData() && request.resource.data.quantity is number;
+        allow delete: if isUserInFarm(farmCode) || isSuperAdmin();
+      }
+
+      // ── COLLECTIONS SENSIBLES : Responsable minimum ────────────────
+      // config = paramètres ferme + PERMISSIONS des sections (Responsable les gère)
+      match /config/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow write: if (isResponsable() && isUserInFarm(farmCode)) || isSuperAdmin();
+      }
+      match /charges/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if ((isResponsable() && isUserInFarm(farmCode)) || isSuperAdmin())
+                              && isValidData()
+                              && request.resource.data.amount is number
+                              && request.resource.data.amount >= 0;
+        allow delete: if (isResponsable() && isUserInFarm(farmCode)) || isSuperAdmin();
+      }
+      match /stock_entries/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create, update: if ((isResponsable() && isUserInFarm(farmCode)) || isSuperAdmin())
+                              && isValidData() && request.resource.data.quantity is number;
+        allow delete: if (isResponsable() && isUserInFarm(farmCode)) || isSuperAdmin();
+      }
+      match /inventaires/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow write: if ((isResponsable() && isUserInFarm(farmCode)) || isSuperAdmin());
+      }
+
+      // ── AUDIT : append-only, jamais modifiable/supprimable ─────────
+      match /audit/{docId} {
+        allow read: if isUserInFarm(farmCode) || isSuperAdmin();
+        allow create: if (isUserInFarm(farmCode) || isSuperAdmin())
+                      && isValidData()
+                      && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      // ── ERREURS : création membre, lecture superadmin, immuable ────
+      match /errors/{docId} {
+        allow read: if isSuperAdmin();
+        allow create: if (isUserInFarm(farmCode) || isSuperAdmin()) && isValidData();
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Tout le reste : refusé par défaut ────────────────────────────
   }
 }
