@@ -18,12 +18,17 @@
 <!-- Schema.org pour Google -->
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"BioFloc ERP","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Logiciel ERP de gestion de fermes aquacoles biofloc. Suivi de production, logistique, stock et comptabilité.","offers":{"@type":"Offer","price":"0","priceCurrency":"XOF"},"author":{"@type":"Organization","name":"BioAquaTech"}}</script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+<!-- SRI (chaîne d'approvisionnement) : integrity sur les CDN à version figée
+     (chart.js, xlsx). Firebase (gstatic) : crossorigin seul, PAS d'integrity —
+     Google met à jour ces fichiers, un hash figé casserait l'app.
+     Si un jour chart.js/xlsx ne se chargent plus (charts/exports KO), retirez
+     leur attribut integrity : cela signifie que le CDN a changé le fichier. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js" crossorigin="anonymous"></script>
 <style>
 :root{
   --bg:#060F1E;
@@ -520,12 +525,9 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <div class="boot-clock" id="boot-clock">--:--:--</div>
     <div class="boot-date" id="boot-date">—</div>
     <div class="boot-sep"></div>
-    <div class="boot-lbl">Code Ferme</div>
-    <input id="b-farm" class="boot-inp" type="text" placeholder="Ex: FARM01" autocomplete="off"
-      onkeydown="if(event.key==='Enter')document.getElementById('b-user').focus()"
-      onblur="previewBootLogo(this.value.trim().toUpperCase())">
-    <div class="boot-lbl">Nom d'utilisateur</div>
-    <input id="b-user" class="boot-inp" type="text" placeholder="Votre identifiant" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('b-pass').focus()">
+    <div class="boot-lbl">Adresse email</div>
+    <input id="b-email" class="boot-inp" type="email" placeholder="vous@biofloc.app" autocomplete="username" autocapitalize="off" spellcheck="false"
+      onkeydown="if(event.key==='Enter')document.getElementById('b-pass').focus()">
     <div class="boot-lbl">Mot de passe</div>
     <input id="b-pass" class="boot-inp" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     <button id="btn-farm-access" class="boot-btn" type="button" onclick="doLogin()">ACCÉDER À MA FERME →</button>
@@ -2825,7 +2827,7 @@ const secondaryAuth=secondaryApp.auth();
 // Échappement HTML global (utilisé par les rendus du script principal).
 // Les blocs ERP (IIFE) ont leur propre copie locale ; celle-ci couvre le reste.
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
-console.log('%cBioFloc build 2026-07-04i (race conditions login + autosave)','color:#38bdf8;font-weight:700;font-size:14px');
+console.log('%cBioFloc build 2026-07-04m (validation bassins)','color:#38bdf8;font-weight:700;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // AUTO-RESTORE SESSION ON REFRESH
@@ -3234,33 +3236,32 @@ loadPlatformSettings();
 async function doLogin(){
   if(_authRestoreInProgress) return; // garde anti double-clic / condition de course
   _authRestoreInProgress=true; // bloquer l'auto-restore pendant le login manuel
-  const farmCode=(G('b-farm').value||'').trim().toUpperCase();
-  const username=(G('b-user').value||'').trim().toLowerCase();
+  const email=(G('b-email').value||'').trim().toLowerCase();
   const password=(G('b-pass').value||'').trim();
   const errEl=G('boot-err');
-  if(!farmCode||!username||!password){errEl.textContent='⚠️ Tous les champs sont obligatoires';errEl.classList.add('show');_authRestoreInProgress=false;return;}
+  if(!email||!password){errEl.textContent='⚠️ Email et mot de passe obligatoires';errEl.classList.add('show');_authRestoreInProgress=false;return;}
   errEl.classList.remove('show');
   showLoader('Étape 1/4 — Authentification…');
   try{
-    const email=`${username.toLowerCase().replace(/[^a-z0-9]/g,'')}_${farmCode.toLowerCase().replace(/[^a-z0-9]/g,'')}@biofloc.app`;
+    // L'utilisateur saisit son email complet ; aucune construction d'email prévisible côté client.
     let cred;
     try{
       cred=await auth.signInWithEmailAndPassword(email,password);
     }catch(authErr){
-      throw new Error(authErr.code==='auth/wrong-password'||authErr.code==='auth/user-not-found'||authErr.code==='auth/invalid-credential'
-        ?'❌ Identifiant ou mot de passe incorrect'
+      throw new Error(authErr.code==='auth/wrong-password'||authErr.code==='auth/user-not-found'||authErr.code==='auth/invalid-credential'||authErr.code==='auth/invalid-email'
+        ?'❌ Email ou mot de passe incorrect'
         :'❌ Authentification échouée : '+authErr.message);
     }
     showLoader('Étape 2/4 — Chargement du profil…');
     const userSnap=await db.collection('users').doc(cred.user.uid).get().catch(e=>{throw new Error('❌ Profil inaccessible : '+e.message);});
-    // Sécurité (IDOR) : jamais de profil par défaut. Le profil DOIT exister.
+    // Sécurité : jamais de profil par défaut. Le profil DOIT exister.
     if(!userSnap.exists){await auth.signOut();throw new Error('❌ Profil utilisateur introuvable');}
     const userData=userSnap.data();
-    // Sécurité (IDOR) : la ferme fait autorité côté base, pas le champ saisi.
-    // On compare la ferme du profil au code tapé ; en cas d'écart, accès refusé.
-    if(String(userData.farmCode||'').trim().toUpperCase()!==farmCode){await auth.signOut();throw new Error('❌ Accès refusé à cette ferme');}
+    // Le code ferme est DÉDUIT du profil (base), jamais saisi ni deviné côté client.
+    const farmCode=String(userData.farmCode||'').trim().toUpperCase();
+    if(!farmCode){await auth.signOut();throw new Error('❌ Aucune ferme associée à ce compte. Contactez l\'administrateur.');}
     const role=userData.role||'Opérateur';
-    APP.user={uid:cred.user.uid,email,name:userData.name||username,role,farmCode,canBackup:userData.canBackup||false};
+    APP.user={uid:cred.user.uid,email,name:userData.name||email,role,farmCode,canBackup:userData.canBackup||false};
     APP.farmCode=farmCode;
     localStorage.setItem('ichtus_last_farmCode',farmCode);
     showLoader('Étape 3/4 — Vérification de la ferme…');
@@ -3361,7 +3362,7 @@ async function doLogout(expired=false){
   FEED_TYPES[3].batches=[{id:1,qty:20,price:627}];  // K5b
   FEED_TYPES[4].batches=[{id:1,qty:20,price:569}];  // K6
   FEED_TYPES[5].batches=[{id:1,qty:20,price:569}];  // K6b
-  G('b-farm').value='';G('b-user').value='';G('b-pass').value='';
+  if(G('b-email'))G('b-email').value='';if(G('b-pass'))G('b-pass').value='';
   if(expired)alert('⏱ Session expirée — veuillez vous reconnecter.');
   showScreen('screen-boot');
 }
@@ -3538,10 +3539,58 @@ function showSyncing(){syncDotEl=G('sync-dot');if(syncDotEl)syncDotEl.style.back
 function showSynced(){syncDotEl=G('sync-dot')||syncDotEl;if(syncDotEl)syncDotEl.style.background='var(--acc)';}
 function showSyncErr(){syncDotEl=G('sync-dot')||syncDotEl;if(syncDotEl)syncDotEl.style.background='var(--dng)';}
 
+// ── Validation stricte des bassins AVANT écriture Firestore (défense en profondeur) ──
+function validateBassinData(b){
+  if(!b || typeof b!=='object') return {ok:false,msg:'données de bassin invalides'};
+  const name=b.name;
+  if(typeof name!=='string' || !name.trim()) return {ok:false,msg:'nom de bassin manquant'};
+  if(name.length>60) return {ok:false,msg:'nom trop long (max 60)'};
+  if(/[<>\u0000-\u001F]/.test(name)) return {ok:false,msg:'nom : caractères non autorisés'};
+  const NUM={vol:[0,100000],nbInit:[0,1e9],poids:[0,100000],mort:[0,1e9],alimReel:[0,1e7],
+    temp:[0,60],ph:[0,14],DO:[0,50],NH3:[0,5000],NO2:[0,5000],TAN:[0,5000],imhoff:[0,5000],
+    probiot:[0,1e7],TAC:[0,5000],basifiant:[0,1e7],carb:[0,1e7]};
+  for(const k in NUM){
+    const v=b[k];
+    if(v===null||v===undefined||v==='') continue;
+    const n=Number(v);
+    if(!isFinite(n)) return {ok:false,msg:'valeur non numérique : '+k};
+    if(n<NUM[k][0]||n>NUM[k][1]) return {ok:false,msg:'valeur hors bornes : '+k+' = '+n};
+  }
+  for(const dk of ['startDate','harvestDate']){
+    const d=b[dk];
+    if(d===null||d===undefined||d==='') continue;
+    if(typeof d!=='string' || !/^\d{4}-\d{2}-\d{2}$/.test(d) || isNaN(new Date(d).getTime()))
+      return {ok:false,msg:'date invalide : '+dk};
+  }
+  for(const sk of ['statut','feedId','basifiantType','carbType','note']){
+    const s=b[sk];
+    if(s===null||s===undefined) continue;
+    if(typeof s!=='string') return {ok:false,msg:'champ texte invalide : '+sk};
+    if(s.length>1000) return {ok:false,msg:sk+' trop long'};
+    if(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(s)) return {ok:false,msg:sk+' : caractères de contrôle interdits'};
+  }
+  return {ok:true};
+}
+window.validateBassinData=validateBassinData;
+function _bassinsValid(list){
+  for(let i=0;i<list.length;i++){
+    const r=validateBassinData(list[i]);
+    if(!r.ok){
+      const nm=(list[i]&&list[i].name)||('bassin #'+i);
+      const m='❌ Sauvegarde refusée — '+nm+' : '+r.msg;
+      if(window.showToast)showToast(m,'dng'); else alert(m);
+      showSyncErr();
+      return false;
+    }
+  }
+  return true;
+}
+
 function saveBassins(){
   if(!APP.farmCode)return;
   debounce('bassins',()=>{
     showSyncing();
+    if(!_bassinsValid(APP.state.bassins))return; // données invalides → on n'écrit rien
     const batch=db.batch();
     APP.state.bassins.forEach((b,i)=>{
       batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i},{merge:true});
@@ -3557,6 +3606,8 @@ function saveBassin(i){
   debounce('bassin1',()=>{
     if(!APP.farmCode || !window._dirtyBassins.size) return;
     showSyncing();
+    const _dirty=[...window._dirtyBassins].map(idx=>APP.state.bassins[idx]).filter(Boolean);
+    if(!_bassinsValid(_dirty))return; // invalide → on garde les bassins "dirty" pour réessayer après correction
     const batch=db.batch();
     window._dirtyBassins.forEach(idx=>{
       const b=APP.state.bassins[idx];
@@ -3571,6 +3622,7 @@ async function saveBassinsNow(){
   if(!APP.farmCode||!Array.isArray(APP.state.bassins)||APP.state.bassins.length===0)return;
   clearTimeout(_dbt['bassins']);_pendingSaveKeys.delete('bassins');
   showSyncing();
+  if(!_bassinsValid(APP.state.bassins))return; // données invalides → on n'écrit rien
   const batch=db.batch();
   APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i},{merge:true});});
   await batch.commit().then(()=>{showSynced();setTimeout(checkVolumeLimit,0);}).catch(showSyncErr);
