@@ -2816,7 +2816,7 @@ const secondaryAuth=secondaryApp.auth();
 // Échappement HTML global (utilisé par les rendus du script principal).
 // Les blocs ERP (IIFE) ont leur propre copie locale ; celle-ci couvre le reste.
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
-console.log('%cBioFloc build 2026-07-04b (toast-fix + PWA + bassins)','color:#38bdf8;font-weight:700;font-size:14px');
+console.log('%cBioFloc build 2026-07-04d (concurrence bassins)','color:#38bdf8;font-weight:700;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // AUTO-RESTORE SESSION ON REFRESH
@@ -3520,17 +3520,35 @@ function saveBassins(){
     showSyncing();
     const batch=db.batch();
     APP.state.bassins.forEach((b,i)=>{
-      batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});
+      batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i},{merge:true});
     });
     batch.commit().then(()=>{showSynced();setTimeout(checkVolumeLimit,0);}).catch(showSyncErr);
   },600);
 }
+// Sauvegarde ciblée par bassin (évite l'écrasement en saisie simultanée entre utilisateurs).
+window._dirtyBassins = window._dirtyBassins || new Set();
+function saveBassin(i){
+  if(!APP.farmCode) return;
+  if(typeof i==='number' && i>=0) window._dirtyBassins.add(i);
+  debounce('bassin1',()=>{
+    if(!APP.farmCode || !window._dirtyBassins.size) return;
+    showSyncing();
+    const batch=db.batch();
+    window._dirtyBassins.forEach(idx=>{
+      const b=APP.state.bassins[idx];
+      if(b) batch.set(farmCol('bassins').doc(String(idx).padStart(3,'0')),{...b,_order:idx},{merge:true});
+    });
+    window._dirtyBassins.clear();
+    batch.commit().then(()=>{showSynced();setTimeout(checkVolumeLimit,0);}).catch(showSyncErr);
+  },600);
+}
+window.saveBassin=saveBassin;
 async function saveBassinsNow(){
   if(!APP.farmCode||!Array.isArray(APP.state.bassins)||APP.state.bassins.length===0)return;
   clearTimeout(_dbt['bassins']);_pendingSaveKeys.delete('bassins');
   showSyncing();
   const batch=db.batch();
-  APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});});
+  APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i},{merge:true});});
   await batch.commit().then(()=>{showSynced();setTimeout(checkVolumeLimit,0);}).catch(showSyncErr);
 }
 // Sync ERP bassins (localStorage bassins_ref) → APP.state.bassins → Firebase
@@ -3538,6 +3556,12 @@ async function saveBassinsNow(){
 window.syncERPBassinsToProduction=async function(resetMode){
   if(!APP.farmCode){toast('Connectez-vous à une ferme d\'abord','warn');return;}
   var erpBs=typeof window.bassins==='function'?window.bassins():[];
+  // Anti-fantômes : on ignore les bassins au format fabriqué "Bassin 1".."Bassin 16"
+  // (sans zéro devant). Les vrais bassins de l'app utilisent "Bassin 01"/"Bassin 02"
+  // ou des noms personnalisés. Empêche toute recréation de fantômes même si le
+  // cache local reste pollué par une ancienne version.
+  var _phantom=/^Bassin ([1-9]|1[0-6])$/;
+  erpBs=erpBs.filter(function(b){return !_phantom.test((b&&(b.name||b.nom))||'');});
   if(!erpBs.length){toast('Aucun bassin ERP à synchroniser','warn');return;}
   var existing=Array.isArray(APP.state.bassins)?APP.state.bassins:[];
   var FEED_ID=(typeof FEED_TYPES!=='undefined'&&FEED_TYPES[0])?FEED_TYPES[0].id:'K4';
@@ -7699,6 +7723,9 @@ function removeBassin(i){
   }
   if(!confirm(`Supprimer ${b.name} ?${hasData?' Cette action supprimera toutes les données associées.':''}`))return;
   APP.state.bassins.splice(i,1);buildBTable();popSelects();upAll();saveBassins();
+  // Supprimer le doc orphelin à l'ancien index le plus élevé (= longueur APRÈS splice),
+  // sinon le bassin supprimé réapparaît au rechargement.
+  farmCol('bassins').doc(String(APP.state.bassins.length).padStart(3,'0')).delete().catch(()=>{});
 }
 
 async function renameBassin(i, newName){
@@ -7977,15 +8004,15 @@ function buildBTable(){
           : '<span style="font-weight:700;color:var(--t2);font-size:11px">'+b.name+'<br><small style="color:var(--warn)">📅 historique</small></span>'
         }
       </td>
-      <td><select class="si" style="font-size:10px;padding:2px 5px" onchange="if(!APP_historyDate){APP.state.bassins[${i}].statut=this.value;if(this.value==='Récolté')APP.state.bassins[${i}].harvestDate='${today()}';upAll();}else{APP_historyData[${i}].statut=this.value;}">
+      <td><select class="si" style="font-size:10px;padding:2px 5px" onchange="if(!APP_historyDate){APP.state.bassins[${i}].statut=this.value;if(this.value==='Récolté')APP.state.bassins[${i}].harvestDate='${today()}';upConfigCalcs();renderSuivi();saveBassin(${i});}else{APP_historyData[${i}].statut=this.value;}">
         <option${b.statut==='Actif'?' selected':''}>Actif</option>
         <option${b.statut==='Récolté'?' selected':''}>Récolté</option>
         <option${b.statut==='Vide'?' selected':''}>Vide</option>
       </select></td>
-      <td><input type="date" class="ci" value="${b.startDate||''}" style="font-size:9px;width:98px;padding:1px 3px" title="Date de démarrage du cycle" onchange="if(!APP_historyDate)APP.state.bassins[${i}].startDate=this.value;else APP_historyData[${i}].startDate=this.value;upConfigCalcs()"></td>
-      <td><input type="number" class="ci" value="${fmt(b.vol,1)}" step="0.1" style="width:52px" onchange="if(!APP_historyDate)APP.state.bassins[${i}].vol=+this.value;else APP_historyData[${i}].vol=+this.value;upConfigCalcs()"></td>
-      <td><input type="number" class="ci" value="${b.nbInit}" style="width:60px" onchange="if(!APP_historyDate)APP.state.bassins[${i}].nbInit=+this.value;else APP_historyData[${i}].nbInit=+this.value;upConfigCalcs()"></td>
-      <td><input type="number" class="ci" value="${b.mort}" style="width:50px" onchange="if(!APP_historyDate)APP.state.bassins[${i}].mort=+this.value;else APP_historyData[${i}].mort=+this.value;upConfigCalcs()"></td>
+      <td><input type="date" class="ci" value="${b.startDate||''}" style="font-size:9px;width:98px;padding:1px 3px" title="Date de démarrage du cycle" onchange="if(!APP_historyDate){APP.state.bassins[${i}].startDate=this.value;saveBassin(${i});}else APP_historyData[${i}].startDate=this.value;upConfigCalcs()"></td>
+      <td><input type="number" class="ci" value="${fmt(b.vol,1)}" step="0.1" style="width:52px" onchange="if(!APP_historyDate){APP.state.bassins[${i}].vol=+this.value;saveBassin(${i});}else APP_historyData[${i}].vol=+this.value;upConfigCalcs()"></td>
+      <td><input type="number" class="ci" value="${b.nbInit}" style="width:60px" onchange="if(!APP_historyDate){APP.state.bassins[${i}].nbInit=+this.value;saveBassin(${i});}else APP_historyData[${i}].nbInit=+this.value;upConfigCalcs()"></td>
+      <td><input type="number" class="ci" value="${b.mort}" style="width:50px" onchange="if(!APP_historyDate){APP.state.bassins[${i}].mort=+this.value;saveBassin(${i});}else APP_historyData[${i}].mort=+this.value;upConfigCalcs()"></td>
       <td class="cf" id="bn-${i}">—</td>
       <td><input type="number" class="ci" value="${fmt(b.poids,1)}" step="0.1" style="width:60px"
         onchange="
@@ -7998,9 +8025,10 @@ function buildBTable(){
             if(!APP_historyDate)APP.state.bassins[${i}].feedId=autoFt.id;
             else APP_historyData[${i}].feedId=autoFt.id;
           }
+          if(!APP_historyDate)saveBassin(${i});
           upConfigCalcs()"></td>
       <td><select id="feed-sel-${i}" class="si" style="font-size:10px;padding:2px 5px;border-color:var(--gold);color:var(--gold)"
-        onchange="if(!APP_historyDate)APP.state.bassins[${i}].feedId=this.value;else APP_historyData[${i}].feedId=this.value;upConfigCalcs()">
+        onchange="if(!APP_historyDate){APP.state.bassins[${i}].feedId=this.value;saveBassin(${i});}else APP_historyData[${i}].feedId=this.value;upConfigCalcs()">
         ${FEED_TYPES.map(f=>{
           const autoFt=getRationEntry(b.poids||1);
           const selected=(b.feedId?b.feedId===f.id:autoFt.id===f.id);
@@ -8010,25 +8038,25 @@ function buildBTable(){
       <td class="cf" id="bb-${i}">—</td>
       <td class="cf" id="br-${i}">—</td>
       <td class="cf" id="bt-${i}">—</td>
-      <td><input type="number" class="ci" value="${fmt(b.alimReel,3)}" step="0.001" style="width:65px" title="Aliment réel (kg) — le champ Mélasse se calcule automatiquement (C:N 15:1)" onchange="const v=+this.value;if(!APP_historyDate)APP.state.bassins[${i}].alimReel=v;else APP_historyData[${i}].alimReel=v;upConfigCalcs();autoCarbCN(${i});"></td>
-      <td><input type="number" id="bT-${i}" class="${optCls(b.temp)}" value="${optVal(b.temp)}" step="0.1" style="width:52px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].temp=v;else APP_historyData[${i}].temp=v;upConfigCalcs()">
+      <td><input type="number" class="ci" value="${fmt(b.alimReel,3)}" step="0.001" style="width:65px" title="Aliment réel (kg) — le champ Mélasse se calcule automatiquement (C:N 15:1)" onchange="const v=+this.value;if(!APP_historyDate){APP.state.bassins[${i}].alimReel=v;saveBassin(${i});}else APP_historyData[${i}].alimReel=v;upConfigCalcs();autoCarbCN(${i});"></td>
+      <td><input type="number" id="bT-${i}" class="${optCls(b.temp)}" value="${optVal(b.temp)}" step="0.1" style="width:52px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].temp=v;saveBassin(${i});}else APP_historyData[${i}].temp=v;upConfigCalcs()">
         <div id="bTst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
-      <td><input type="number" id="bP-${i}" class="${optCls(b.ph)}" value="${optVal(b.ph)}" step="0.01" style="width:50px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].ph=v;else APP_historyData[${i}].ph=v;upConfigCalcs()">
+      <td><input type="number" id="bP-${i}" class="${optCls(b.ph)}" value="${optVal(b.ph)}" step="0.01" style="width:50px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].ph=v;saveBassin(${i});}else APP_historyData[${i}].ph=v;upConfigCalcs()">
         <div id="bPst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
-      <td><input type="number" id="bD-${i}" class="${optCls(b.DO)}" value="${optVal(b.DO)}" step="0.1" style="width:50px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].DO=v;else APP_historyData[${i}].DO=v;upConfigCalcs()">
+      <td><input type="number" id="bD-${i}" class="${optCls(b.DO)}" value="${optVal(b.DO)}" step="0.1" style="width:50px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].DO=v;saveBassin(${i});}else APP_historyData[${i}].DO=v;upConfigCalcs()">
         <div id="bDst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
-      <td><input type="number" id="bN-${i}" class="${optCls(b.NH3)}" value="${optVal(b.NH3)}" step="0.01" style="width:55px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].NH3=v;else APP_historyData[${i}].NH3=v;upConfigCalcs()">
+      <td><input type="number" id="bN-${i}" class="${optCls(b.NH3)}" value="${optVal(b.NH3)}" step="0.01" style="width:55px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].NH3=v;saveBassin(${i});}else APP_historyData[${i}].NH3=v;upConfigCalcs()">
         <div id="bNst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
       <td><input type="number" id="bNO2-${i}" class="${optCls(b.NO2)}" value="${optVal(b.NO2)}" step="0.01" style="width:55px;border-color:rgba(255,143,171,.3)" placeholder="—"
           title="Nitrites NO₂ — Vigilance 0.2 · Alerte 0.5 · Urgence 1.0 mg/L"
-          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].NO2=v;else APP_historyData[${i}].NO2=v;upConfigCalcs()">
+          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].NO2=v;saveBassin(${i});}else APP_historyData[${i}].NO2=v;upConfigCalcs()">
         <div id="bNO2st-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
       <td>
         <input type="number" id="bTAN-${i}" class="${b.TAN!==null&&b.TAN>=1?'ci wi':'ci opt'}" value="${optVal(b.TAN)}" step="0.01" style="width:55px;border-color:${b.TAN!==null&&b.TAN>=1?'var(--warn)':'rgba(245,166,35,.25)'}"
           placeholder="—" title="TAN ≥1 mg/L → Phase 2 mélasse · Saisir pour pré-remplir le calculateur"
           onchange="
             const v=this.value===''?null:+this.value;
-            if(!APP_historyDate)APP.state.bassins[${i}].TAN=v;
+            if(!APP_historyDate){APP.state.bassins[${i}].TAN=v;saveBassin(${i});}
             else APP_historyData[${i}].TAN=v;
             upConfigCalcs();
             const bx=APP_historyDate?APP_historyData[${i}]:APP.state.bassins[${i}];
@@ -8046,14 +8074,14 @@ function buildBTable(){
         <input type="number" id="bIMH-${i}" class="${b.imhoff!=null?(b.imhoff<10||b.imhoff>45?'ci di':b.imhoff>=25&&b.imhoff<=40?'ci':'ci wi'):'ci opt'}"
           value="${b.imhoff??''}" step="0.5" style="width:60px;border-color:${b.imhoff!=null?b.imhoff<10||b.imhoff>45?'var(--dng)':b.imhoff>=25&&b.imhoff<=40?'var(--acc)':'var(--warn)':'rgba(125,211,252,.25)'}"
           placeholder="—" title="Cône Imhoff 30 min — optimal tilapia 25–40 ml/L"
-          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].imhoff=v;else APP_historyData[${i}].imhoff=v;upConfigCalcs()">
+          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].imhoff=v;saveBassin(${i});}else APP_historyData[${i}].imhoff=v;upConfigCalcs()">
         <div id="bIMHst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div>
       </td>
       <td>
         <input type="number" id="bPROBIOT-${i}" class="${(b.probiot!==null&&b.probiot!==undefined)?'ci':'ci opt'}"
           value="${b.probiot??''}" step="1" style="width:58px;border-color:rgba(192,132,252,.3)"
           placeholder="—" title="Probiot utilisé ce jour (ml)"
-          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].probiot=v;else APP_historyData[${i}].probiot=v;upConfigCalcs()">
+          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].probiot=v;saveBassin(${i});}else APP_historyData[${i}].probiot=v;upConfigCalcs()">
       </td>
       <td>
         <input type="number" id="bTAC-${i}" class="${(b.TAC!==null&&b.TAC!==undefined)?'ci'+(b.TAC<50?' di':b.TAC<100?' wi':''):'ci opt'}"
@@ -8061,7 +8089,7 @@ function buildBTable(){
           placeholder="—" title="TAC mesuré (mg/L CaCO₃) — cible ≥150 mg/L"
           onchange="
             const v=this.value===''?null:+this.value;
-            if(!APP_historyDate)APP.state.bassins[${i}].TAC=v;
+            if(!APP_historyDate){APP.state.bassins[${i}].TAC=v;saveBassin(${i});}
             else APP_historyData[${i}].TAC=v;
             upConfigCalcs();
             if(v!==null){
@@ -8077,14 +8105,14 @@ function buildBTable(){
       <!-- Basifiant : type + quantité -->
       <td style="min-width:100px">
         <select id="bBAS-type-${i}" class="si" style="font-size:9px;padding:1px 3px;width:58px;border-color:rgba(61,142,245,.3);color:var(--acc2);margin-bottom:2px"
-          onchange="if(!APP_historyDate)APP.state.bassins[${i}].basifiantType=this.value;else APP_historyData[${i}].basifiantType=this.value;upConfigCalcs()">
+          onchange="if(!APP_historyDate){APP.state.bassins[${i}].basifiantType=this.value;saveBassin(${i});}else APP_historyData[${i}].basifiantType=this.value;upConfigCalcs()">
           <option value="">—</option>
           ${PARAM_LISTS.basifiants.map(item=>`<option value="${item.label}"${b.basifiantType===item.label?' selected':''}>${item.label} (${item.unit})</option>`).join('')}
         </select>
         <input type="number" id="bBAS-${i}" class="${b.basifiant?'ci':'ci opt'}" value="${b.basifiant??''}"
           step="0.1" style="width:58px;font-size:10px" placeholder="g"
           title="Quantité basifiant utilisée (g)"
-          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].basifiant=v;else APP_historyData[${i}].basifiant=v;upConfigCalcs()">
+          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].basifiant=v;saveBassin(${i});}else APP_historyData[${i}].basifiant=v;upConfigCalcs()">
         ${b.basifiant&&b.basifiantType?`<div style="font-size:8px;color:var(--acc2);text-align:center">${b.basifiant}g ${b.basifiantType}</div>`:''}
       </td>
 
@@ -8092,7 +8120,7 @@ function buildBTable(){
       <td style="min-width:110px">
         <select id="bCARB-type-${i}" class="si" style="font-size:9px;padding:1px 3px;width:82px;border-color:rgba(245,158,11,.3);color:var(--warn);margin-bottom:2px"
           onchange="
-            if(!APP_historyDate)APP.state.bassins[${i}].carbType=this.value;
+            if(!APP_historyDate){APP.state.bassins[${i}].carbType=this.value;saveBassin(${i});}
             else APP_historyData[${i}].carbType=this.value;
             const unit=G('bCARB-unit-${i}');
             const found=PARAM_LISTS.carbohydrates.find(x=>x.label===this.value);
@@ -8105,7 +8133,7 @@ function buildBTable(){
           <input type="number" id="bCARB-${i}" class="${b.carb?'ci':'ci opt'}" value="${b.carb??''}"
             step="1" style="width:52px;font-size:10px" placeholder="qté"
             title="Quantité de carbohydrate utilisée"
-            onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate)APP.state.bassins[${i}].carb=v;else APP_historyData[${i}].carb=v;upConfigCalcs()">
+            onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].carb=v;saveBassin(${i});}else APP_historyData[${i}].carb=v;upConfigCalcs()">
           <span id="bCARB-unit-${i}" style="font-size:9px;color:var(--t3)">${(PARAM_LISTS.carbohydrates.find(x=>x.label===b.carbType)||{unit:'g'}).unit}</span>
         </div>
         ${b.carb&&b.carbType?`<div style="font-size:8px;color:var(--warn);text-align:center">${b.carb}${b.carbType==='Mélasse'?'mL':'g'} ${b.carbType}</div>`:''}
@@ -8243,7 +8271,9 @@ function upConfigCalcs(){
   G('s-actifs').textContent=actifs;G('s-bio').textContent=fmt(tBio,1)+' kg';G('s-alim').textContent=fmt(tTheo,3)+' kg';G('s-recolte').textContent=recoltes;
   renderDashboardKPIs();
   if(typeof checkAndNotify==='function')checkAndNotify();
-  if(typeof saveBassins==='function')saveBassins();
+  // Ne déclenche PLUS de sauvegarde pleine ici : les saisies d'un seul bassin
+  // persistent via saveBassin(i) (merge ciblé) pour éviter l'écrasement entre
+  // utilisateurs. Les changements structurels appellent saveBassins()/saveBassinsNow().
 }
 
 // ── FEATURE 11: C/N AUTOMATIQUE ──────────────────────────────────────
@@ -9675,12 +9705,16 @@ function injectIoTDataIntoBassins(readings){
   let changed=false;
   Object.values(readings).forEach(r=>{
     if(!r.bassin)return;
-    const b=APP.state.bassins.find(x=>x.name===r.bassin);
-    if(!b)return;
-    if(r.temp!=null&&b.temp!==r.temp){b.temp=r.temp;changed=true;}
-    if(r.ph!=null&&b.ph!==r.ph){b.ph=r.ph;changed=true;}
-    if(r.DO!=null&&b.DO!==r.DO){b.DO=r.DO;changed=true;}
-    if(r.NH3!=null&&b.NH3!==r.NH3){b.NH3=r.NH3;changed=true;}
+    const bi=APP.state.bassins.findIndex(x=>x.name===r.bassin);
+    if(bi<0)return;
+    const b=APP.state.bassins[bi];
+    let bChanged=false;
+    if(r.temp!=null&&b.temp!==r.temp){b.temp=r.temp;changed=true;bChanged=true;}
+    if(r.ph!=null&&b.ph!==r.ph){b.ph=r.ph;changed=true;bChanged=true;}
+    if(r.DO!=null&&b.DO!==r.DO){b.DO=r.DO;changed=true;bChanged=true;}
+    if(r.NH3!=null&&b.NH3!==r.NH3){b.NH3=r.NH3;changed=true;bChanged=true;}
+    // Persistance ciblée du bassin capteur (upConfigCalcs ne sauvegarde plus)
+    if(bChanged&&typeof saveBassin==='function')saveBassin(bi);
     // Sauvegarder l\'historique IoT
     const dateStr=today();
     farmCol('sensorHistory').doc(dateStr).set({
