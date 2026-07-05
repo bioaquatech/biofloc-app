@@ -244,25 +244,34 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
 (function(){
   function add(el, cls){ cls.split(' ').forEach(c=>c&&el.classList.add(c)); }
   function adaptDesignClasses(){
-    document.querySelectorAll('.tabnav').forEach(el=>add(el,'sidebar sidebar-nav'));
-    document.querySelectorAll('.tb').forEach(el=>add(el,'nav-item'));
-    document.querySelectorAll('.main').forEach(el=>add(el,'main-content page-container'));
-    document.querySelectorAll('.card,.farm-card,.feed-card,.feed-sum-card').forEach(el=>add(el,'panel'));
-    document.querySelectorAll('.ctitle').forEach(el=>add(el,'panel-title'));
-    document.querySelectorAll('.tw').forEach(el=>add(el,'table-wrapper table-scroll'));
-    document.querySelectorAll('table').forEach(el=>add(el,'data-table'));
-    document.querySelectorAll('.mgrid').forEach(el=>add(el,'kpi-grid'));
-    document.querySelectorAll('.met').forEach(el=>add(el,'kpi-card'));
-    document.querySelectorAll('.form-inp, .si, input.ci, input[type=date].di2').forEach(el=>add(el,'form-control'));
-    document.querySelectorAll('.form-lbl').forEach(el=>add(el,'form-label'));
-    document.querySelectorAll('.sbtn').forEach(el=>add(el,'btn btn-primary'));
-    document.querySelectorAll('.abtn').forEach(el=>add(el,'btn btn-info'));
-    document.querySelectorAll('.ebtn').forEach(el=>add(el,'btn btn-outline btn-sm'));
-    document.querySelectorAll('.dbtn').forEach(el=>add(el,'btn btn-danger btn-sm'));
+    // Chaque sélecteur exclut sa classe cible (:not) pour ne JAMAIS re-traiter
+    // un élément déjà adapté — évite la surcharge CPU à chaque mutation.
+    document.querySelectorAll('.tabnav:not(.sidebar)').forEach(el=>add(el,'sidebar sidebar-nav'));
+    document.querySelectorAll('.tb:not(.nav-item)').forEach(el=>add(el,'nav-item'));
+    document.querySelectorAll('.main:not(.main-content)').forEach(el=>add(el,'main-content page-container'));
+    document.querySelectorAll('.card:not(.panel),.farm-card:not(.panel),.feed-card:not(.panel),.feed-sum-card:not(.panel)').forEach(el=>add(el,'panel'));
+    document.querySelectorAll('.ctitle:not(.panel-title)').forEach(el=>add(el,'panel-title'));
+    document.querySelectorAll('.tw:not(.table-wrapper)').forEach(el=>add(el,'table-wrapper table-scroll'));
+    document.querySelectorAll('table:not(.data-table)').forEach(el=>add(el,'data-table'));
+    document.querySelectorAll('.mgrid:not(.kpi-grid)').forEach(el=>add(el,'kpi-grid'));
+    document.querySelectorAll('.met:not(.kpi-card)').forEach(el=>add(el,'kpi-card'));
+    document.querySelectorAll('.form-inp:not(.form-control), .si:not(.form-control), input.ci:not(.form-control), input[type=date].di2:not(.form-control)').forEach(el=>add(el,'form-control'));
+    document.querySelectorAll('.form-lbl:not(.form-label)').forEach(el=>add(el,'form-label'));
+    document.querySelectorAll('.sbtn:not(.btn)').forEach(el=>add(el,'btn btn-primary'));
+    document.querySelectorAll('.abtn:not(.btn)').forEach(el=>add(el,'btn btn-info'));
+    document.querySelectorAll('.ebtn:not(.btn)').forEach(el=>add(el,'btn btn-outline btn-sm'));
+    document.querySelectorAll('.dbtn:not(.btn)').forEach(el=>add(el,'btn btn-danger btn-sm'));
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',adaptDesignClasses); else adaptDesignClasses();
-  const obs=new MutationObserver(adaptDesignClasses);
-  if(document.documentElement) obs.observe(document.documentElement,{childList:true,subtree:true});
+  // Ne relancer que si des nœuds ont réellement été ajoutés (évite les passes inutiles).
+  const obs=new MutationObserver(function(mutations){
+    for(var i=0;i<mutations.length;i++){
+      if(mutations[i].addedNodes && mutations[i].addedNodes.length>0){ adaptDesignClasses(); return; }
+    }
+  });
+  // Observer uniquement document.body (pas documentElement) pour limiter la portée.
+  function startObs(){ if(document.body) obs.observe(document.body,{childList:true,subtree:true}); }
+  if(document.body) startObs(); else document.addEventListener('DOMContentLoaded',startObs);
 })();
 </script>
 
@@ -2816,7 +2825,7 @@ const secondaryAuth=secondaryApp.auth();
 // Échappement HTML global (utilisé par les rendus du script principal).
 // Les blocs ERP (IIFE) ont leur propre copie locale ; celle-ci couvre le reste.
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
-console.log('%cBioFloc build 2026-07-04d (concurrence bassins)','color:#38bdf8;font-weight:700;font-size:14px');
+console.log('%cBioFloc build 2026-07-04i (race conditions login + autosave)','color:#38bdf8;font-weight:700;font-size:14px');
 
 // ═══════════════════════════════════════════════
 // AUTO-RESTORE SESSION ON REFRESH
@@ -3223,6 +3232,7 @@ loadPlatformSettings();
 // OPERATOR LOGIN
 // ═══════════════════════════════════════════════
 async function doLogin(){
+  if(_authRestoreInProgress) return; // garde anti double-clic / condition de course
   _authRestoreInProgress=true; // bloquer l'auto-restore pendant le login manuel
   const farmCode=(G('b-farm').value||'').trim().toUpperCase();
   const username=(G('b-user').value||'').trim().toLowerCase();
@@ -3243,7 +3253,12 @@ async function doLogin(){
     }
     showLoader('Étape 2/4 — Chargement du profil…');
     const userSnap=await db.collection('users').doc(cred.user.uid).get().catch(e=>{throw new Error('❌ Profil inaccessible : '+e.message);});
-    const userData=userSnap.exists?userSnap.data():{name:username,role:'Opérateur',farmCode};
+    // Sécurité (IDOR) : jamais de profil par défaut. Le profil DOIT exister.
+    if(!userSnap.exists){await auth.signOut();throw new Error('❌ Profil utilisateur introuvable');}
+    const userData=userSnap.data();
+    // Sécurité (IDOR) : la ferme fait autorité côté base, pas le champ saisi.
+    // On compare la ferme du profil au code tapé ; en cas d'écart, accès refusé.
+    if(String(userData.farmCode||'').trim().toUpperCase()!==farmCode){await auth.signOut();throw new Error('❌ Accès refusé à cette ferme');}
     const role=userData.role||'Opérateur';
     APP.user={uid:cred.user.uid,email,name:userData.name||username,role,farmCode,canBackup:userData.canBackup||false};
     APP.farmCode=farmCode;
@@ -3297,15 +3312,18 @@ function withTimeout(p,ms=8000){
 }
 
 async function doAdminLogin(){
+  if(_authRestoreInProgress) return; // garde anti double-clic / condition de course
   const email=(G('adm-email').value||'').trim();
   const password=(G('adm-pass').value||'').trim();
   const errEl=G('adm-err');
   if(!email||!password){errEl.textContent='⚠️ Saisir email et mot de passe';errEl.classList.add('show');return;}
+  _authRestoreInProgress=true; // verrou anti double-exécution
   showLoader('Connexion…');
   try{
     await withTimeout(auth.signInWithEmailAndPassword(email,password),10000);
     APP.user={uid:auth.currentUser.uid,email,name:'Administrateur',role:'Administrateur',farmCode:null};
   }catch(e){
+    _authRestoreInProgress=false; // libérer le verrou en cas d'échec
     hideLoader();
     errEl.textContent=e.message==='timeout'?'❌ Connexion trop lente. Réessayez.':'❌ Email ou mot de passe incorrect';
     errEl.classList.add('show');
@@ -3314,6 +3332,7 @@ async function doAdminLogin(){
   }
   showLoader('Tableau de bord…');
   try{await withTimeout(loadAdminDashboard(),8000);}catch(e){console.warn('Dashboard:',e.message);}
+  _authRestoreInProgress=false; // libérer le verrou une fois connecté
   hideLoader();
   hideAdminModal();
   showScreen('screen-admin');
@@ -3392,7 +3411,12 @@ async function showFarmApp(){
   }
   const cd=G('config-date');if(cd)cd.value=today();
   // Charger données ERP depuis Firestore puis sauvegarde auto
-  loadERPFromFirestore().then(()=>setTimeout(autoSaveFarm,2000)).catch(()=>setTimeout(autoSaveFarm,2000));
+  // _isLoadingData bloque autoSaveFarm tant que le chargement n'est pas résolu
+  // (évite d'écraser les saisies de l'utilisateur avec d'anciennes données cloud).
+  window._isLoadingData=true;
+  loadERPFromFirestore()
+    .then(()=>{window._isLoadingData=false;setTimeout(autoSaveFarm,2000);})
+    .catch(()=>{window._isLoadingData=false;setTimeout(autoSaveFarm,2000);});
   // Check backup reminder (first login of the day)
   checkBackupReminder();
   // Sync déclenchée depuis showScreen('screen-farm') automatiquement
@@ -3735,10 +3759,12 @@ window.renderAdminERPFarms=function(){
   var btns=G('ta5-farm-btns');
   if(btns)btns.innerHTML='<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">'
     +farms.map(function(f){
-      var fc=f.code||f.id;var fn=esc2(f.name||fc);
+      var fc=esc2(f.code||f.id);var fn=esc2(f.name||(f.code||f.id));
+      // Sécurité : on passe la ferme/nom via data-* (jamais interpolés dans le JS du onclick),
+      // et on les relit avec this.dataset — insensible aux apostrophes/guillemets dans le nom.
       return '<span style="display:inline-flex;gap:3px;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:2px 4px">'
-        +'<button class="sbtn" style="font-size:11px;margin:0" onclick="loadFarmERP(\''+fc+'\',\''+fn+'\')">'+fn+'</button>'
-        +'<button class="sbtn" style="font-size:10px;margin:0;padding:4px 7px;opacity:.8;border-color:rgba(61,142,245,.4);color:var(--acc2)" title="Gérer les permissions" onclick="openPermissionsEditor(\''+fc+'\',\''+fn+'\')">🔐</button>'
+        +'<button class="sbtn" style="font-size:11px;margin:0" data-farm="'+fc+'" data-name="'+fn+'" onclick="loadFarmERP(this.dataset.farm,this.dataset.name)">'+fn+'</button>'
+        +'<button class="sbtn" style="font-size:10px;margin:0;padding:4px 7px;opacity:.8;border-color:rgba(61,142,245,.4);color:var(--acc2)" title="Gérer les permissions" data-farm="'+fc+'" data-name="'+fn+'" onclick="openPermissionsEditor(this.dataset.farm,this.dataset.name)">🔐</button>'
         +'</span>';
     }).join('')+'</div>';
   if(farms.length===1)loadFarmERP(farms[0].code||farms[0].id,farms[0].name||farms[0].id);
@@ -4615,7 +4641,27 @@ function calcRation(){
 // ═══════════════════════════════════════════════
 // FARM TAB SWITCH
 // ═══════════════════════════════════════════════
+// Contrôle d'accès STRICT aux onglets (pas seulement CSS). Source unique de vérité
+// pour les permissions ; utilisé par sw() et par le wrapper final.
+function canAccessTab(id){
+  if(!id || id==='t0') return true; // Tableau de bord toujours accessible
+  const role=(APP.user&&APP.user.role)||'Opérateur';
+  const isResp=role==='Responsable'||role==='Responsable ferme';
+  const isAdmin=role==='Administrateur'||role==='SuperAdmin'||role==='superadmin';
+  const normRole=isAdmin?'Administrateur':isResp?'Responsable':'Opérateur';
+  const basePerms=DEFAULT_FARM_PERMISSIONS[normRole]||DEFAULT_FARM_PERMISSIONS['Opérateur'];
+  const farmPerms=APP.farmPermissions?APP.farmPermissions[normRole]:null;
+  const perms=farmPerms?Object.assign({},basePerms,farmPerms):basePerms;
+  // Administration (t10) : Administrateur toujours autorisé
+  if(id==='t10') return isAdmin || (perms['t10']!==undefined?perms['t10']:isResp);
+  // Onglets absents de la matrice → autorisés (internes non sensibles)
+  return perms[id]!==undefined ? perms[id] : true;
+}
+window.canAccessTab=canAccessTab;
+
 function sw(id){
+  // Barrière serveur-indépendante : bloque l'accès même si le DOM est trafiqué.
+  if(!canAccessTab(id)){ alert('🔒 Accès non autorisé'); return; }
   document.querySelectorAll('#screen-farm .pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('#screen-farm .tb').forEach(b=>b.classList.remove('active'));
   const pane=G(id);if(pane)pane.classList.add('active');
@@ -9300,6 +9346,7 @@ function restoreERPData(erp){
 // Sauvegarde automatique silencieuse à chaque connexion
 // Stocke dans localStorage (clé: ichtus_autosave_{farmCode}) + garde les 3 dernières
 async function autoSaveFarm(){
+  if(window._isLoadingData) return; // ne pas sauvegarder pendant le chargement Firestore (anti-écrasement)
   if(!APP.farmCode)return;
   try{
     const col=(c)=>db.collection('farms').doc(APP.farmCode).collection(c);
@@ -13256,6 +13303,8 @@ window.refreshFinancials=function(){
 (function(){
   var prevSw=window.sw;
   window.sw=function(id){
+    // Barrière stricte au point d'entrée réel des clics (bloque aussi les effets de bord des wrappers).
+    if(typeof canAccessTab==='function' && !canAccessTab(id)){ alert('🔒 Accès non autorisé'); return; }
     if(prevSw)prevSw.apply(this,arguments);
     // Rafraîchit la rentabilité sur les onglets financiers
     if(['t5','t13','t14'].indexOf(id)>=0){
