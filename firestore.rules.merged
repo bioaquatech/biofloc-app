@@ -1,0 +1,159 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Fonctions helper ─────────────────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function hasProfile() {
+      return isAuth() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function isSuperAdmin() {
+      return hasProfile() && userData().role in ['Administrateur', 'SuperAdmin', 'superadmin'];
+    }
+    function isResponsable() {
+      return hasProfile() && userData().role in ['Responsable', 'Administrateur', 'SuperAdmin', 'superadmin'];
+    }
+    function isSameFarm(farmCode) {
+      return hasProfile() && userData().farmCode == farmCode;
+    }
+
+    // ── Validation de types : BASSINS (à l'écriture) ─────────────────
+    function validBassin() {
+      let d = request.resource.data;
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && (!('vol'    in d) || d.vol    is number)
+        && (!('nbInit' in d) || d.nbInit is number)
+        && (!('poids'  in d) || d.poids  is number)
+        && (!('mort'   in d) || d.mort   is number)
+        && (!('temp'   in d) || d.temp == null || d.temp is number)
+        && (!('ph'     in d) || d.ph   == null || d.ph   is number)
+        && (!('DO'     in d) || d.DO   == null || d.DO   is number)
+        && (!('NH3'    in d) || d.NH3  == null || d.NH3  is number)
+        && (!('NO2'    in d) || d.NO2  == null || d.NO2  is number)
+        && (!('startDate'   in d) || d.startDate   == null || d.startDate   is string)
+        && (!('harvestDate' in d) || d.harvestDate == null || d.harvestDate is string);
+    }
+
+    // ── Validation de types : SUIVI (à l'écriture) ───────────────────
+    function validSuivi() {
+      let d = request.resource.data;
+      return (!('date'   in d) || d.date   is string)
+        && (!('bassin' in d) || d.bassin is string)
+        && (!('poids'  in d) || d.poids  is number)
+        && (!('mort'   in d) || d.mort   is number);
+    }
+
+    // ── Superadmin (paramètres plateforme + journal central) ─────────
+    match /superadmin/{document=**} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isAuth() && (request.auth.uid == uid || isResponsable());
+      allow write: if isResponsable();
+    }
+
+    // ── Logins (table email↔uid) ─────────────────────────────────────
+    match /logins/{doc} {
+      allow read, write: if isResponsable();
+    }
+
+    // ── Platform params ───────────────────────────────────────────────
+    match /platform/{doc} {
+      allow read: if isResponsable();
+      allow write: if isSuperAdmin();
+    }
+
+    // ── Farms ─────────────────────────────────────────────────────────
+    match /farms/{farmCode} {
+      allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      allow write: if isSuperAdmin();
+
+      // BASSINS — accès ferme + validation de types à l'écriture
+      match /bassins/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow create, update: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin()) && validBassin();
+        allow delete: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      }
+
+      // SUIVI — accès ferme + validation de types à l'écriture
+      match /suivi/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow create, update: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin()) && validSuivi();
+        allow delete: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      }
+
+      match /feed/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      }
+      match /daily/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      }
+      match /notifications/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      }
+      match /intrants/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      }
+      match /sensors/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      }
+      match /suppliers/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      }
+
+      match /stock_movements/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow create, update: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin())
+                              && request.resource.data.quantity is number;
+        allow delete: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+      }
+      match /stock_entries/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow create, update: if isAuth() && ((isResponsable() && isSameFarm(farmCode)) || isSuperAdmin())
+                              && request.resource.data.quantity is number;
+        allow delete: if isAuth() && ((isResponsable() && isSameFarm(farmCode)) || isSuperAdmin());
+      }
+      match /inventaires/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isResponsable() && isSameFarm(farmCode)) || isSuperAdmin());
+      }
+      match /charges/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow create, update: if isAuth() && ((isResponsable() && isSameFarm(farmCode)) || isSuperAdmin())
+                              && request.resource.data.amount is number
+                              && request.resource.data.amount >= 0
+                              && (!('quantity' in request.resource.data) || request.resource.data.quantity is number);
+        allow delete: if isAuth() && ((isResponsable() && isSameFarm(farmCode)) || isSuperAdmin());
+      }
+      match /config/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isAuth() && ((isResponsable() && isSameFarm(farmCode)) || isSuperAdmin());
+      }
+
+      match /audit/{docId} {
+        allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow create: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow update, delete: if false;
+      }
+
+      match /errors/{docId} {
+        allow read: if isSuperAdmin();
+        allow create: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow update, delete: if false;
+      }
+    }
+  }
+}
