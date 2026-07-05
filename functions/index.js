@@ -1,32 +1,57 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+admin.initializeApp();
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+exports.loginUser = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "Vous devez être authentifié pour vous connecter."
+    );
+  }
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+  const uid = context.auth.uid;
+  const farmCode = String((data && data.farmCode) || "").trim().toUpperCase();
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+  const userSnap = await admin.firestore().collection("users").doc(uid).get();
+  if (!userSnap.exists) {
+    throw new functions.https.HttpsError(
+      "not-found",
+      "Profil utilisateur introuvable."
+    );
+  }
+  const userData = userSnap.data();
+
+  if (String(userData.farmCode || "").trim().toUpperCase() !== farmCode) {
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "Accès refusé à cette ferme."
+    );
+  }
+
+  const farmSnap = await admin.firestore().collection("farms").doc(farmCode).get();
+  if (!farmSnap.exists) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Ferme introuvable."
+    );
+  }
+  const farmData = farmSnap.data();
+  if (farmData.active === false) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Ferme désactivée. Contactez l'administrateur."
+    );
+  }
+
+  return {
+    uid: uid,
+    name: userData.name || "",
+    role: userData.role || "Opérateur",
+    farmCode: farmCode,
+    farmName: farmData.name || farmCode,
+    canBackup: userData.canBackup === true,
+    farmMessages: farmData.farmMessages || [],
+  };
+});
