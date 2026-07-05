@@ -55,6 +55,7 @@ exports.loginUser = functions.https.onCall(async (data, context) => {
     farmCode: farmCode,
     farmName: farmData.name || farmCode,
     canBackup: userData.canBackup === true,
+    sections: userData.sections || null,
     farmMessages: farmData.farmMessages || [],
   };
 });
