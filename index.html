@@ -2944,6 +2944,10 @@ let APP={
   bCount:17,
   species:null, // profil espèce actif (voir SPECIES_PROFILES)
 };
+// Exposer APP sur window : `let` ne crée PAS de propriété window, or de nombreux
+// modules (PWA, ERP…) testent `window.APP` en fallback. Sans cet alias, ces
+// fallbacks échouent silencieusement (ex. liste de bassins vide dans le PWA).
+window.APP=APP;
 
 // ═══════════════════════════════════════════════
 // PROFILS MULTI-ESPÈCES BIOFLOC
