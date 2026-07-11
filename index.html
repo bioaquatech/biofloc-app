@@ -4811,9 +4811,19 @@ async function openBassinStats(bassinName){
   const totalProbiot=records.reduce((s,r)=>s+(r.probiot||0),0);
   const lastPoids=records.map(r=>r.poids).filter(Boolean).pop()||null;
   const avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null;
+  // Mortalité : cumul + nbInit lus sur le bassin LIVE (source de vérité) ; morts sur la période via les instantanés journaliers
+  const liveB=(APP.state.bassins||[]).find(x=>x&&x.name===bassinName)||{};
+  const mortCumul=Number(liveB.mort)||0;
+  const nbInit=Number(liveB.nbInit)||0;
+  const survie=nbInit>0?((nbInit-mortCumul)/nbInit*100):null;
+  const mortRecs=records.filter(r=>r.mort!=null);
+  const mortPeriode=mortRecs.length>=2?Math.max(0,(mortRecs[mortRecs.length-1].mort||0)-(mortRecs[0].mort||0)):null;
   const m=G('bstats-metrics');
   if(m)m.innerHTML=`
     <div class="met"><div class="mlbl">Mesures enregistrées</div><div class="mval">${records.length}</div></div>
+    <div class="met${survie!==null&&survie<85?' dng':survie!==null&&survie<90?' warn':''}"><div class="mlbl">Survie</div><div class="mval">${survie!==null?survie.toFixed(1):'—'}<span class="munit">%</span></div></div>
+    <div class="met"><div class="mlbl">Mortalité cumulée</div><div class="mval">${mortCumul}<span class="munit">pois.</span></div></div>
+    <div class="met"><div class="mlbl">Morts (30 j)</div><div class="mval">${mortPeriode!==null?mortPeriode:'—'}</div></div>
     <div class="met${avg(avgDO)!==null&&avg(avgDO)<5?' dng':''}"><div class="mlbl">DO moyen</div><div class="mval">${avg(avgDO)!==null?avg(avgDO).toFixed(1):'—'}<span class="munit">ppm</span></div></div>
     <div class="met${avg(avgTAN)!==null&&avg(avgTAN)>1?' warn':''}"><div class="mlbl">TAN moyen</div><div class="mval">${avg(avgTAN)!==null?avg(avgTAN).toFixed(2):'—'}<span class="munit">mg/L</span></div></div>
     <div class="met"><div class="mlbl">pH moyen</div><div class="mval">${avg(avgPH)!==null?avg(avgPH).toFixed(2):'—'}</div></div>
