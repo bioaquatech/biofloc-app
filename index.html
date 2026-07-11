@@ -6639,6 +6639,26 @@ function calcPWA(){
 
 function enregistrerConsommationPWA(totalL){
   if(!totalL||totalL<=0){alert('Aucune quantité à enregistrer.');return;}
+  var plan=window.PWA_PLAN||PWA_PLAN||[];
+  // ── Garde-fou anti-écrasement : préparer les cibles AVANT toute écriture ──
+  var targets=[],conflicts=[],notFound=[];
+  if(window.APP&&APP.state&&Array.isArray(APP.state.bassins)){
+    plan.forEach(function(row){
+      var b=APP.state.bassins.find(function(x){return x.id===row.bassinId||x.name===row.bassin;});
+      if(!b){notFound.push(row.bassin||row.bassinId||'?');return;}
+      var newMl=Math.round(pwaDoseLitres(row)*1000);
+      targets.push({b:b,newMl:newMl});
+      var cur=b.probiot;
+      // Conflit = valeur déjà présente, non nulle, et différente de la valeur calculée
+      if(cur!==null&&cur!==undefined&&cur!==0&&cur!==newMl){conflicts.push({name:b.name,from:cur,to:newMl});}
+    });
+    if(conflicts.length){
+      var cmsg='⚠️ Ces bassins ont déjà une valeur probiotique saisie qui sera REMPLACÉE :\n\n'
+        +conflicts.map(function(c){return '• '+c.name+' : '+c.from+' → '+c.to+' ml';}).join('\n')
+        +'\n\nRemplacer par les valeurs calculées du plan PWA ?';
+      if(!confirm(cmsg))return; // annulation → rien n'est enregistré (ni stock, ni probiot)
+    }
+  }
   var date=new Date().toISOString().slice(0,10);
   var label='Consommation PWA — '+totalL.toFixed(2)+' L — '+date;
   // 1. Créer une entrée stock (consommation intrant pwa_prep)
@@ -6647,15 +6667,10 @@ function enregistrerConsommationPWA(totalL){
     APP_STOCK_ENTRIES.unshift(entry);
     if(window.farmCol)farmCol('stock_entries').doc(entry.id).set(entry).catch(function(){});
   }
-  // 2. Mettre à jour b.probiot sur chaque bassin du plan (ml/j moyen)
-  var plan=window.PWA_PLAN||PWA_PLAN||[];
-  if(window.APP&&APP.state&&Array.isArray(APP.state.bassins)){
-    plan.forEach(function(row){
-      var b=APP.state.bassins.find(function(x){return x.id===row.bassinId||x.name===row.bassin;});
-      if(b){var qL=pwaDoseLitres(row);b.probiot=Math.round(qL*1000);}
-    });
-    if(typeof saveBassins==='function')saveBassins();
-  }
+  // 2. Appliquer les valeurs probiot préparées (après accord éventuel)
+  targets.forEach(function(t){t.b.probiot=t.newMl;});
+  if(targets.length&&typeof saveBassins==='function')saveBassins();
+  if(notFound.length&&window.showToast)showToast('⚠️ Bassin(s) du plan introuvable(s) : '+notFound.join(', '),'warn');
   if(window.showToast)showToast('✅ '+label+' enregistrée','acc');
   if(typeof refreshFinancials==='function')refreshFinancials();
   if(typeof upCompta==='function')upCompta();
