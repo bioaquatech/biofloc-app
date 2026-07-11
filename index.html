@@ -3273,9 +3273,27 @@ async function doLogin(){
     const email=`${username.replace(/[^a-z0-9]/g,'')}_${farmCode.toLowerCase().replace(/[^a-z0-9]/g,'')}@biofloc.app`;
     await auth.signInWithEmailAndPassword(email,password);
     showLoader('Étape 2/3 — Vérification serveur…');
-    const loginBackend=firebase.functions().httpsCallable('loginUser');
-    const result=await loginBackend({farmCode:farmCode});
-    const d=result.data;
+    let d;
+    try{
+      const loginBackend=firebase.functions().httpsCallable('loginUser');
+      const result=await withTimeout(loginBackend({farmCode:farmCode}),8000);
+      d=result.data;
+    }catch(fnErr){
+      // Repli si la Cloud Function loginUser est indisponible/non déployée/timeout :
+      // lecture directe (autorisée par les règles Firestore pour l'utilisateur lui-même).
+      console.warn('loginUser indisponible — repli Firestore:',fnErr&&fnErr.message);
+      const uSnap=await withTimeout(db.collection('users').doc(auth.currentUser.uid).get(),8000);
+      if(!uSnap.exists) throw new Error('not-found');
+      const ud=uSnap.data();
+      if(String(ud.farmCode||'').trim().toUpperCase()!==farmCode) throw new Error('permission-denied');
+      const fSnap=await withTimeout(db.collection('farms').doc(farmCode).get(),8000);
+      if(!fSnap.exists) throw new Error('failed-precondition');
+      const fd=fSnap.data();
+      if(fd.active===false) throw new Error('failed-precondition');
+      d={uid:auth.currentUser.uid,name:ud.name||'',role:ud.role||'Opérateur',farmCode:farmCode,
+         farmName:fd.name||farmCode,canBackup:ud.canBackup===true,sections:ud.sections||null,
+         farmMessages:fd.farmMessages||[]};
+    }
     APP.user={uid:d.uid,email,name:d.name,role:d.role,farmCode:d.farmCode,canBackup:d.canBackup,sections:d.sections||null};
     APP.farmCode=d.farmCode;
     APP.farmName=d.farmName;
