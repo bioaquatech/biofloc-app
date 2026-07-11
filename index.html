@@ -3546,8 +3546,9 @@ async function flushPendingSaves(){
   }
   // Force immediate batch write for bassins and feed
   if(!APP.farmCode)return;
+  if(!_bassinsValid(APP.state.bassins))return; // données invalides → on n'écrit rien (défense en profondeur)
   const batch=db.batch();
-  APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i});});
+  APP.state.bassins.forEach((b,i)=>{batch.set(farmCol('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i},{merge:true});});
   FEED_TYPES.forEach(ft=>{batch.set(farmCol('feed').doc(ft.id),{batches:ft.batches});});
   await batch.commit().catch(console.error);
 }
