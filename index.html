@@ -1963,6 +1963,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
         </div>
         <div style="display:flex;gap:.4rem;align-items:center">
           <span style="font-size:10px;color:var(--t3)">🖨️ Vue impression uniquement</span>
+          <button class="sbtn" onclick="exportFicheCollectePDF()" style="background:var(--dng)">📄 Fiche PDF (paysage A4)</button>
           <button class="sbtn" onclick="window.print()" style="background:var(--acc2)">🖨️ Imprimer</button>
         </div>
       </div>
@@ -1973,12 +1974,15 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           <div style="font-size:11px;color:var(--t3)">Date : <strong id="fc-date-display"></strong> &nbsp;|&nbsp; Opérateur : ____________________</div>
         </div>
         <div class="tw">
-          <table style="font-size:10px"><thead><tr>
+          <table style="font-size:9px"><thead><tr>
             <th>Bassin</th><th>Nb Actuel</th><th>Poids (g)</th><th>Aliment</th>
             <th>Théo (kg)</th><th style="background:rgba(0,201,167,.1);color:var(--acc)">Réel ✍️</th>
             <th style="color:#a8d8ff">Temp ✍️</th><th style="color:#a8d8ff">pH ✍️</th>
             <th style="color:#a8d8ff">DO ✍️</th><th style="color:#a8d8ff">NH₃ ✍️</th>
-            <th style="color:var(--warn)">Imhoff ✍️</th><th style="color:var(--warn)">TAN ✍️</th>
+            <th style="color:#a8d8ff">NO₂ ✍️</th><th style="color:var(--warn)">TAN ✍️</th>
+            <th style="color:#a8d8ff">TAC ✍️</th><th style="color:var(--warn)">Imhoff ✍️</th>
+            <th style="color:var(--purp)">PWA ✍️</th><th style="color:var(--warn)">Mélasse ✍️</th>
+            <th style="color:var(--acc2)">Basifiant ✍️</th>
             <th>Morts ✍️</th><th>Obs.</th>
           </tr></thead>
           <tbody id="fiche-tbody"></tbody></table>
@@ -6260,6 +6264,13 @@ function openAddStock(preselect){
   if(preselect){const it=APP_INTRANTS.find(i=>i.id===preselect);if(it&&it.conditionnement)G('stock-cond').value=it.conditionnement;}
 }
 
+// Rappel : après validation d'une entrée, le prix doit encore être validé en Comptabilité (indispensable au CUMP).
+function remindComptaPrice(){
+  setTimeout(function(){
+    if(window.showToast)showToast('💰 Étape suivante : validez le PRIX de cette facture dans Comptabilité → Validation achats (indispensable pour le CUMP).','warn');
+  },1500);
+}
+
 async function saveStockEntry(){
   const intrantId=G('stock-intrant').value;const qty=+G('stock-qty').value;const date=G('stock-date').value;
   const expiry=G('stock-expiry').value||null;const supplier=G('stock-supplier').value||'';const notes=G('stock-notes').value||'';
@@ -6282,6 +6293,7 @@ async function saveStockEntry(){
       else APP_INVENTAIRE_CURRENT.items.push({intrantId,actualQty:qty});
     }
     showToast(validated?'✅ Entrée enregistrée et validée':'📋 Entrée en attente de validation','acc');
+    if(validated)remindComptaPrice();
   }catch(e){msg.style.color='var(--dng)';msg.textContent='❌ '+e.message;}
 }
 
@@ -6306,6 +6318,9 @@ function renderStockEntries(){
             ?('<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ En attente</span>')
             :'<span style="font-size:9px;color:var(--warn);font-weight:700">⏳ Attente validation</span>')
           :'<span style="font-size:9px;color:var(--acc)">✅ '+(e.validatedBy||'OK')+'</span>';
+        const _priceOk=(window.COMPTA_PRIX&&COMPTA_PRIX[e.id]>0)&&(typeof priceValidated==='function'?priceValidated(e.id):true);
+        const _needsPrice=!(item&&item.amortissable);
+        const priceBadge=(e.validated&&_needsPrice&&!_priceOk)?'<span style="font-size:9px;color:#fff;background:var(--warn);border-radius:8px;padding:1px 7px;font-weight:700" title="Validez le prix dans Comptabilité → Validation achats (nécessaire au CUMP)">⚠ Prix à valider</span>':'';
         const saveBtn=canValidate?'<button data-save="'+e.id+'" style="font-size:9px;background:var(--acc);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">💾 Enregistrer</button>':'';
         const editBtn=canValidate?'<button data-edit="'+e.id+'" style="font-size:9px;background:var(--acc2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">✏️ Modifier</button>':'';
         const deletBtn=canValidate
@@ -6322,7 +6337,7 @@ function renderStockEntries(){
           +(e.supplier?'Fourn: '+e.supplier+' · ':'')
           +(e.expiryDate?'<span style="color:'+expCol+'">⏱ '+(isExpired?'⚠️PÉRIMÉ ':'')+e.expiryDate+'</span> · ':'')
           +'Par: '+(e.createdBy||'?')+'</div></div>'
-          +'<div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+saveBtn+editBtn+deletBtn+'</div>'
+          +'<div style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">'+validBtns+priceBadge+saveBtn+editBtn+deletBtn+'</div>'
           +'</div></div>';
       }).join('')+'</div>';
   }).join('');
@@ -6356,6 +6371,7 @@ async function validateStockEntry(id){
   try{
     await withTimeout(farmCol('stock_entries').doc(id).update({validated:true,validatedBy:entry.validatedBy,validatedAt:entry.validatedAt}),6000);
     renderStockEntries();showToast('✅ Entrée validée','acc');
+    remindComptaPrice();
   }catch(e){showToast('❌ '+e.message,'dng');}
 }
 
@@ -7295,23 +7311,25 @@ function updateLactoStatus(){
   const seuil=+(G('lacto-seuil')?.value||1);
   const container=G('lacto-status');if(!container)return;
   const lactoIntrant=(window.APP_INTRANTS||[]).find(x=>x.id==='lacto_conc');
-  const stockActuel=lactoIntrant?.stockActuel??null;
+  // Priorité au stock d'inventaire physique ; repli sur le stock live (entrées − sorties)
+  // pour que l'alerte fonctionne même avant qu'un inventaire ait été validé.
+  let stock=(lactoIntrant&&lactoIntrant.stockActuel!=null)?lactoIntrant.stockActuel:null;
+  let source='inventaire';
+  if(stock===null&&typeof getItemCurrentStock==='function'){stock=getItemCurrentStock('lacto_conc');source='théorique';}
   let stockHtml='';
-  if(stockActuel!==null){
-    const enAlerte=stockActuel<seuil;
-    stockHtml='<div style="display:flex;justify-content:space-between;margin-bottom:.3rem"><span>Stock inventaire :</span><strong style="color:'+(enAlerte?'var(--dng)':'var(--acc)')+'">'+Number(stockActuel).toFixed(2)+' L '+(enAlerte?'⚠️ ALERTE':'✅')+'</strong></div>';
+  if(stock!==null){
+    const enAlerte=stock<seuil;
+    stockHtml='<div style="display:flex;justify-content:space-between;margin-bottom:.3rem"><span>Stock '+source+' :</span><strong style="color:'+(enAlerte?'var(--dng)':'var(--acc)')+'">'+Number(stock).toFixed(2)+' L '+(enAlerte?'⚠️ ALERTE':'✅')+'</strong></div>';
   } else {
-    stockHtml='<div style="color:var(--t3);font-size:9px;margin-bottom:.3rem">Stock synchronisé depuis l\'inventaire intrants</div>';
+    stockHtml='<div style="color:var(--t3);font-size:9px;margin-bottom:.3rem">Stock indisponible</div>';
   }
   container.innerHTML=stockHtml
     +'<div style="display:flex;justify-content:space-between"><span>Seuil alerte :</span><strong>'+seuil.toFixed(2)+' L</strong></div>'
     +'<div style="font-size:9px;color:var(--warn);margin-top:.3rem">⚠️ Délai minimum : 20 jours · Le stock est lu depuis l\'inventaire des intrants</div>';
 }
 
-async function saveLactoData(){
-  const data={seuil:+(G('lacto-seuil')?.value||1),updatedAt:new Date().toISOString()};
-  try{await withTimeout(farmCol('config').doc('lacto').set(data),6000);showToast('✅ Seuil Lactobacillus enregistré','acc');}catch(e){showToast('❌ '+e.message,'dng');}
-}
+// (Supprimé) saveLactoData — écrivait dans config/lacto, un doc jamais relu.
+// Le seuil Lactobacillus est géré uniquement via saveLactoSeuil → intrants/lacto_conc.seuil.
 
 async function saveLactoSeuil(){
   if(!window.saveCentralIntrantThreshold){showToast('❌ Fonction non disponible','dng');return;}
@@ -9039,10 +9057,11 @@ async function upComptaSynthese(){
 
   APP.state.bassins.forEach(b=>{
     const c=calcBassin(b);
-    // Coût aliment via CUMP
-    const feedItem=APP_INTRANTS.find(i=>i.category==='aliment'&&(i.id===c.ft||i.feedId===c.ft||i.name?.includes(c.ft)));
-    const cumpAlim=feedItem?getCUMP(feedItem.id):0;
-    const cAlim=c.alimReel>0?c.alimReel*cumpAlim:c.alimTheo*(duree/7)*cumpAlim;
+    // Coût aliment via CUMP — même intrant que les sorties de stock (b.feedId), échelle cycle
+    const feedId=b.feedId||(c.ft&&c.ft.id)||'aliment';
+    const cumpAlim=getCUMP(feedId)||0;
+    const alimJour=(b.alimReel>0?b.alimReel:c.alimTheo)||0; // kg/jour
+    const cAlim=alimJour*duree*cumpAlim; // coût sur le cycle (cohérent avec mélasse/basifiant/probio)
     // Probio via CUMP — cumul historique si dispo, sinon estimation linéaire
     const probioItem=APP_INTRANTS.find(i=>i.id?.toLowerCase().includes('pwa')||i.name?.toLowerCase().includes('pwa'));
     const cumpProbio=probioItem?getCUMP(probioItem.id):0;
@@ -9424,18 +9443,67 @@ function renderFiche(){
       +'<td style="text-align:center">'+b.poids+'</td>'
       +'<td style="text-align:center;font-weight:700">'+(ft?.aliment||b.feedId||'K4')+'</td>'
       +'<td style="text-align:center;font-weight:700;color:var(--acc)">'+c.alimTheo.toFixed(3)+'</td>'
-      +'<td style="background:rgba(0,201,167,.05);width:70px;min-width:70px"></td>'
-      +'<td style="width:50px;min-width:50px"></td>'
-      +'<td style="width:50px;min-width:50px"></td>'
-      +'<td style="width:50px;min-width:50px"></td>'
-      +'<td style="width:50px;min-width:50px"></td>'
-      +'<td style="width:55px;min-width:55px"></td>'
-      +'<td style="width:55px;min-width:55px"></td>'
-      +'<td style="width:50px;min-width:50px"></td>'
-      +'<td style="width:100px;min-width:100px"></td>'
+      +'<td style="background:rgba(0,201,167,.05);min-width:55px"></td>' // Alim Réel
+      +'<td style="min-width:42px"></td>' // Temp
+      +'<td style="min-width:38px"></td>' // pH
+      +'<td style="min-width:42px"></td>' // DO
+      +'<td style="min-width:42px"></td>' // NH3
+      +'<td style="min-width:42px"></td>' // NO2
+      +'<td style="min-width:42px"></td>' // TAN
+      +'<td style="min-width:42px"></td>' // TAC
+      +'<td style="min-width:48px"></td>' // Imhoff
+      +'<td style="min-width:48px"></td>' // PWA
+      +'<td style="min-width:52px"></td>' // Mélasse
+      +'<td style="min-width:52px"></td>' // Basifiant
+      +'<td style="min-width:42px"></td>' // Morts
+      +'<td style="min-width:80px"></td>' // Obs
       +'</tr>';
   }).join('');
 }
+
+// Export PDF paysage A4 de la fiche de collecte VIERGE, alignée sur tous les
+// paramètres monitorés (colonnes à remplir à la main sur le terrain).
+function exportFicheCollectePDF(){
+  const bassins=(APP.state.bassins||[]).filter(b=>b.statut==='Actif');
+  const dateStr=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const farm=(APP.farmName||APP.farmCode||'Ferme');
+  const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const head=['Bassin','Nb Actuel','Poids (g)','Aliment','Théo (kg)','Alim Réel (kg)','Temp (°C)','pH','DO (mg/L)','NH₃','NO₂','TAN','TAC','Imhoff','PWA (mL)','Mélasse (mL)','Basifiant (g)','Morts','Observations'];
+  const thead='<tr>'+head.map((h,i)=>'<th'+(i>=5?' class="w"':'')+'>'+h+'</th>').join('')+'</tr>';
+  let rows=bassins.map(b=>{
+    const c=typeof calcBassin==='function'?calcBassin(b):{};
+    const ft=typeof getRationEntry==='function'?getRationEntry(b.poids||1):null;
+    const pre='<td class="bn">'+esc(b.name)+'</td>'
+      +'<td>'+(c.nbActuel!=null?c.nbActuel:((b.nbInit||0)-(b.mort||0)))+'</td>'
+      +'<td>'+(b.poids!=null?b.poids:'')+'</td>'
+      +'<td>'+esc((ft&&ft.aliment)||b.feedId||'')+'</td>'
+      +'<td>'+(c.alimTheo!=null?c.alimTheo.toFixed(3):'')+'</td>';
+    let blanks='';for(let k=0;k<14;k++)blanks+='<td class="w"></td>';
+    return '<tr>'+pre+blanks+'</tr>';
+  }).join('');
+  if(!bassins.length)rows='<tr><td colspan="19" style="text-align:center;color:#888">Aucun bassin actif</td></tr>';
+  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fiche de collecte journalière</title>'
+    +'<style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box;font-family:Arial,sans-serif}'
+    +'body{color:#111;font-size:9px;padding:6px}h1{font-size:14px;color:#1a5276;margin:0 0 2px}'
+    +'.sub{font-size:10px;color:#555;margin-bottom:8px}'
+    +'table{width:100%;border-collapse:collapse}'
+    +'th{background:#1a5276;color:#fff;padding:4px 3px;font-size:8.5px;border:1px solid #14405e;text-align:center}'
+    +'td{border:1px solid #cbd5e1;padding:5px 3px;font-size:9px;text-align:center;height:22px}'
+    +'td.bn{font-weight:700;text-align:left}th.w{background:#0e7490}td.w{background:#fff}'
+    +'.foot{margin-top:8px;font-size:9px;color:#333}'
+    +'button{margin-top:8px;padding:6px 16px;background:#0d9488;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700}'
+    +'@media print{button{display:none}}</style></head><body>'
+    +'<h1>'+esc(farm)+' — Fiche de collecte journalière</h1>'
+    +'<div class="sub">Date : <strong>'+esc(dateStr)+'</strong> &nbsp;|&nbsp; Opérateur : ____________________</div>'
+    +'<table><thead>'+thead+'</thead><tbody>'+rows+'</tbody></table>'
+    +'<div class="foot">Colonnes en-tête bleutées = à remplir sur le terrain. · Mélasse corrective si TAN ≥ 1 mg/L (voir onglet Rationnement).</div>'
+    +'<button onclick="window.print()">🖨️ Imprimer / Enregistrer PDF (paysage A4)</button>'
+    +'</body></html>';
+  const w=window.open('','_blank','width=1100,height=700');
+  if(!w){alert('Autorisez les pop-ups pour exporter la fiche.');return;}
+  w.document.write(html);w.document.close();
+}
+window.exportFicheCollectePDF=exportFicheCollectePDF;
 
 function renderFicheInventaire(){
   const dateEl=G('fc-inv-date');if(dateEl)dateEl.textContent=new Date().toLocaleDateString('fr-FR');
@@ -11645,7 +11713,6 @@ showScreen('screen-boot');
   function roleCanValidate(){const r=(window.APP&&APP.user&&APP.user.role)||'';return r==='Administrateur'||r==='Responsable'||r==='SuperAdmin'||r==='superadmin';}
   window.saveCentralIntrantThreshold=async function(intrantId,seuil){if(!roleCanValidate()){if(window.showToast)showToast('❌ Validation seuil réservée au Responsable ferme / SuperAdmin','dng');return false;}const it=(window.APP_INTRANTS||[]).find(x=>x.id===intrantId);if(!it)return false;it.seuil=Number(seuil)||0;it.seuilValidatedBy=(APP.user&&APP.user.name)||'Responsable';it.seuilValidatedAt=new Date().toISOString();try{if(window.farmCol)await farmCol('intrants').doc(it.id).set(it,{merge:true});}catch(e){console.warn(e);}if(typeof renderIntrants==='function')renderIntrants();if(typeof updateLactoStatus==='function')updateLactoStatus();if(window.showToast)showToast('✅ Seuil d\'alerte validé et synchronisé','acc');return true;};
   const oldRenderIntrants=window.renderIntrants;if(typeof oldRenderIntrants==='function'){window.renderIntrants=function(filter){oldRenderIntrants(filter);replaceBC();};}
-  const oldSaveLacto=window.saveLactoData;if(typeof oldSaveLacto==='function'){window.saveLactoData=function(){const val=Number((document.getElementById('lacto-seuil')||{}).value||0);const it=(window.APP_INTRANTS||[]).find(x=>x.id==='lacto_conc');if(it){it.seuil=val;try{if(window.farmCol)farmCol('intrants').doc(it.id).set(it,{merge:true});}catch(e){console.warn(e);}}return oldSaveLacto.apply(this,arguments);};}
   window.PWA_MODALITES_EXPLICATIONS={primo:'Primo-inoculation : traitement de l\'eau avant mise en charge.',entretien:'Entretien : traitement pour maintenir un bon Imhoff.',rotation:'Système mature_post introduction alevins : bassin déjà stabilisé après introduction.',postintro:'Système immature_post introduction alevins : bassin non encore stabilisé après introduction.'};
   function patchPwaRates(){if(window.PWA_RATES){if(PWA_RATES.primo)PWA_RATES.primo.label='Primo-inoculation';if(PWA_RATES.entretien)PWA_RATES.entretien.label='Entretien';if(PWA_RATES.rotation)PWA_RATES.rotation.label='Système mature_post introduction alevins';if(PWA_RATES.postintro)PWA_RATES.postintro.label='Système immature_post introduction alevins';}}
   const oldRenderPWA=window.renderPWAPlanner;if(typeof oldRenderPWA==='function')window.renderPWAPlanner=function(){patchPwaRates();oldRenderPWA.apply(this,arguments);replaceBC();};patchPwaRates();
@@ -11953,22 +12020,31 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 // ═══════════════════════════════════════════════
 function refreshAnalyseERP(){
   try{
-    const d=G('ana-date'); if(d && !d.value) d.value=todayISO();
-    let stockVal=0, cumpCount=0, stockLines=[];
-    const intrants=(APP.intrants||[]).filter(x=>x.actif!==false);
+    const d=G('ana-date'); if(d && !d.value && typeof todayISO==='function') d.value=todayISO();
+    const gStock=id=>typeof getItemCurrentStock==='function'?(getItemCurrentStock(id)||0):0;
+    const gCump=id=>typeof getCUMP==='function'?(getCUMP(id)||0):0;
+    // Valeur de stock = Σ (stock courant × CUMP), intrants consommables uniquement
+    const intrants=(window.APP_INTRANTS||[]).filter(x=>x&&!x.amortissable);
+    let stockVal=0, cumpCount=0; const stockLines=[];
     intrants.forEach(it=>{
-      const qty=Number(it.stock||it.qte||0);
-      const cump=Number(it.cump||it.prix||0);
-      if(cump>0)cumpCount++;
-      const val=qty*cump; stockVal+=val;
-      if(qty||cump) stockLines.push(`${it.nom||it.name||'Intrant'} : ${qty.toFixed?qty.toFixed(2):qty} ${it.unite||''} · ${Math.round(val).toLocaleString('fr-FR')} XOF`);
+      const qty=gStock(it.id), cu=gCump(it.id);
+      if(cu>0)cumpCount++;
+      const val=qty*cu; stockVal+=val;
+      if(qty>0||cu>0)stockLines.push(`${it.name||it.id} : ${qty.toFixed(2)} ${it.unit||''} × ${Math.round(cu).toLocaleString('fr-FR')} = ${Math.round(val).toLocaleString('fr-FR')} XOF`);
     });
+    // Valeur consommée = Σ (sorties de stock × CUMP)
+    let consVal=0;
+    (window.APP_STOCK_MOVEMENTS||[]).filter(m=>m&&m.type==='sortie').forEach(m=>{consVal+=gCump(m.intrantId)*(Number(m.quantity)||0);});
+    // Charges d'exploitation saisies (total)
+    let chargesVal=0;
+    (window.APP_CHARGES||[]).forEach(c=>{chargesVal+=Number(c&&(c.amount||c.montant||c.total)||0)||0;});
     const set=(id,v)=>{const el=G(id);if(el)el.textContent=v;};
     set('ana-val-stock',Math.round(stockVal).toLocaleString('fr-FR'));
     set('ana-cump',String(cumpCount));
-    set('ana-val-cons','—'); set('ana-charges','—');
-    const det=G('ana-stock-detail'); if(det) det.innerHTML=stockLines.length?stockLines.slice(0,12).join('<br>'):'Aucune valeur de stock calculable pour le moment. Les valeurs apparaîtront après validation des prix et CUMP.';
-    const cd=G('ana-charges-detail'); if(cd) cd.innerHTML="Les charges d\'exploitation sont centralisées dans Comptabilité → Charges exploitation. Les statistiques par période seront calculées à partir des saisies quotidiennes ou mensuelles.";
+    set('ana-val-cons',Math.round(consVal).toLocaleString('fr-FR'));
+    set('ana-charges',Math.round(chargesVal).toLocaleString('fr-FR'));
+    const det=G('ana-stock-detail'); if(det) det.innerHTML=stockLines.length?stockLines.slice(0,15).join('<br>'):'Aucune valeur de stock. Validez les prix et le CUMP dans Comptabilité → Validation achats.';
+    const cd=G('ana-charges-detail'); if(cd) cd.innerHTML='Valeur consommée (sorties × CUMP) : <strong>'+Math.round(consVal).toLocaleString('fr-FR')+' XOF</strong> · Charges d\'exploitation saisies : <strong>'+Math.round(chargesVal).toLocaleString('fr-FR')+' XOF</strong>.';
   }catch(e){console.warn('Analyse ERP',e);}
 }
 
