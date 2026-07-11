@@ -1940,6 +1940,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
         <button class="sbtn" style="background:var(--acc2);display:flex;align-items:center;gap:5px" onclick="downloadBackupFarm()">⬇️ Sauvegarder</button>
         <button class="sbtn" style="background:var(--purp);display:flex;align-items:center;gap:5px" onclick="G('restore-file-farm').click()">⬆️ Restaurer fichier</button>
         <button class="sbtn" style="background:rgba(167,139,250,.3);border:1px solid var(--purp);color:var(--purp);display:flex;align-items:center;gap:5px" onclick="restoreFromAutoSave()">🕐 Restaurer sauvegarde auto</button>
+        <button class="sbtn" style="background:rgba(0,201,167,.15);border:1px solid var(--acc);color:var(--acc);display:flex;align-items:center;gap:5px" onclick="restoreFromCloud()">☁️ Restaurer depuis le cloud</button>
         <input type="file" id="restore-file-farm" accept=".json" style="display:none" onchange="restoreBackupFarm(this)">
       </div>
       <div class="mgrid" id="rec-metrics"></div>
@@ -2223,6 +2224,14 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
               </div>
               <button class="sbtn" style="background:var(--purp);flex-shrink:0" onclick="G('restore-file-resp').click()">Restaurer</button>
               <input type="file" id="restore-file-resp" accept=".json" style="display:none" onchange="restoreBackupFarm(this)">
+            </div>
+            <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem;background:rgba(0,201,167,.07);border:1px solid rgba(0,201,167,.2);border-radius:8px">
+              <div style="font-size:22px">☁️</div>
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:700;color:var(--t1)">Restaurer depuis le cloud</div>
+                <div style="font-size:10px;color:var(--t2)">Sauvegardes automatiques durables (Firebase Storage), classées par ferme — aucun fichier local requis</div>
+              </div>
+              <button class="sbtn" style="background:var(--acc);flex-shrink:0" onclick="restoreFromCloud()">☁️ Cloud</button>
             </div>
           </div>
         </div>
@@ -9609,6 +9618,18 @@ async function autoSaveFarm(){
     hist.unshift({date:snapshot.date,data:snapshot});
     if(hist.length>3)hist=hist.slice(0,3);
     localStorage.setItem(histKey,JSON.stringify(hist));
+    // Copie cloud durable (Firebase Storage), classée par ferme — garde les 10 dernières
+    try{
+      if(window.storage&&APP.farmCode){
+        const stamp=snapshot.date.replace(/[:.]/g,'-');
+        await storage.ref('backups/'+APP.farmCode+'/'+stamp+'.json')
+          .putString(JSON.stringify(snapshot),'raw',{contentType:'application/json'});
+        const dir=storage.ref('backups/'+APP.farmCode);
+        const list=await dir.listAll();
+        const names=list.items.map(it=>it.name).sort(); // noms ISO → tri chronologique
+        if(names.length>10)await Promise.all(names.slice(0,names.length-10).map(nm=>dir.child(nm).delete().catch(()=>{})));
+      }
+    }catch(ce){console.warn('cloud backup:',ce&&ce.message);}
     if(window.showToast)showToast('💾 Sauvegarde automatique effectuée','acc');
   }catch(e){console.warn('autoSaveFarm:',e);}
 }
@@ -9645,6 +9666,53 @@ window.restoreFromAutoSave=async function(){
     location.reload();
   }catch(e){alert('❌ Erreur : '+e.message);}
   hideLoader();
+};
+
+// Applique un snapshot (bassins, suivi, feed, stock, intrants, charges + ERP) à la ferme courante
+async function applyRestoreSnapshot(snapshot){
+  const col=(c)=>db.collection('farms').doc(APP.farmCode).collection(c);
+  const batch=db.batch();
+  (snapshot.bassins||[]).forEach((b,i)=>batch.set(col('bassins').doc(String(i).padStart(3,'0')),{...b,_order:i}));
+  (snapshot.suivi||[]).forEach(s=>batch.set(col('suivi').doc(String(s.id)),s));
+  (snapshot.feed||[]).forEach(f=>{const{id,...r}=f;batch.set(col('feed').doc(id||'K1'),r);});
+  (snapshot.stock_entries||[]).forEach(e=>{const{id,...r}=e;if(id)batch.set(col('stock_entries').doc(id),r);});
+  (snapshot.stock_movements||[]).forEach(m=>{const{id,...r}=m;if(id)batch.set(col('stock_movements').doc(id),r);});
+  (snapshot.intrants||[]).forEach(it=>{const{id,...r}=it;if(id)batch.set(col('intrants').doc(id),r);});
+  (snapshot.charges||[]).forEach(c=>{const{id,...r}=c;if(id)batch.set(col('charges').doc(id),r);});
+  await batch.commit();
+  if(snapshot.erp)restoreERPData(snapshot.erp);
+}
+window.applyRestoreSnapshot=applyRestoreSnapshot;
+
+// Restaure depuis une sauvegarde cloud (Firebase Storage), classée par ferme — aucun fichier local requis
+window.restoreFromCloud=async function(){
+  if(!APP.farmCode||!window.storage){alert('Stockage cloud indisponible.');return;}
+  showLoader('Chargement des sauvegardes cloud…');
+  let names=[];
+  try{
+    const dir=storage.ref('backups/'+APP.farmCode);
+    const list=await dir.listAll();
+    names=list.items.map(it=>it.name).sort().reverse(); // plus récentes d'abord
+  }catch(e){hideLoader();alert('❌ Impossible de lister les sauvegardes cloud : '+e.message);return;}
+  hideLoader();
+  if(!names.length){alert('Aucune sauvegarde cloud disponible pour cette ferme.');return;}
+  const menu=names.slice(0,10).map((nm,i)=>(i+1)+'. '+nm.replace('.json','').replace('T',' ')).join('\n');
+  const idx=prompt('Choisissez la sauvegarde cloud à restaurer (1-'+Math.min(names.length,10)+'):\n\n'+menu);
+  if(!idx)return;
+  const n=parseInt(idx)-1;
+  if(!(n>=0&&n<names.length)){alert('Numéro invalide.');return;}
+  if(!confirm('⚠️ Restaurer la sauvegarde cloud « '+names[n].replace('.json','')+' » ?\nLes données actuelles seront remplacées.'))return;
+  showLoader('Restauration depuis le cloud…');
+  try{
+    const url=await storage.ref('backups/'+APP.farmCode+'/'+names[n]).getDownloadURL();
+    const resp=await fetch(url);
+    if(!resp.ok)throw new Error('Téléchargement impossible ('+resp.status+')');
+    const snapshot=await resp.json();
+    await applyRestoreSnapshot(snapshot);
+    await logAudit('sauvegarde','Restauration cloud','Sauvegarde cloud '+names[n]+' restaurée');
+    alert('✅ Restauration cloud terminée ! La page va se recharger.');
+    location.reload();
+  }catch(e){hideLoader();alert('❌ Erreur : '+e.message);}
 };
 
 function checkBackupReminder(){
