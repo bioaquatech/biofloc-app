@@ -8050,7 +8050,7 @@ async function saveBassinRow(i){
       const sn=b.name.replace(/\s+/g,'_');
       const who=APP.user?.name||'?';
       const mkMov=(type,intrantId,qty,unit)=>({id:'mov_'+type+'_'+sn+'_'+dateStr,intrantId,quantity:qty,unit,date:dateStr,type:'sortie',source:'daily',bassin:b.name,createdAt:new Date().toISOString(),createdBy:who});
-      if(b.alimReel>0){const feedId=b.feedId||'aliment';pendingMovs.push(mkMov('alim',feedId,b.alimReel/1000,'kg'));}
+      if(b.alimReel>0){const feedId=b.feedId||'aliment';pendingMovs.push(mkMov('alim',feedId,b.alimReel,'kg'));}
       if(b.probiot>0){pendingMovs.push(mkMov('pwa','pwa_prep',b.probiot/1000,'L'));}
       if(b.carb>0){
         const carbIntrant=APP_INTRANTS.find(x=>x.category==='carbohydrate'&&(x.id===(b.carbType||'').toLowerCase().replace(/[éèê]/g,'e').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')||x.name.toLowerCase().includes((b.carbType||'').toLowerCase())));
