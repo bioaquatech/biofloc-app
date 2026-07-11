@@ -1384,8 +1384,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.6rem">
               <div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">DATE</div><input type="date" id="sc-date" class="di2" style="width:100%"></div>
               <div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">BASSIN</div><select id="sc-bassin" class="si" style="width:100%;font-size:11px"><option value="">Sélectionner...</option></select></div>
-              <div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">POIDS (g)</div><input type="number" id="sc-poids" class="ci" style="width:100%" placeholder="12.5" step="0.1"></div>
-              <div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">MORTALITÉ</div><input type="number" id="sc-mort" class="ci" style="width:100%" placeholder="0"></div>
+              <div style="grid-column:1/-1"><div style="font-size:9px;color:var(--t3);margin-bottom:3px">POIDS (g)</div><input type="number" id="sc-poids" class="ci" style="width:100%" placeholder="12.5" step="0.1"></div>
               <div style="grid-column:1/-1"><div style="font-size:9px;color:var(--t3);margin-bottom:3px">NOTE (optionnel)</div><input type="text" id="sc-note" class="ci" style="width:100%" placeholder="Ex: comportement normal, eau légèrement trouble…"></div>
             </div>
             <button class="sbtn" style="width:100%" onclick="addSuivi()">+ Ajouter pesée</button>
@@ -8685,40 +8684,22 @@ function popSelects(){
 // ═══════════════════════════════════════════════
 // SUIVI CROISSANCE
 // ═══════════════════════════════════════════════
-// Ajuste le cumul de mortalité d'un bassin (pilote Nb Actuel / Survie %) et le sauvegarde.
-// delta = variation (positive à l'ajout, négative à la suppression). Borné à >= 0.
-function _syncBassinMort(name,delta){
-  if(!delta) return;
-  const i=APP.state.bassins.findIndex(b=>b&&b.name===name);
-  if(i<0) return; // bassin introuvable (ex. renommé) → on ne touche à rien
-  APP.state.bassins[i].mort=Math.max(0,(APP.state.bassins[i].mort||0)+delta);
-  saveBassin(i);
-  if(typeof upConfigCalcs==='function')try{upConfigCalcs();}catch(e){}
-}
+// La pesée ne saisit QUE le poids. La mortalité se saisit uniquement dans
+// l'onglet « Bassins & qualité d'eau » (compteur cumulé, corrigeable à tout moment).
 function addSuivi(){
-  const date=G('sc-date').value,bassin=G('sc-bassin').value,poids=parseFloat(G('sc-poids').value),mort=parseInt(G('sc-mort').value)||0;
+  const date=G('sc-date').value,bassin=G('sc-bassin').value,poids=parseFloat(G('sc-poids').value);
   const note=(G('sc-note')?.value||'').trim();
   if(!date||!bassin||isNaN(poids)){alert('Date, Bassin et Poids requis.');return;}
   if(!isFinite(poids)||poids<=0||poids>=100000){alert('Poids invalide (doit être supérieur à 0 et inférieur à 100000 g).');return;}
-  if(!Number.isInteger(mort)||mort<0){alert('Nombre de morts invalide (entier positif ou nul requis).');return;}
   const existing=APP.state.suivi.find(r=>r.bassin===bassin&&r.date===date);
-  const prevMort=existing?(existing.mort||0):0; // mortalité de l'enregistrement remplacé (édition)
   if(existing)deleteSuiviDoc(existing.id);
   APP.state.suivi=APP.state.suivi.filter(r=>!(r.bassin===bassin&&r.date===date));
-  const nr={id:APP.state.suiviId++,date,bassin,poids,mort,...(note?{note}:{})};
+  const nr={id:APP.state.suiviId++,date,bassin,poids,mort:0,...(note?{note}:{})};
   APP.state.suivi.push(nr);
   APP.state.suivi.sort((a,b)=>a.date.localeCompare(b.date)||a.bassin.localeCompare(b.bassin));
-  // Répercute la mortalité de la pesée sur le compteur cumulé du bassin (delta = ajout ou édition)
-  _syncBassinMort(bassin,mort-prevMort);
-  G('sc-poids').value='';G('sc-mort').value='';if(G('sc-note'))G('sc-note').value='';saveSuiviDoc(nr);renderSuivi();renderChart();
+  G('sc-poids').value='';if(G('sc-note'))G('sc-note').value='';saveSuiviDoc(nr);renderSuivi();renderChart();
 }
-function removeSuivi(id){
-  const rec=APP.state.suivi.find(r=>r.id===id);
-  APP.state.suivi=APP.state.suivi.filter(r=>r.id!==id);
-  deleteSuiviDoc(id);
-  if(rec)_syncBassinMort(rec.bassin,-(rec.mort||0)); // supprimer une pesée réduit le cumul d'autant
-  renderSuivi();renderChart();
-}
+function removeSuivi(id){APP.state.suivi=APP.state.suivi.filter(r=>r.id!==id);deleteSuiviDoc(id);renderSuivi();renderChart();}
 function renderSuivi(){
   const tb=G('sc-tbody');if(!tb)return;
   const fl=G('sc-filter')?.value||'';
