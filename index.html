@@ -8685,6 +8685,16 @@ function popSelects(){
 // ═══════════════════════════════════════════════
 // SUIVI CROISSANCE
 // ═══════════════════════════════════════════════
+// Ajuste le cumul de mortalité d'un bassin (pilote Nb Actuel / Survie %) et le sauvegarde.
+// delta = variation (positive à l'ajout, négative à la suppression). Borné à >= 0.
+function _syncBassinMort(name,delta){
+  if(!delta) return;
+  const i=APP.state.bassins.findIndex(b=>b&&b.name===name);
+  if(i<0) return; // bassin introuvable (ex. renommé) → on ne touche à rien
+  APP.state.bassins[i].mort=Math.max(0,(APP.state.bassins[i].mort||0)+delta);
+  saveBassin(i);
+  if(typeof upConfigCalcs==='function')try{upConfigCalcs();}catch(e){}
+}
 function addSuivi(){
   const date=G('sc-date').value,bassin=G('sc-bassin').value,poids=parseFloat(G('sc-poids').value),mort=parseInt(G('sc-mort').value)||0;
   const note=(G('sc-note')?.value||'').trim();
@@ -8692,14 +8702,23 @@ function addSuivi(){
   if(!isFinite(poids)||poids<=0||poids>=100000){alert('Poids invalide (doit être supérieur à 0 et inférieur à 100000 g).');return;}
   if(!Number.isInteger(mort)||mort<0){alert('Nombre de morts invalide (entier positif ou nul requis).');return;}
   const existing=APP.state.suivi.find(r=>r.bassin===bassin&&r.date===date);
+  const prevMort=existing?(existing.mort||0):0; // mortalité de l'enregistrement remplacé (édition)
   if(existing)deleteSuiviDoc(existing.id);
   APP.state.suivi=APP.state.suivi.filter(r=>!(r.bassin===bassin&&r.date===date));
   const nr={id:APP.state.suiviId++,date,bassin,poids,mort,...(note?{note}:{})};
   APP.state.suivi.push(nr);
   APP.state.suivi.sort((a,b)=>a.date.localeCompare(b.date)||a.bassin.localeCompare(b.bassin));
+  // Répercute la mortalité de la pesée sur le compteur cumulé du bassin (delta = ajout ou édition)
+  _syncBassinMort(bassin,mort-prevMort);
   G('sc-poids').value='';G('sc-mort').value='';if(G('sc-note'))G('sc-note').value='';saveSuiviDoc(nr);renderSuivi();renderChart();
 }
-function removeSuivi(id){APP.state.suivi=APP.state.suivi.filter(r=>r.id!==id);deleteSuiviDoc(id);renderSuivi();renderChart();}
+function removeSuivi(id){
+  const rec=APP.state.suivi.find(r=>r.id===id);
+  APP.state.suivi=APP.state.suivi.filter(r=>r.id!==id);
+  deleteSuiviDoc(id);
+  if(rec)_syncBassinMort(rec.bassin,-(rec.mort||0)); // supprimer une pesée réduit le cumul d'autant
+  renderSuivi();renderChart();
+}
 function renderSuivi(){
   const tb=G('sc-tbody');if(!tb)return;
   const fl=G('sc-filter')?.value||'';
