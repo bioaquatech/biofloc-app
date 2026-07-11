@@ -4780,9 +4780,15 @@ async function openBassinStats(bassinName){
   // Charger l\'historique depuis Firestore (bassins daily)
   const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
   const yStr=yesterday.toISOString().slice(0,10);
-  const days30=new Date();days30.setDate(days30.getDate()-30);
-  const dStr=days30.toISOString().slice(0,10);
-  G('bstats-period').textContent=`${dStr} → ${yStr} (30 derniers jours)`;
+  // Période = tout le cycle (depuis la date de démarrage du bassin) ; repli sur 30 jours si absente/invalide
+  const _liveB0=(APP.state.bassins||[]).find(x=>x&&x.name===bassinName)||{};
+  const _cycleStart=(typeof _liveB0.startDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(_liveB0.startDate))?_liveB0.startDate:null;
+  let dStr;
+  if(_cycleStart&&_cycleStart<=yStr){ dStr=_cycleStart; }
+  else { const days30=new Date();days30.setDate(days30.getDate()-30);dStr=days30.toISOString().slice(0,10); }
+  const _cycleMode=(dStr===_cycleStart);
+  const _periodLabel=_cycleMode?'cycle complet':'30 derniers jours';
+  G('bstats-period').textContent=`${dStr} → ${yStr} (${_periodLabel})`;
 
   let records=[];
   try{
@@ -4823,7 +4829,7 @@ async function openBassinStats(bassinName){
     <div class="met"><div class="mlbl">Mesures enregistrées</div><div class="mval">${records.length}</div></div>
     <div class="met${survie!==null&&survie<85?' dng':survie!==null&&survie<90?' warn':''}"><div class="mlbl">Survie</div><div class="mval">${survie!==null?survie.toFixed(1):'—'}<span class="munit">%</span></div></div>
     <div class="met"><div class="mlbl">Mortalité cumulée</div><div class="mval">${mortCumul}<span class="munit">pois.</span></div></div>
-    <div class="met"><div class="mlbl">Morts (30 j)</div><div class="mval">${mortPeriode!==null?mortPeriode:'—'}</div></div>
+    <div class="met"><div class="mlbl">Morts (${_cycleMode?'cycle':'30 j'})</div><div class="mval">${mortPeriode!==null?mortPeriode:'—'}</div></div>
     <div class="met${avg(avgDO)!==null&&avg(avgDO)<5?' dng':''}"><div class="mlbl">DO moyen</div><div class="mval">${avg(avgDO)!==null?avg(avgDO).toFixed(1):'—'}<span class="munit">ppm</span></div></div>
     <div class="met${avg(avgTAN)!==null&&avg(avgTAN)>1?' warn':''}"><div class="mlbl">TAN moyen</div><div class="mval">${avg(avgTAN)!==null?avg(avgTAN).toFixed(2):'—'}<span class="munit">mg/L</span></div></div>
     <div class="met"><div class="mlbl">pH moyen</div><div class="mval">${avg(avgPH)!==null?avg(avgPH).toFixed(2):'—'}</div></div>
