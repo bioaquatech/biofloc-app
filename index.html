@@ -12255,9 +12255,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   window.installPwaUi=installPwaUi;
 
-  // PWA : toutes les fonctions déléguent vers les globales (source unique _pwaLoad/_pwaSave)
-  window.addPWAActivity=function(){addPWAActivity();};
-  window.pwaDoseLitres=function(row){return pwaDoseLitres(row);};
+  // PWA : addPWAActivity() et pwaDoseLitres() sont déjà des fonctions globales
+  // (déclarées plus haut) exposées sur window. Les ré-envelopper ici créait des
+  // stubs qui s'appelaient eux-mêmes → récursion infinie (Maximum call stack).
   // Aliases locaux pour le calendrier mensuel
   function loadMonthlyPlan(){return _pwaLoad();}
   function saveMonthlyPlan(a){_pwaSave(a);}
