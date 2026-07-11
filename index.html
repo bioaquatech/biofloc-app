@@ -4541,7 +4541,7 @@ async function saveSubscription(farmCode){
         startDate:start?new Date(start):new Date(),
         expiresAt:new Date(expires),
         updatedAt:new Date(),
-        updatedBy:(window.APP&&APP.email)||'admin'
+        updatedBy:(window.APP&&APP.user&&(APP.user.email||APP.user.name))||'admin'
       }
     });
     msg.style.color='var(--acc)';
