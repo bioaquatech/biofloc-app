@@ -1151,7 +1151,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
             </div>
             <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px">
               <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,119,182,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</span>
-              <span style="color:var(--t2)"><strong style="color:var(--t1)">Mélasse — ratio C/N évolue sur le cycle.</strong> S0–S4 C/N 15:1 (floc immature) · S4–S16 C/N 12:1 (floc mature, nitrifiantes actives) · S16–S22 C/N 15:1 (charge TAN max, grande biomasse) · <em>Phase 2 (TAN ≥1 mg/L) : ajustement basé sur TAN × volume — voir onglet 🍽️ Rationnement.</em></span>
+              <span style="color:var(--t2)"><strong style="color:var(--t1)">Mélasse — ratio C/N évolue sur le cycle.</strong> S0–S3 C/N 15:1 (floc immature) · S4–S6 C/N 15→12:1 (transition) · S7–S15 C/N 12:1 (floc mature, nitrifiantes actives) · S16–S22 C/N 12→13:1 (finition K6, charge TAN max) · &gt;S22 C/N 13:1 (finition, TAN sous contrôle) · <em>Phase 2 (TAN ≥1 mg/L) : ajustement basé sur TAN × volume — voir onglet 🍽️ Rationnement.</em></span>
             </div>
             <div style="display:flex;gap:8px;align-items:flex-start;font-size:11px">
               <span style="min-width:20px;height:20px;border-radius:50%;background:rgba(0,119,182,.15);color:var(--acc);font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</span>
@@ -1253,7 +1253,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           </div>
           <div>
             <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Semaine du cycle</div>
-            <input type="number" id="rat-semaine" class="ci" value="1" min="1" max="22" style="width:55px" oninput="renderRationnement()">
+            <input type="number" id="rat-semaine" class="ci" value="1" min="1" max="30" style="width:55px" oninput="renderRationnement()">
           </div>
           <div>
             <div style="font-size:9px;color:var(--t3);margin-bottom:2px">% Protéines aliment</div>
@@ -1287,7 +1287,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           </tbody>
         </table>
         </div>
-        <div style="font-size:9px;color:var(--t3);margin-top:.3rem">Cycle démarre à S0 · alevins 5 g · 9008 Floating 2.0mm · Réduction Biofloc −20% (Imhoff 25–40 mL/L) · ⚠️ &gt;600 g : réduire à 2 repas/j · C/N : S0–S4 = 15:1 (floc immature) → S4–S16 = 12:1 (floc mature) → S16–S22 = 15:1 (charge TAN max)</div>
+        <div style="font-size:9px;color:var(--t3);margin-top:.3rem">Cycle démarre à S0 · alevins 5 g · 9008 Floating 2.0mm · Réduction Biofloc −20% (Imhoff 25–40 mL/L) · ⚠️ &gt;600 g : réduire à 2 repas/j · C/N : S0–S3 = 15:1 → S4–S6 = 15→12:1 → S7–S15 = 12:1 → S16–S22 = 12→13:1 (finition K6) → &gt;S22 = 13:1</div>
       </div>
 
       <!-- Résultats par bassin -->
@@ -3106,7 +3106,7 @@ function sp(){return getSpecies();}
 // Cycle démarre S0 · alevins 5 g · 9008 Floating 2.0mm (pas de nurserie 9004)
 // Fréquences : 6·5·4·4·3·3 (K4→K4b→K5→K5b→K6→K6b)
 // Réduction Biofloc −20% sur ration Koudijs (floc optimal 25–40 ml/L Imhoff)
-// C/N mélasse : S0–S4=15:1 (floc immature) · S4–S16=12:1 (floc mature) · S16–S22=15:1 (charge TAN max)
+// C/N mélasse : S0–S3=15:1 · S4–S6=15→12:1 · S7–S15=12:1 (floc mature) · S16–S22=12→13:1 (finition K6) · >S22=13:1
 // Note : au-delà de 600 g de poids individuel, réduire à 2 repas par jour.
 // ─────────────────────────────────────────────────────────────────────────────
 const KOUDIJS_PROFILE={
@@ -4639,17 +4639,25 @@ const FEED_DRY_MATTER=0.90;      // fraction matière sèche aliment (humidité 
 const N_PROTEIN_FACTOR=0.155;    // N par gramme protéine brute (N=PB/6.45) — CORRIGÉ (était 0.16)
 const FEED_NON_ASSIM=0.70;       // fraction non assimilée (fèces+TAN) — CORRIGÉ (était 0.75)
 
-// Ratio C/N par phase de production (outil v2.0)
-const CN_PHASE={demarrage:15, grossissement:12, finition:15};
+// Ratio C/N par phase de production (outil v2.1 — finition K6 remontée à 13:1)
+// Transition S4–S6 : rampe 15→12 (S4=14, S5=13, S6=12).
+const CN_PHASE={demarrage:15, grossissement:12, finition:13};
 function getCNTarget(week=1){
-  if(week<=4)return CN_PHASE.demarrage;
-  if(week<=16)return CN_PHASE.grossissement;
-  return CN_PHASE.finition;
+  const w=+week;
+  if(w<=3)return 15;               // S0–S3
+  if(w===4)return 14;              // Transition S4
+  if(w===5)return 13;              // Transition S5
+  if(w===6)return 12;              // Transition S6
+  if(w<=15)return 12;              // S7–S15 floc mature
+  return 13;                       // S16–S22 et au-delà : finition K6 à 13:1
 }
 function getPhaseLabel(week){
-  if(week<=4)return{label:'Démarrage (S0–S4)',cn:15,color:'var(--acc)'};
-  if(week<=16)return{label:'Grossissement (S4–S16)',cn:12,color:'var(--gold)'};
-  return{label:'Finition (S16–S22)',cn:15,color:'var(--dng)'};
+  const w=+week;
+  if(w<=3)return{label:'Démarrage (S0–S3)',cn:15,color:'var(--acc)'};
+  if(w<=6)return{label:'Transition (S4–S6)',cn:getCNTarget(w),color:'var(--gold)'};
+  if(w<=15)return{label:'Grossissement (S7–S15)',cn:12,color:'var(--gold)'};
+  if(w<=22)return{label:'Finition K6 (S16–S22)',cn:13,color:'var(--dng)'};
+  return{label:'Finition K6 (>S22)',cn:13,color:'var(--dng)'};
 }
 
 // ── MÉTHODE PRÉVENTIVE (quotidienne, basée sur aliment distribué) ──
@@ -7394,9 +7402,13 @@ const ALIM_C_ORGANIQUE=0.50,ALIM_POIDS_SEC=0.90,ALIM_NON_ASSIM=0.70,ALIM_N_PROT=
 // Ratio C:N par phase (semaine)
 function getCNRatio(semaine){
   const s=+semaine;
-  if(s<=4)return{ratio:15,phase:'Démarrage floc (S0–S4)',color:'var(--warn)'};
-  if(s<=16)return{ratio:12,phase:'Grossissement (S4–S16)',color:'var(--acc2)'};
-  return{ratio:15,phase:'Finition (S16–S22)',color:'var(--warn)'};
+  if(s<=3)return{ratio:15,phase:'Floc immature (S0–S3)',color:'var(--warn)'};
+  if(s===4)return{ratio:14,phase:'Transition S4 (15→12)',color:'var(--warn)'};
+  if(s===5)return{ratio:13,phase:'Transition S5 (15→12)',color:'var(--warn)'};
+  if(s===6)return{ratio:12,phase:'Transition S6 (15→12)',color:'var(--warn)'};
+  if(s<=15)return{ratio:12,phase:'Floc mature (S7–S15)',color:'var(--acc2)'};
+  if(s<=22)return{ratio:13,phase:'Finition K6 (S16–S22)',color:'var(--warn)'};
+  return{ratio:13,phase:'Finition K6 (>S22)',color:'var(--warn)'};
 }
 
 // Tableau fréquences-aliments selon poids
