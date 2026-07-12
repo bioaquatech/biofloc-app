@@ -3258,7 +3258,31 @@ function hideAdminModal(){G('admin-modal').classList.add('hidden');}
 // ═══════════════════════════════════════════════
 // LOAD PLATFORM SETTINGS
 // ═══════════════════════════════════════════════
+function _cachePlatformPublic(){
+  try{localStorage.setItem('ichtus_platform_public',JSON.stringify({name:APP.platformName||'',messages:APP.platformMessages||[]}));}catch(e){}
+}
 async function loadPlatformSettings(){
+  // La landing page s'affiche AVANT authentification, or superadmin/settings n'est
+  // lisible qu'authentifié → on repart d'abord du cache local pour éviter le retour au défaut.
+  try{
+    const cached=JSON.parse(localStorage.getItem('ichtus_platform_public')||'null');
+    if(cached){
+      if(cached.name)APP.platformName=cached.name;
+      if(Array.isArray(cached.messages)&&cached.messages.length)APP.platformMessages=cached.messages;
+      updateBootMessage();
+    }
+  }catch(e){}
+  // Document public (lisible sans authentification) — source de vérité pour la landing page
+  try{
+    const pub=await db.collection('platform').doc('landing').get();
+    if(pub.exists){
+      const d=pub.data();
+      if(d.name)APP.platformName=d.name;
+      if(Array.isArray(d.messages)&&d.messages.length)APP.platformMessages=d.messages;
+      _cachePlatformPublic();
+      updateBootMessage();
+    }
+  }catch(e){}
   try{
     const snap=await db.collection('superadmin').doc('settings').get();
     if(snap.exists){
@@ -3267,6 +3291,7 @@ async function loadPlatformSettings(){
       APP.sessionMin=d.sessionTimeout||10;
       APP.platformName=d.platformName||'';
       APP.platformMessages=d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme BioFloc'];
+      _cachePlatformPublic();
     }
     updateBootMessage();
   }catch(e){console.warn('Settings load error:',e);}
@@ -3835,7 +3860,7 @@ async function loadAdminDashboard(){
     const settSnap=await db.collection('superadmin').doc('settings').get();
     if(settSnap.exists){
       const d=settSnap.data();
-      APP.whatsapp=d.whatsapp||'';APP.sessionMin=d.sessionTimeout||10;APP.platformName=d.platformName||'';APP.platformMessages=d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme BioFloc'];updateBootMessage();
+      APP.whatsapp=d.whatsapp||'';APP.sessionMin=d.sessionTimeout||10;APP.platformName=d.platformName||'';APP.platformMessages=d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme BioFloc'];updateBootMessage();if(typeof _cachePlatformPublic==='function')_cachePlatformPublic();
       if(G('set-wa'))G('set-wa').value=APP.whatsapp;
       if(G('set-timeout'))G('set-timeout').value=APP.sessionMin;
       if(G('set-platform-messages'))G('set-platform-messages').value=(d.platformMessages||APP.platformMessages||['Bienvenue sur la plateforme BioFloc']).join('\n');
@@ -4253,7 +4278,9 @@ async function saveSettings(){
     const messages=(G('set-platform-messages')?.value||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
     const platName='';
     await db.collection('superadmin').doc('settings').set({whatsapp:wa,sessionTimeout:timeout,platformName:platName,platformMessages:messages},{merge:true});
-    APP.whatsapp=wa;APP.sessionMin=timeout;APP.platformName=platName;APP.platformMessages=messages;updateBootMessage();
+    // Copie publique (lisible sans authentification) pour la landing page
+    try{await db.collection('platform').doc('landing').set({name:platName,messages:messages,updatedAt:new Date().toISOString()},{merge:true});}catch(pubErr){console.warn('platform/landing:',pubErr&&pubErr.message);}
+    APP.whatsapp=wa;APP.sessionMin=timeout;APP.platformName=platName;APP.platformMessages=messages;updateBootMessage();if(typeof _cachePlatformPublic==='function')_cachePlatformPublic();
     updateSessionBadge();
     alert('✅ Paramètres enregistrés avec succès !');
   }catch(e){alert('❌ Erreur : '+e.message);}
