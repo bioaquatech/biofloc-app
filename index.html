@@ -9613,7 +9613,9 @@ window.exportFicheBassinPDF=exportFicheBassinPDF;
 function exportInventaireFichePDF(){
   const farm=(APP.farmName||APP.farmCode||'Ferme');
   const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const items=(window.APP_INTRANTS||[]).filter(i=>i&&!i.amortissable);
+  // APP_INTRANTS (let) est la source fiable ; window.APP_INTRANTS peut être vide/désynchronisée.
+  const _src=(typeof APP_INTRANTS!=='undefined'&&Array.isArray(APP_INTRANTS)&&APP_INTRANTS.length)?APP_INTRANTS:(window.APP_INTRANTS||[]);
+  const items=_src.filter(i=>i&&!i.amortissable);
   const rows=items.map(it=>{
     const stock=typeof getItemCurrentStock==='function'?(getItemCurrentStock(it.id)||0):0;
     return '<tr><td class="l">'+esc(it.name||it.id)+'</td><td>'+esc(it.category||'')+'</td><td>'+esc(it.unit||'')+'</td>'
