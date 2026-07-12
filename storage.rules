@@ -1,27 +1,59 @@
 rules_version = '2';
+
+// ════════════════════════════════════════════════════════════════════
+//  Firebase Storage — BioFloc ERP
+//  Bucket : bio-aqua-tech.firebasestorage.app
+//  Accès réservé aux utilisateurs authentifiés ; chaque ferme est
+//  cloisonnée via le profil users/{uid}.farmCode (lu dans Firestore).
+//  Tout chemin non listé est refusé.
+// ════════════════════════════════════════════════════════════════════
 service firebase.storage {
   match /b/{bucket}/o {
-    // Logos des fermes — lecture authentifiée, écriture ferme, suppression admin
-    match /logos/{farmCode}/{file} {
-      // Lecture : authentifié uniquement (choix par défaut plus sûr).
-      // Tradeoff : si l'écran de connexion (non authentifié) doit afficher
-      // le logo de la ferme, cette règle le bloquera — dans ce cas repasser
-      // à `if true` en acceptant l'exposition publique du logo.
-      allow read: if request.auth != null;
-      // NOTE: request.resource.contentType est fourni par le client et n'est
-      // PAS une garantie d'authenticité — un client malveillant peut le
-      // falsifier. La limite de taille reste appliquée par Storage.
-      allow write: if request.auth != null
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.farmCode == farmCode
-        && request.resource.size < 2 * 1024 * 1024  // max 2MB
-        && request.resource.contentType.matches('image/.*');
-      // Suppression : même ferme ET rôle admin/superadmin (un opérateur
-      // simple ne peut pas supprimer). Liste des rôles alignée sur firestore.rules.
-      allow delete: if request.auth != null
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.farmCode == farmCode
-        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['Administrateur','SuperAdmin','superadmin'];
+
+    // ── Helpers ──────────────────────────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
     }
-    // Tout le reste — refusé
+    function userData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+    // L'utilisateur appartient-il à cette ferme ?
+    function isSameFarm(farmCode) {
+      return isAuth() && userData().farmCode == farmCode;
+    }
+    // Rôle administrateur / superadmin (liste alignée sur firestore.rules)
+    function isAdmin() {
+      return isAuth() && userData().role in ['Administrateur', 'SuperAdmin', 'superadmin'];
+    }
+
+    // ── Logos de ferme ───────────────────────────────────────────────
+    // logos/{farmCode}/logo.png|jpg|…
+    match /logos/{farmCode}/{file} {
+      // Lecture : tout utilisateur authentifié (affichage inter-fermes toléré).
+      allow read: if isAuth();
+      // Écriture : membre de la ferme · image · max 2 Mo.
+      // (contentType vient du client, non garanti — la taille reste appliquée.)
+      allow write: if isSameFarm(farmCode)
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      // Suppression : membre de la ferme ET rôle admin/superadmin.
+      allow delete: if isSameFarm(farmCode) && isAdmin();
+    }
+
+    // ── Sauvegardes automatiques (classées par ferme) ────────────────
+    // backups/{farmCode}/{horodatage}.json
+    match /backups/{farmCode}/{file} {
+      // Lecture / restauration : membre de la ferme, ou admin/superadmin.
+      allow read: if isSameFarm(farmCode) || isAdmin();
+      // Écriture : membre de la ferme · JSON · max 25 Mo.
+      allow write: if isSameFarm(farmCode)
+        && request.resource.contentType.matches('application/json.*')
+        && request.resource.size < 25 * 1024 * 1024;
+      // Suppression (purge des > 10 dernières) : membre de la ferme ou admin.
+      allow delete: if isSameFarm(farmCode) || isAdmin();
+    }
+
+    // ── Tout le reste : refusé ───────────────────────────────────────
     match /{allPaths=**} {
       allow read, write: if false;
     }
