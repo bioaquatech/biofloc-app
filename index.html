@@ -8618,7 +8618,7 @@ function renderDashboardKPIs(){
     {ico:'🧪',lbl:'TAN ≥ 1 mg/L',val:tanHaut,color:tanHaut>0?'var(--warn)':'var(--acc)',alert:tanHaut>0},
     {ico:'📦',lbl:'Alertes stock',val:lowStock,color:lowStock>0?'var(--warn)':'var(--acc)',alert:lowStock>0},
     {ico:'💰',lbl:'Total achats (XOF)',val:Math.round(soldeCompta).toLocaleString()+' XOF',color:'var(--acc)',alert:false},
-    {ico:'🔄',lbl:'Prochaine rotation',val:prochaineRotation,color:'var(--warn)',alert:prochaineRotation!=='—'},
+    {ico:'🔄',lbl:'Prochaine dose PWA',val:prochaineRotation,color:'var(--warn)',alert:prochaineRotation!=='—'},
   ];
   el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.5rem;margin-bottom:.75rem">'
     +kpis.map(k=>`<div style="background:var(--card);border:1px solid ${k.alert?k.color:'var(--b1)'};border-radius:8px;padding:.55rem .7rem;text-align:center">
