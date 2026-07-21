@@ -2860,9 +2860,9 @@ var _authRestoreInProgress=false; // garde contre la race condition login manuel
 auth.onAuthStateChanged(async function(firebaseUser){
   if(!firebaseUser)return; // pas de session Firebase → landing page normale
   if(APP.user||_authRestoreInProgress)return; // déjà connecté ou restore en cours
-  _authRestoreInProgress=true;
   const farmCode=localStorage.getItem('ichtus_last_farmCode');
-  if(!farmCode)return;     // farmCode inconnu → impossible de restaurer
+  if(!farmCode)return;     // farmCode inconnu (ex. admin, ou cache vidé) → pas de restore, NE PAS poser le verrou
+  _authRestoreInProgress=true;
   try{
     showLoader('Restauration de la session…');
     const [userSnap,farmSnap]=await Promise.all([
