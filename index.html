@@ -7451,7 +7451,7 @@ function renderRationnement(){
   const container=G('rat-results');if(!container)return;
   // Édition table d'aliment / calendrier C/N réservée au SuperAdmin (role='Administrateur')
   const btnSup=G('btn-edit-supplier');
-  if(btnSup)btnSup.style.display=(APP.user?.role==='Administrateur')?'inline-flex':'none';
+  if(btnSup)btnSup.style.display=isRationSuperAdmin()?'inline-flex':'none';
   if(typeof renderReferenceRationTable==='function')renderReferenceRationTable();
 
   // Sélectionner bassins actifs
@@ -10647,8 +10647,7 @@ let SELECTED_SPECIES_ID='tilapia'; // espèce sélectionnée dans le modal (avan
 
 function openSpeciesModal(){
   // Verrouillé pour Responsable et Opérateur — espèce définie par le Super Admin à la création
-  const role=APP.user?.role||'Opérateur';
-  if(role!=='Administrateur'){
+  if(!isRationSuperAdmin()){
     alert(`🔒 L\'espèce élevée dans cette ferme est définie par l\'administrateur.\n\nFerme : ${APP.farmName||APP.farmCode}\nEspèce : ${sp().icon} ${sp().nom}`);
     return;
   }
@@ -10730,7 +10729,7 @@ function renderSpeciesParams(s){
 
 async function applySpecies(){
   // Seul le Super Administrateur peut modifier l\'espèce
-  if(APP.user?.role!=='Administrateur'){
+  if(!isRationSuperAdmin()){
     alert('🔒 L\'espèce de la ferme est définie par le Super Administrateur et ne peut pas être modifiée.');
     G('species-modal').classList.add('hidden');
     return;
@@ -10814,6 +10813,11 @@ async function loadSpeciesFromFirestore(){
   if(t12title)t12title.textContent=`Plan de rationnement — ${ACTIVE_SUPPLIER?.nom||'Koudijs AKF'} adapté Biofloc ${s.nom}`;
   const t12icon=G('t12-species-icon');if(t12icon)t12icon.textContent=s.icon;
 }
+
+// SuperAdmin réel : le login "Accès Administrateur" fixe toujours role='Administrateur',
+// mais un compte SuperAdmin bootstrap au niveau d'une ferme (users/{uid}.role) peut valoir
+// 'SuperAdmin' ou 'superadmin' — accepter les trois formes partout où on vérifie ce droit.
+function isRationSuperAdmin(){return ['Administrateur','SuperAdmin','superadmin'].includes(APP.user?.role);}
 
 // ═══════════════════════════════════════════════
 // GESTION FOURNISSEURS D\'ALIMENT
@@ -10997,7 +11001,7 @@ function applySupplier(sup,silent=false){
 
 // Modifier directement le fournisseur actif
 function editActiveSupplier(){
-  if(APP.user?.role!=='Administrateur'){alert('🔒 La table d\'aliment et le calendrier C/N sont réservés au SuperAdmin.');return;}
+  if(!isRationSuperAdmin()){alert('🔒 La table d\'aliment et le calendrier C/N sont réservés au SuperAdmin.');return;}
   const supList=G('sup-list');
   if(supList){
     supList.innerHTML=SUPPLIERS.map(s=>`<option value="${s.id}">${s.nom}</option>`).join('');
@@ -11022,7 +11026,7 @@ function renderSupplierPreview(){
 }
 
 function openSupplierModal(newMode=false){
-  if(APP.user?.role!=='Administrateur'){alert('🔒 La table d\'aliment et le calendrier C/N sont réservés au SuperAdmin.');return;}
+  if(!isRationSuperAdmin()){alert('🔒 La table d\'aliment et le calendrier C/N sont réservés au SuperAdmin.');return;}
   const title=G('supplier-modal')?.querySelector('.modal-title');
   // Charger la liste
   const supList=G('sup-list');
@@ -11101,7 +11105,7 @@ function addSupplierType(){
 }
 
 async function saveSupplier(){
-  if(APP.user?.role!=='Administrateur'){alert('🔒 Réservé au SuperAdmin.');return;}
+  if(!isRationSuperAdmin()){alert('🔒 Réservé au SuperAdmin.');return;}
   const name=G('sup-name').value.trim();
   const msg=G('sup-msg');
   if(!name){msg.style.color='var(--dng)';msg.textContent='⚠️ Nom du fournisseur obligatoire';return;}
@@ -11163,7 +11167,7 @@ async function saveSupplier(){
 }
 
 async function selectActiveSupplier(){
-  if(APP.user?.role!=='Administrateur'){alert('🔒 Réservé au SuperAdmin.');return;}
+  if(!isRationSuperAdmin()){alert('🔒 Réservé au SuperAdmin.');return;}
   const selVal=G('sup-list')?.value;
   const sup=SUPPLIERS.find(s=>s.id===selVal);
   if(!sup)return;
@@ -11175,7 +11179,7 @@ async function selectActiveSupplier(){
 }
 
 async function deleteSupplier(){
-  if(APP.user?.role!=='Administrateur'){alert('🔒 Réservé au SuperAdmin.');return;}
+  if(!isRationSuperAdmin()){alert('🔒 Réservé au SuperAdmin.');return;}
   const selVal=G('sup-list')?.value;
   if(selVal==='koudijs'){alert('Le profil Koudijs par défaut ne peut pas être supprimé.');return;}
   if(!confirm('Supprimer ce fournisseur ?'))return;
