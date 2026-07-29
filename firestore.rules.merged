@@ -64,6 +64,13 @@ service cloud.firestore {
       allow read, write: if isResponsable();
     }
 
+    // ── Landing page publique (message de bienvenue affiché AVANT connexion) ──
+    // Doit être lisible sans authentification ; seul le superadmin l'écrit.
+    match /platform/landing {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
     // ── Platform params ───────────────────────────────────────────────
     match /platform/{doc} {
       allow read: if isResponsable();
@@ -109,9 +116,11 @@ service cloud.firestore {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
         allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
       }
+      // Table d'aliment / calendrier C/N — lecture par la ferme (nécessaire au calcul
+      // du rationnement), écriture réservée au SuperAdmin (table éditable sans coder).
       match /suppliers/{docId} {
         allow read: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
-        allow write: if isAuth() && (isSameFarm(farmCode) || isSuperAdmin());
+        allow write: if isSuperAdmin();
       }
 
       match /stock_movements/{docId} {
