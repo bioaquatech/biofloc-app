@@ -1245,6 +1245,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           <div style="font-size:10px;color:var(--t3)">Ration · Fréquence · Mélasse préventive & corrective · Ratio C:N selon phase</div>
         </div>
         <button onclick="exportRationnementPDF()" class="no-print" style="align-self:center;background:var(--dng);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:11px;font-weight:700;cursor:pointer;white-space:normal;line-height:1.3;max-width:220px">📄 Exporter le plan de rationnement (PDF)</button>
+        <button id="btn-edit-supplier" onclick="editActiveSupplier()" class="no-print" style="display:none;align-self:center;background:var(--purp);color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:11px;font-weight:700;cursor:pointer" title="Réservé au SuperAdmin — table d'aliment et calendrier C/N">🏭 Fournisseur d'aliment</button>
         <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
           <div>
             <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Bassin</div>
@@ -1264,31 +1265,34 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
         </div>
       </div>
 
-      <!-- Tableau référence fréquences -->
+      <!-- Tableau référence fréquences — généré dynamiquement, voir renderReferenceRationTable() -->
       <div style="margin-bottom:.75rem">
-        <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.4rem">📋 Tableau de rationnement — Fréquences & aliments par stade</div>
+        <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.4rem">📋 Table d'aliment — <span id="ref-supplier-name">Koudijs AKF</span></div>
         <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:10px;min-width:600px">
+        <table style="width:100%;border-collapse:collapse;font-size:10px;min-width:520px">
           <thead><tr style="background:var(--inp)">
-            <th style="padding:6px 10px;text-align:left;border-bottom:2px solid var(--b2)">Stade / Poids</th>
+            <th style="padding:6px 10px;text-align:left;border-bottom:2px solid var(--b2)">Stade / Poids max</th>
             <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--gold)">Aliment</th>
             <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--acc)">Fréq./jour</th>
             <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--acc2)">% Biomasse</th>
-            <th style="padding:6px 10px;border-bottom:2px solid var(--b2)">Semaines</th>
-            <th style="padding:6px 10px;border-bottom:2px solid var(--b2)">Ratio C:N</th>
-            <th style="padding:6px 10px;border-bottom:2px solid var(--b2)">Phase</th>
           </tr></thead>
-          <tbody>
-            <tr style="background:rgba(96,165,250,.07)"><td style="padding:6px 10px;font-weight:700">S0–S3 · 5–25 g (K4)</td><td style="padding:6px 10px;color:#60a5fa;font-weight:700">9008 Floating 2.0mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">6</td><td style="padding:6px 10px;text-align:center">3.6%</td><td style="padding:6px 10px;text-align:center">S0–S3</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">15:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Floc immature · NH₄ élevé</td></tr>
-            <tr><td style="padding:6px 10px;font-weight:700">S4–S6 · 25–50 g (K4)</td><td style="padding:6px 10px;color:#38bdf8;font-weight:700">9008 Floating 2.0mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">5</td><td style="padding:6px 10px;text-align:center">3.2%</td><td style="padding:6px 10px;text-align:center">S4–S6</td><td style="padding:6px 10px;text-align:center;color:var(--acc)">15→12:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Transition · nitrif. s'établissent</td></tr>
-            <tr style="background:rgba(245,158,11,.07)"><td style="padding:6px 10px;font-weight:700">S7–S9 · 50–100 g (K5)</td><td style="padding:6px 10px;color:#f59e0b;font-weight:700">9008 Floating 3.0mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">4</td><td style="padding:6px 10px;text-align:center">2.3%</td><td style="padding:6px 10px;text-align:center">S7–S9</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">12:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Floc mature · nitrif. actives</td></tr>
-            <tr><td style="padding:6px 10px;font-weight:700">S10–S14 · 100–200 g (K5)</td><td style="padding:6px 10px;color:#fbbf24;font-weight:700">9008 Floating 3.0mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">4</td><td style="padding:6px 10px;text-align:center">2.0%</td><td style="padding:6px 10px;text-align:center">S10–S14</td><td style="padding:6px 10px;text-align:center;color:var(--acc2)">12:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Grossissement · DO protégé</td></tr>
-            <tr style="background:rgba(248,113,113,.07)"><td style="padding:6px 10px;font-weight:700">S15–S22 · 200–400 g (K6)</td><td style="padding:6px 10px;color:#f87171;font-weight:700">9008 Floating 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">3</td><td style="padding:6px 10px;text-align:center">1.6%</td><td style="padding:6px 10px;text-align:center">S15–S22</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">12→13:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Charge TAN max · remonter C/N S16</td></tr>
-            <tr><td style="padding:6px 10px;font-weight:700">&gt;S22 · &gt;400 g (K6) ⚠️</td><td style="padding:6px 10px;color:#fca5a5;font-weight:700">9008 Floating 4.5mm</td><td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">3</td><td style="padding:6px 10px;text-align:center">1.4%</td><td style="padding:6px 10px;text-align:center">&gt;S22</td><td style="padding:6px 10px;text-align:center;color:var(--warn)">13:1</td><td style="padding:6px 10px;color:var(--t3);font-size:9px">Finition · TAN sous contrôle</td></tr>
-          </tbody>
+          <tbody id="ref-feed-tbody"></tbody>
         </table>
         </div>
-        <div style="font-size:9px;color:var(--t3);margin-top:.3rem">Cycle démarre à S0 · alevins 5 g · 9008 Floating 2.0mm · Réduction Biofloc −20% (Imhoff 25–40 mL/L) · ⚠️ &gt;600 g : réduire à 2 repas/j · C/N : S0–S3 = 15:1 → S4–S6 = 15→12:1 → S7–S15 = 12:1 → S16–S22 = 12→13:1 (finition K6) → &gt;S22 = 13:1</div>
+      </div>
+      <div style="margin-bottom:.75rem">
+        <div style="font-size:11px;font-weight:700;color:var(--t1);margin-bottom:.4rem">🧪 Calendrier C/N mélasse</div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:10px;min-width:400px">
+          <thead><tr style="background:var(--inp)">
+            <th style="padding:6px 10px;text-align:left;border-bottom:2px solid var(--b2)">Semaines</th>
+            <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--warn)">Ratio C:N</th>
+            <th style="padding:6px 10px;text-align:left;border-bottom:2px solid var(--b2)">Phase</th>
+          </tr></thead>
+          <tbody id="ref-cn-tbody"></tbody>
+        </table>
+        </div>
+        <div style="font-size:9px;color:var(--t3);margin-top:.5rem">Formules : Mélasse préventive → voir onglet Rationnement · Mélasse corrective si TAN ≥ 1 mg/L · Tables éditables par le SuperAdmin (bouton 🏷 Fournisseur d'aliment ci-dessus).</div>
       </div>
 
       <!-- Résultats par bassin -->
@@ -2744,17 +2748,31 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
       <!-- Types d'aliment du fournisseur -->
       <div style="font-size:10px;font-weight:700;color:var(--t2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.5px">Types d'aliment (max 8)</div>
       <!-- En-têtes colonnes -->
-      <div style="display:grid;grid-template-columns:1fr 80px 55px 60px 55px 40px auto;gap:4px;padding:3px 6px;margin-bottom:2px">
+      <div style="display:grid;grid-template-columns:1fr 70px 50px 60px 55px 55px 40px auto;gap:4px;padding:3px 6px;margin-bottom:2px">
         <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Nom produit</span>
         <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Granulé</span>
         <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">%Prot.</span>
         <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Poids max (g)</span>
+        <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px" title="Ration en % de la biomasse/jour">Taux %</span>
         <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Prix/kg</span>
         <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Repas/j</span>
         <span></span>
       </div>
       <div id="sup-types-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:.5rem"></div>
       <button class="sbtn" style="font-size:10px;padding:3px 10px;background:var(--b2)" onclick="addSupplierType()">+ Ajouter un type</button>
+    </div>
+
+    <div style="border-top:1px solid var(--b1);padding-top:.75rem;margin-bottom:.5rem">
+      <div class="form-lbl" style="margin-bottom:.3rem">Calendrier C/N mélasse (par semaine de cycle)</div>
+      <div style="font-size:9px;color:var(--t3);margin-bottom:.4rem">Une ligne par palier. Laisser "Semaine max" vide sur la dernière ligne = s'applique au-delà (finition).</div>
+      <div style="display:grid;grid-template-columns:90px 70px 1fr auto;gap:4px;padding:3px 6px;margin-bottom:2px">
+        <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Semaine max</span>
+        <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Ratio C:N</span>
+        <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Libellé phase</span>
+        <span></span>
+      </div>
+      <div id="sup-cn-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:.5rem"></div>
+      <button class="sbtn" style="font-size:10px;padding:3px 10px;background:var(--b2)" onclick="addCNRow()">+ Ajouter un palier</button>
     </div>
 
     <div style="display:flex;gap:.5rem;margin-top:.75rem">
@@ -4638,25 +4656,14 @@ const FEED_DRY_MATTER=0.90;      // fraction matière sèche aliment (humidité 
 const N_PROTEIN_FACTOR=0.155;    // N par gramme protéine brute (N=PB/6.45) — CORRIGÉ (était 0.16)
 const FEED_NON_ASSIM=0.70;       // fraction non assimilée (fèces+TAN) — CORRIGÉ (était 0.75)
 
-// Ratio C/N par phase de production (outil v2.1 — finition K6 remontée à 13:1)
-// Transition S4–S6 : rampe 15→12 (S4=14, S5=13, S6=12).
-const CN_PHASE={demarrage:15, grossissement:12, finition:13};
-function getCNTarget(week=1){
-  const w=+week;
-  if(w<=3)return 15;               // S0–S3
-  if(w===4)return 14;              // Transition S4
-  if(w===5)return 13;              // Transition S5
-  if(w===6)return 12;              // Transition S6
-  if(w<=15)return 12;              // S7–S15 floc mature
-  return 13;                       // S16–S22 et au-delà : finition K6 à 13:1
-}
+// Ratio C/N par phase de production — dérivé de CN_SCHEDULE (calendrier du
+// fournisseur actif, éditable par le SuperAdmin). Garantit que l'outil PWA/
+// mélasse préventive et le Guide de rationnement affichent toujours le même
+// ratio pour une semaine donnée.
+function getCNTarget(week=1){return getCNRatio(week).ratio;}
 function getPhaseLabel(week){
-  const w=+week;
-  if(w<=3)return{label:'Démarrage (S0–S3)',cn:15,color:'var(--acc)'};
-  if(w<=6)return{label:'Transition (S4–S6)',cn:getCNTarget(w),color:'var(--gold)'};
-  if(w<=15)return{label:'Grossissement (S7–S15)',cn:12,color:'var(--gold)'};
-  if(w<=22)return{label:'Finition K6 (S16–S22)',cn:13,color:'var(--dng)'};
-  return{label:'Finition K6 (>S22)',cn:13,color:'var(--dng)'};
+  const r=getCNRatio(week);
+  return{label:r.phase,cn:r.ratio,color:r.color};
 }
 
 // ── MÉTHODE PRÉVENTIVE (quotidienne, basée sur aliment distribué) ──
@@ -7398,30 +7405,10 @@ const MELASSE_FACTEUR=MELASSE_F1*MELASSE_F2*MELASSE_F3*MELASSE_F4; // 0.21
 const MELASSE_DENSITE=1.4; // kg/L
 const ALIM_C_ORGANIQUE=0.50,ALIM_POIDS_SEC=0.90,ALIM_NON_ASSIM=0.70,ALIM_N_PROT=0.155;
 
-// Ratio C:N par phase (semaine)
-function getCNRatio(semaine){
-  const s=+semaine;
-  if(s<=3)return{ratio:15,phase:'Floc immature (S0–S3)',color:'var(--warn)'};
-  if(s===4)return{ratio:14,phase:'Transition S4 (15→12)',color:'var(--warn)'};
-  if(s===5)return{ratio:13,phase:'Transition S5 (15→12)',color:'var(--warn)'};
-  if(s===6)return{ratio:12,phase:'Transition S6 (15→12)',color:'var(--warn)'};
-  if(s<=15)return{ratio:12,phase:'Floc mature (S7–S15)',color:'var(--acc2)'};
-  if(s<=22)return{ratio:13,phase:'Finition K6 (S16–S22)',color:'var(--warn)'};
-  return{ratio:13,phase:'Finition K6 (>S22)',color:'var(--warn)'};
-}
-
-// Tableau fréquences-aliments selon poids
-function getRatEntry(poids){
-  if(poids<1)return{aliment:'K1 Starter',freq:6,pct:0.09,color:'#a78bfa'};
-  if(poids<5)return{aliment:'K4 2mm',freq:5,pct:0.065,color:'#a78bfa'};
-  if(poids<25)return{aliment:'K4 2mm',freq:5,pct:0.04,color:'#a78bfa'};
-  if(poids<50)return{aliment:'K4 2mm',freq:6,pct:0.025,color:'#a78bfa'};
-  if(poids<100)return{aliment:'K5 3mm',freq:5,pct:0.025,color:'#34d399'};
-  if(poids<200)return{aliment:'K5 3mm',freq:4,pct:0.0175,color:'#34d399'};
-  if(poids<400)return{aliment:'K6 4.5mm',freq:4,pct:0.015,color:'#f87171'};
-  if(poids<600)return{aliment:'K6 4.5mm',freq:3,pct:0.0125,color:'#f87171'};
-  return{aliment:'K6 4.5mm',freq:3,pct:0.010,color:'#f87171'};
-}
+// getCNRatio(semaine) et getRatEntry(poids) : voir plus loin (section GESTION
+// FOURNISSEURS D'ALIMENT) — dérivées de CN_SCHEDULE / FEED_TYPES, donc du
+// fournisseur d'aliment réellement actif. Une seule source de vérité, partagée
+// avec calcBassin() et l'onglet Aliments.
 
 // ─── Mélasse Préventive (basée sur aliment distribué) ───
 // TCO = (g/1000) × C_org × %sec × non_assim
@@ -7462,6 +7449,10 @@ function renderRationnement(){
   const bassinSel=G('rat-bassin')?.value||'all';
   const {ratio,phase,color}=getCNRatio(semaine);
   const container=G('rat-results');if(!container)return;
+  // Édition table d'aliment / calendrier C/N réservée au SuperAdmin (role='Administrateur')
+  const btnSup=G('btn-edit-supplier');
+  if(btnSup)btnSup.style.display=(APP.user?.role==='Administrateur')?'inline-flex':'none';
+  if(typeof renderReferenceRationTable==='function')renderReferenceRationTable();
 
   // Sélectionner bassins actifs
   let bassins=APP.state.bassins.filter(b=>b.statut==='Actif');
@@ -10831,16 +10822,111 @@ async function loadSpeciesFromFirestore(){
 // Stockage local des fournisseurs (Firestore optionnel)
 let SUPPLIERS=[JSON.parse(JSON.stringify(KOUDIJS_PROFILE))];
 let EDITING_SUP_TYPES=[]; // types en cours d\'édition dans le modal
+let EDITING_CN_ROWS=[]; // paliers C/N en cours d'édition dans le modal
+
+// Calendrier C/N par défaut (valeurs Koudijs/Tilapia actuelles) — remplacé par
+// celui du fournisseur actif dès qu'un calendrier personnalisé est enregistré.
+let CN_SCHEDULE=[
+  {maxWeek:3,ratio:15,label:'Floc immature (S0–S3)'},
+  {maxWeek:4,ratio:14,label:'Transition S4 (15→12)'},
+  {maxWeek:5,ratio:13,label:'Transition S5 (15→12)'},
+  {maxWeek:6,ratio:12,label:'Transition S6 (15→12)'},
+  {maxWeek:15,ratio:12,label:'Floc mature (S7–S15)'},
+  {maxWeek:22,ratio:13,label:'Finition (S16–S22)'},
+  {maxWeek:null,ratio:13,label:'Finition (>S22)'}
+];
+function renderCNRows(){
+  const el=G('sup-cn-list');if(!el)return;
+  el.innerHTML='';
+  if(!EDITING_CN_ROWS.length){el.innerHTML='<div style="font-size:10px;color:var(--t3);padding:.3rem 0">Aucun palier — cliquez "+ Ajouter un palier"</div>';return;}
+  EDITING_CN_ROWS.forEach((r,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:90px 70px 1fr auto;gap:4px;align-items:center;background:var(--inp);border:1px solid var(--b1);border-radius:6px;padding:4px 6px;font-size:10px';
+    row.innerHTML=`
+      <input type="number" class="ci" style="font-size:10px;border:none;background:transparent;width:100%" placeholder="illimité" value="${r.maxWeek==null?'':r.maxWeek}"
+        oninput="EDITING_CN_ROWS[${i}].maxWeek=this.value===''?null:+this.value" title="Semaine max de ce palier (vide = au-delà, dernière ligne)">
+      <input type="number" step="0.5" class="ci" style="font-size:10px;border:none;background:transparent;width:100%" value="${r.ratio!=null?r.ratio:''}"
+        oninput="EDITING_CN_ROWS[${i}].ratio=+this.value||0" title="Ratio C:N cible">
+      <input class="ci" style="font-size:10px;border:none;background:transparent;width:100%" placeholder="Libellé (ex: Floc mature)" value="${r.label||''}"
+        oninput="EDITING_CN_ROWS[${i}].label=this.value">
+      <button class="dbtn" style="padding:2px 6px;font-size:10px" onclick="EDITING_CN_ROWS.splice(${i},1);renderCNRows()">✕</button>`;
+    el.appendChild(row);
+  });
+}
+function addCNRow(){
+  if(EDITING_CN_ROWS.length>=12){alert('Maximum 12 paliers.');return;}
+  EDITING_CN_ROWS.push({maxWeek:null,ratio:15,label:''});
+  renderCNRows();
+}
+// Ratio C/N cible pour une semaine donnée, selon le calendrier actif (fournisseur).
+function getCNRatio(semaine){
+  const s=+semaine;
+  const sorted=(CN_SCHEDULE||[]).slice().sort((a,b)=>(a.maxWeek==null?Infinity:a.maxWeek)-(b.maxWeek==null?Infinity:b.maxWeek));
+  const found=sorted.find(r=>s<=(r.maxWeek==null?Infinity:r.maxWeek))||sorted[sorted.length-1];
+  if(!found)return{ratio:15,phase:'Non configuré',color:'var(--warn)'};
+  return{ratio:found.ratio,phase:found.label||('Jusqu\'à S'+(found.maxWeek??'∞')),color:'var(--warn)'};
+}
+// Entrée aliment (nom/fréquence/taux) pour un poids donné — même source que
+// calcBassin() et l'onglet 🌾 Aliments (FEED_TYPES du fournisseur actif).
+// Utilisée par le Guide de rationnement (t12) pour rester toujours cohérente.
+function getRatEntry(poids){
+  const ft=getRationEntry(poids);
+  if(!ft)return{aliment:'—',freq:1,pct:0,color:'var(--t3)'};
+  return{aliment:getFeedFullName(ft),freq:ft.freq||1,pct:ft.rate||0,color:ft.color||'#60a5fa'};
+}
+
+// Tableau de référence (Guide de rationnement) — reconstruit à partir du
+// fournisseur d'aliment ACTIF (FEED_TYPES) et du calendrier C/N actif
+// (CN_SCHEDULE), pour rester toujours cohérent après un changement de
+// fournisseur par le SuperAdmin. Aucune valeur codée en dur.
+function renderReferenceRationTable(){
+  const nameEl=G('ref-supplier-name');
+  if(nameEl)nameEl.textContent=(ACTIVE_SUPPLIER&&ACTIVE_SUPPLIER.nom)||'—';
+  const feedTb=G('ref-feed-tbody');
+  if(feedTb){
+    const sorted=(FEED_TYPES||[]).slice().sort((a,b)=>(a.maxPoids||9999)-(b.maxPoids||9999));
+    feedTb.innerHTML=sorted.length?sorted.map((f,i)=>{
+      const prevMax=i>0?sorted[i-1].maxPoids:0;
+      const range=(prevMax||0)+'–'+(f.maxPoids&&f.maxPoids<9999?f.maxPoids:'∞')+' g';
+      return '<tr'+(i%2===0?' style="background:'+(f.color||'#60a5fa')+'0d"':'')+'>'
+        +'<td style="padding:6px 10px;font-weight:700">'+range+(f.stage?' ('+escapeHtml(f.stage)+')':'')+'</td>'
+        +'<td style="padding:6px 10px;color:'+(f.color||'#60a5fa')+';font-weight:700">'+escapeHtml(getFeedFullName(f))+'</td>'
+        +'<td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">'+(f.freq||'—')+'</td>'
+        +'<td style="padding:6px 10px;text-align:center">'+(f.rate!=null?(f.rate*100).toFixed(1)+'%':'—')+'</td></tr>';
+    }).join(''):'<tr><td colspan="4" style="padding:6px 10px;text-align:center;color:var(--t3)">Aucun aliment configuré</td></tr>';
+  }
+  const cnTb=G('ref-cn-tbody');
+  if(cnTb){
+    const sorted=(CN_SCHEDULE||[]).slice().sort((a,b)=>(a.maxWeek==null?Infinity:a.maxWeek)-(b.maxWeek==null?Infinity:b.maxWeek));
+    cnTb.innerHTML=sorted.length?sorted.map((r,i)=>{
+      const prevMax=i>0?sorted[i-1].maxWeek:0;
+      const range='S'+((prevMax||0)+1)+(r.maxWeek==null?'+':(r.maxWeek>(prevMax||0)+1?'–S'+r.maxWeek:''));
+      return '<tr'+(i%2===0?' style="background:rgba(245,166,35,.05)"':'')+'>'
+        +'<td style="padding:6px 10px;font-weight:700">'+range+'</td>'
+        +'<td style="padding:6px 10px;text-align:center;color:var(--warn);font-weight:700">'+r.ratio+':1</td>'
+        +'<td style="padding:6px 10px;color:var(--t3);font-size:9px">'+escapeHtml(r.label||'')+'</td></tr>';
+    }).join(''):'<tr><td colspan="3" style="padding:6px 10px;text-align:center;color:var(--t3)">Aucun palier configuré</td></tr>';
+  }
+}
 
 function loadSuppliersFromFirestore(){
   if(!APP.farmCode)return;
-  farmCol('suppliers').get().then(snap=>{
+  farmCol('suppliers').get().then(async snap=>{
     if(!snap.empty){
       const customs=snap.docs.map(d=>({id:d.id,...d.data()}));
       // Garder Koudijs en premier, ajouter les customs
       SUPPLIERS=[JSON.parse(JSON.stringify(KOUDIJS_PROFILE)),...customs.filter(s=>s.id!=='koudijs')];
     }
     refreshSupplierSelect();
+    // Réappliquer le fournisseur choisi pour cette ferme (sinon on retombe sur Koudijs à chaque rechargement)
+    try{
+      const farmSnap=await db.collection('farms').doc(APP.farmCode).get();
+      const activeId=farmSnap.exists?farmSnap.data().activeSupplierId:null;
+      if(activeId){
+        const sup=SUPPLIERS.find(s=>s.id===activeId);
+        if(sup)applySupplier(sup,true);
+      }
+    }catch(e){console.warn('activeSupplierId load:',e);}
   }).catch(()=>{});
 }
 
@@ -10860,7 +10946,7 @@ function onSupplierChange(val){
   applySupplier(sup);
 }
 
-function applySupplier(sup){
+function applySupplier(sup,silent=false){
   ACTIVE_SUPPLIER=JSON.parse(JSON.stringify(sup));
   // Reconstruire FEED_TYPES depuis le fournisseur
   FEED_TYPES=sup.types.map((t,i)=>({
@@ -10875,6 +10961,26 @@ function applySupplier(sup){
     stage:t.stage||'',
     batches:FEED_TYPES.find(f=>f.id===t.id)?.batches||[{id:Date.now(),qty:100,price:700}]
   }));
+  // Nettoyer les aliments figés qui n'existent plus dans le nouveau fournisseur —
+  // sinon le menu déroulant affiche un choix trompeur (calcBassin, lui, retombe
+  // déjà proprement sur l'auto-sélection par poids). L'historique n'est pas touché.
+  if(window.APP&&APP.state&&Array.isArray(APP.state.bassins)){
+    const validIds=new Set(FEED_TYPES.map(f=>f.id));
+    let cleaned=0;
+    APP.state.bassins.forEach((b,i)=>{
+      if(b.feedId&&!validIds.has(b.feedId)){
+        b.feedId=null;
+        cleaned++;
+        if(typeof saveBassin==='function')saveBassin(i);
+      }
+    });
+    if(cleaned){
+      if(typeof buildBTable==='function')buildBTable();
+      if(window.showToast)showToast('♻️ '+cleaned+' bassin(s) repassé(s) en aliment auto (poids) suite au changement de fournisseur','warn');
+    }
+  }
+  // Reconstruire le calendrier C/N depuis le fournisseur (garde l'actuel si non défini)
+  if(Array.isArray(sup.cnSchedule)&&sup.cnSchedule.length)CN_SCHEDULE=JSON.parse(JSON.stringify(sup.cnSchedule));
   // Mettre à jour les labels UI
   const lbl=G('supplier-active-label');
   if(lbl)lbl.textContent=`${sup.nom} — ${sup.types.length} types · Réduction Biofloc −20%`;
@@ -10883,14 +10989,15 @@ function applySupplier(sup){
   // Rafraîchir tous les onglets
   if(G('t2')?.classList.contains('active'))renderFeed();
   if(G('t4')?.classList.contains('active'))upLog();
+  if(G('t12')?.classList.contains('active'))renderRationnement();
   upAll();
   renderSupplierPreview();
-  renderSupplierPreview();
-  alert(`✅ Fournisseur \"${sup.nom}\" sélectionné — tous les onglets ont été mis à jour.`);
+  if(!silent)alert(`✅ Fournisseur \"${sup.nom}\" sélectionné — tous les onglets ont été mis à jour.`);
 }
 
 // Modifier directement le fournisseur actif
 function editActiveSupplier(){
+  if(APP.user?.role!=='Administrateur'){alert('🔒 La table d\'aliment et le calendrier C/N sont réservés au SuperAdmin.');return;}
   const supList=G('sup-list');
   if(supList){
     supList.innerHTML=SUPPLIERS.map(s=>`<option value="${s.id}">${s.nom}</option>`).join('');
@@ -10915,6 +11022,7 @@ function renderSupplierPreview(){
 }
 
 function openSupplierModal(newMode=false){
+  if(APP.user?.role!=='Administrateur'){alert('🔒 La table d\'aliment et le calendrier C/N sont réservés au SuperAdmin.');return;}
   const title=G('supplier-modal')?.querySelector('.modal-title');
   // Charger la liste
   const supList=G('sup-list');
@@ -10925,7 +11033,9 @@ function openSupplierModal(newMode=false){
     if(title)title.textContent='🏭 Nouveau fournisseur';
     G('sup-name').value='';
     EDITING_SUP_TYPES=[];
+    EDITING_CN_ROWS=JSON.parse(JSON.stringify(CN_SCHEDULE));
     renderSupplierTypes();
+    renderCNRows();
   } else {
     if(title)title.textContent='✏️ Modifier — '+ACTIVE_SUPPLIER.nom;
     // Charger le fournisseur sélectionné dans le modal
@@ -10940,6 +11050,8 @@ function loadSupplierInModal(supId){
   if(!sup)return;
   G('sup-name').value=sup.nom||'';
   EDITING_SUP_TYPES=JSON.parse(JSON.stringify(sup.types||[]));
+  EDITING_CN_ROWS=JSON.parse(JSON.stringify((sup.cnSchedule&&sup.cnSchedule.length)?sup.cnSchedule:CN_SCHEDULE));
+  renderCNRows();
   renderSupplierTypes();
 }
 
@@ -10948,7 +11060,7 @@ function renderSupplierTypes(){
   el.innerHTML='';
   EDITING_SUP_TYPES.forEach((t,i)=>{
     const row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:1fr 80px 55px 60px 55px 40px auto;gap:4px;align-items:center;background:var(--inp);border:1px solid var(--b1);border-radius:6px;padding:4px 6px;font-size:10px';
+    row.style.cssText='display:grid;grid-template-columns:1fr 70px 50px 60px 55px 55px 40px auto;gap:4px;align-items:center;background:var(--inp);border:1px solid var(--b1);border-radius:6px;padding:4px 6px;font-size:10px';
     row.innerHTML=`
       <input class="ci" style="font-size:10px;border:none;background:transparent;width:100%" placeholder="Nom produit (ex: 9008 Floating)" value="${t.name||''}"
         oninput="EDITING_SUP_TYPES[${i}].name=this.value">
@@ -10958,6 +11070,8 @@ function renderSupplierTypes(){
         oninput="EDITING_SUP_TYPES[${i}].protein=+this.value" title="Protéines %">
       <input type="number" class="ci" style="font-size:10px;border:none;background:transparent;width:100%" placeholder="PxMax(g)" value="${t.maxPoids||''}"
         oninput="EDITING_SUP_TYPES[${i}].maxPoids=+this.value" title="Poids max poisson (g)">
+      <input type="number" step="0.1" class="ci" style="font-size:10px;border:none;background:transparent;width:100%" placeholder="Taux%" value="${t.rate!=null?(t.rate*100).toFixed(2).replace(/\.?0+$/,''):''}"
+        oninput="EDITING_SUP_TYPES[${i}].rate=(+this.value||0)/100" title="Ration en % de la biomasse/jour">
       <input type="number" class="ci" style="font-size:10px;border:none;background:transparent;width:100%" placeholder="Prix/kg" value="${t.prix||''}"
         oninput="EDITING_SUP_TYPES[${i}].prix=+this.value" title="Prix XOF/kg">
       <input type="number" class="ci" style="font-size:10px;border:none;background:transparent;width:100%" min="1" max="8" placeholder="Freq" value="${t.freq||2}"
@@ -10987,6 +11101,7 @@ function addSupplierType(){
 }
 
 async function saveSupplier(){
+  if(APP.user?.role!=='Administrateur'){alert('🔒 Réservé au SuperAdmin.');return;}
   const name=G('sup-name').value.trim();
   const msg=G('sup-msg');
   if(!name){msg.style.color='var(--dng)';msg.textContent='⚠️ Nom du fournisseur obligatoire';return;}
@@ -11000,10 +11115,14 @@ async function saveSupplier(){
       t.rate=Math.round(refRate*0.80*1000)/1000;
     }
   }
+  // Valider le calendrier C/N (ignorer les lignes vides/incomplètes)
+  const cnRows=EDITING_CN_ROWS.filter(r=>r.ratio>0);
+  if(!cnRows.length){msg.style.color='var(--dng)';msg.textContent='⚠️ Ajoutez au moins un palier C/N';return;}
   const sup={
     id:name.toLowerCase().replace(/[^a-z0-9]/g,'')||('sup_'+Date.now()),
     nom:name,
-    types:EDITING_SUP_TYPES
+    types:EDITING_SUP_TYPES,
+    cnSchedule:cnRows
   };
   // Vérifier si c\'est une mise à jour ou nouveau
   const existing=SUPPLIERS.find(s=>s.nom.toLowerCase()===name.toLowerCase());
@@ -11031,16 +11150,20 @@ async function saveSupplier(){
       color:t.color||'#60a5fa',stage:t.stage||'',
       batches:FEED_TYPES.find(f=>f.id===t.id)?.batches||[{id:Date.now(),qty:100,price:700}]
     }));
+    CN_SCHEDULE=cnRows;
     const lbl=G('supplier-active-label');
     if(lbl)lbl.textContent=`${sup.nom} — ${sup.types.length} types · Réduction Biofloc −20%`;
     renderSupplierPreview();
     if(G('t2')?.classList.contains('active'))renderFeed();
+    if(G('t12')?.classList.contains('active'))renderRationnement();
     upAll();
+    if(APP.farmCode){try{await db.collection('farms').doc(APP.farmCode).set({activeSupplierId:sup.id},{merge:true});}catch(e){console.warn('activeSupplierId save:',e);}}
   }
   setTimeout(()=>{G('supplier-modal').classList.add('hidden');},1200);
 }
 
-function selectActiveSupplier(){
+async function selectActiveSupplier(){
+  if(APP.user?.role!=='Administrateur'){alert('🔒 Réservé au SuperAdmin.');return;}
   const selVal=G('sup-list')?.value;
   const sup=SUPPLIERS.find(s=>s.id===selVal);
   if(!sup)return;
@@ -11048,9 +11171,11 @@ function selectActiveSupplier(){
   const mainSel=G('supplier-select');
   if(mainSel)mainSel.value=sup.id;
   applySupplier(sup);
+  if(APP.farmCode){try{await db.collection('farms').doc(APP.farmCode).set({activeSupplierId:sup.id},{merge:true});}catch(e){console.warn('activeSupplierId save:',e);}}
 }
 
 async function deleteSupplier(){
+  if(APP.user?.role!=='Administrateur'){alert('🔒 Réservé au SuperAdmin.');return;}
   const selVal=G('sup-list')?.value;
   if(selVal==='koudijs'){alert('Le profil Koudijs par défaut ne peut pas être supprimé.');return;}
   if(!confirm('Supprimer ce fournisseur ?'))return;
