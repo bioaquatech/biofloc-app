@@ -803,35 +803,37 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <!-- TA6: ABONNEMENTS -->
     <div id="ta6" class="pane">
       <div class="card" style="border-color:rgba(251,191,36,.25)">
-        <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Gestion des abonnements</div>
-        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.5rem">
-          <div style="background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.6rem 1rem;min-width:140px">
-            <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">Plan 1 — ≤ 45,9 m³</div>
-            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-top:2px">32 000 XOF/mois</div>
-            <div style="font-size:10px;color:var(--t2)">326 400 XOF/an</div>
-          </div>
-          <div style="background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.6rem 1rem;min-width:140px">
-            <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">Plan 2 — 46 à 99,9 m³</div>
-            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-top:2px">45 000 XOF/mois</div>
-            <div style="font-size:10px;color:var(--t2)">459 000 XOF/an</div>
-          </div>
-          <div style="background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.6rem 1rem;min-width:140px">
-            <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">Plan 3 — 100 à 300 m³</div>
-            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-top:2px">60 000 XOF/mois</div>
-            <div style="font-size:10px;color:var(--t2)">612 000 XOF/an</div>
-          </div>
-          <div style="background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.6rem 1rem;min-width:140px">
-            <div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">Plan 4 — > 300 m³</div>
-            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-top:2px">70 000 XOF/mois</div>
-            <div style="font-size:10px;color:var(--t2)">714 000 XOF/an</div>
-          </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+          <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>Gestion des abonnements</div>
+          <button onclick="openEditPlansModal()" style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:6px;color:var(--gold);font-size:10px;font-weight:700;padding:5px 12px;cursor:pointer">✏️ Modifier les plans</button>
         </div>
+        <div id="ta6-plan-cards" style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.5rem"></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
         <div style="font-size:11px;color:var(--t2)">Toutes les fermes enregistrées</div>
         <button onclick="renderSubscriptions()" style="background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:6px;color:var(--gold);font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer">🔄 Actualiser</button>
       </div>
       <div id="ta6-sub-list"></div>
+    </div>
+
+    <!-- Modal Édition des plans d'abonnement -->
+    <div id="plans-modal" class="modal-overlay hidden">
+      <div class="modal-box" style="max-width:560px;max-height:90vh;overflow-y:auto">
+        <div class="modal-title">✏️ Modifier les plans d'abonnement</div>
+        <div style="display:grid;grid-template-columns:.6fr 1fr 1fr 1fr;gap:6px;padding:3px 6px;margin-bottom:2px">
+          <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Plan</span>
+          <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Volume max (m³)</span>
+          <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Mensuel (XOF)</span>
+          <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Annuel (XOF)</span>
+        </div>
+        <div id="plans-modal-rows" style="display:flex;flex-direction:column;gap:4px;margin-bottom:.6rem"></div>
+        <div style="font-size:9px;color:var(--t3);margin-bottom:.6rem">Le dernier plan reste illimité (volume max = ∞) quelle que soit la valeur saisie. Les bornes se déduisent automatiquement du plan précédent.</div>
+        <div style="display:flex;gap:.5rem;margin-top:.5rem">
+          <button class="sbtn" style="flex:1" onclick="savePlans()">💾 Enregistrer</button>
+          <button class="dbtn" style="flex:1;padding:6px" onclick="G('plans-modal').classList.add('hidden')">Fermer</button>
+        </div>
+        <div id="plans-modal-msg" style="font-size:11px;margin-top:.4rem"></div>
+      </div>
     </div>
 
   </div>
@@ -3340,6 +3342,7 @@ async function loadPlatformSettings(){
   }catch(e){console.warn('Settings load error:',e);}
 }
 loadPlatformSettings();
+loadSubscriptionPlans();
 
 // ═══════════════════════════════════════════════
 // OPERATOR LOGIN
@@ -3830,6 +3833,10 @@ async function loadFarmData(){
     if(!fSnap.empty){fSnap.docs.forEach(d=>{const ft=FEED_TYPES.find(f=>f.id===d.id);if(ft&&d.data().batches)ft.batches=d.data().batches;});}
     if(cfgSnap.exists&&cfgSnap.data().probioStock!==undefined&&G('g-probio'))G('g-probio').value=cfgSnap.data().probioStock;
     if(window.fillPwaBassinSelect){setTimeout(fillPwaBassinSelect,100);setTimeout(fillPwaBassinSelect,800);}
+    // Vérifie dès la connexion (pas seulement à la prochaine sauvegarde) que le volume
+    // cumulé des bassins n'excède pas le plan souscrit — utile si l'abonnement a été
+    // rétrogradé entre-temps par un SuperAdmin.
+    setTimeout(checkVolumeLimit,0);
   }catch(e){
     console.error('loadFarmData error:',e);
     // Continuer avec des données vides plutôt que de bloquer la connexion
@@ -4358,7 +4365,7 @@ function swAdmin(id){
   ['ta0','ta1','ta2','ta3','ta4','ta5','ta6'].forEach((t,i)=>{if(t===id)document.querySelectorAll('#screen-admin .tb')[i]?.classList.add('active');});
   if(id==='ta4')renderAdminJournal();
   if(id==='ta5')renderAdminERPFarms();
-  if(id==='ta6')renderSubscriptions();
+  if(id==='ta6'){loadSubscriptionPlans();renderSubscriptions();}
 }
 
 // ═══════════════════════════════════════════════
@@ -4372,13 +4379,90 @@ var SUBSCRIPTION_PLANS=[
 ];
 
 function getPlanForVolume(volM3){
-  if(volM3<=45.9)return SUBSCRIPTION_PLANS[0];
-  if(volM3<=99.9)return SUBSCRIPTION_PLANS[1];
-  if(volM3<=300)return SUBSCRIPTION_PLANS[2];
-  return SUBSCRIPTION_PLANS[3];
+  const sorted=SUBSCRIPTION_PLANS.slice().sort((a,b)=>a.maxVol-b.maxVol);
+  return sorted.find(p=>volM3<=p.maxVol)||sorted[sorted.length-1];
 }
 
 function fmtXOF(n){return Number(n).toLocaleString('fr-FR')+' XOF';}
+
+// Charge les plans d'abonnement depuis Firestore (SuperAdmin-éditables) — sinon
+// on garde les valeurs par défaut codées ci-dessus.
+async function loadSubscriptionPlans(){
+  try{
+    const snap=await db.collection('platform').doc('subscription_plans').get();
+    if(snap.exists&&Array.isArray(snap.data().plans)&&snap.data().plans.length){
+      SUBSCRIPTION_PLANS=snap.data().plans.map(p=>({...p,maxVol:p.maxVol===null?Infinity:Number(p.maxVol)}));
+    }
+  }catch(e){console.warn('[loadSubscriptionPlans]',e);}
+  renderPlanCards();
+}
+window.loadSubscriptionPlans=loadSubscriptionPlans;
+
+function renderPlanCards(){
+  const el=G('ta6-plan-cards');if(!el)return;
+  const sorted=SUBSCRIPTION_PLANS.slice().sort((a,b)=>a.maxVol-b.maxVol);
+  el.innerHTML=sorted.map((p,i)=>{
+    const prevMax=i>0?sorted[i-1].maxVol:0;
+    const range=p.maxVol===Infinity?'> '+prevMax.toLocaleString('fr-FR')+' m³':(i===0?'≤ '+p.maxVol.toLocaleString('fr-FR')+' m³':prevMax.toLocaleString('fr-FR')+' à '+p.maxVol.toLocaleString('fr-FR')+' m³');
+    return '<div style="background:var(--panel);border:1px solid var(--b1);border-radius:6px;padding:.6rem 1rem;min-width:140px">'
+      +'<div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1px">'+escapeHtml(p.label||('Plan '+p.plan))+' — '+range+'</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--gold);margin-top:2px">'+fmtXOF(p.monthly)+'/mois</div>'
+      +'<div style="font-size:10px;color:var(--t2)">'+fmtXOF(p.annual)+'/an</div>'
+      +'</div>';
+  }).join('');
+}
+window.renderPlanCards=renderPlanCards;
+
+function openEditPlansModal(){
+  const rows=G('plans-modal-rows');if(!rows)return;
+  const sorted=SUBSCRIPTION_PLANS.slice().sort((a,b)=>a.plan-b.plan);
+  rows.innerHTML=sorted.map((p,i)=>{
+    const isLast=i===sorted.length-1;
+    return '<div style="display:grid;grid-template-columns:.6fr 1fr 1fr 1fr;gap:6px;align-items:center;background:var(--inp);border:1px solid var(--b1);border-radius:6px;padding:5px 8px">'
+      +'<span style="font-size:11px;font-weight:700;color:var(--t1)">'+escapeHtml(p.label||('Plan '+p.plan))+'</span>'
+      +'<input type="number" step="0.1" min="0" class="ci" style="width:100%;font-size:11px" id="plan-maxvol-'+p.plan+'" value="'+(isLast?'':p.maxVol)+'" '+(isLast?'placeholder="illimité" disabled':'')+'>'
+      +'<input type="number" step="1000" min="0" class="ci" style="width:100%;font-size:11px" id="plan-monthly-'+p.plan+'" value="'+p.monthly+'">'
+      +'<input type="number" step="1000" min="0" class="ci" style="width:100%;font-size:11px" id="plan-annual-'+p.plan+'" value="'+p.annual+'">'
+      +'</div>';
+  }).join('');
+  G('plans-modal-msg').textContent='';
+  G('plans-modal').classList.remove('hidden');
+}
+window.openEditPlansModal=openEditPlansModal;
+
+async function savePlans(){
+  const msg=G('plans-modal-msg');
+  const sorted=SUBSCRIPTION_PLANS.slice().sort((a,b)=>a.plan-b.plan);
+  const updated=[];
+  for(let i=0;i<sorted.length;i++){
+    const p=sorted[i];
+    const isLast=i===sorted.length-1;
+    const monthly=+(G('plan-monthly-'+p.plan)?.value||0);
+    const annual=+(G('plan-annual-'+p.plan)?.value||0);
+    if(!(monthly>0)||!(annual>0)){msg.style.color='var(--dng)';msg.textContent='⚠️ Prix mensuel et annuel obligatoires pour '+(p.label||('Plan '+p.plan));return;}
+    let maxVol=Infinity;
+    if(!isLast){
+      maxVol=+(G('plan-maxvol-'+p.plan)?.value||0);
+      if(!(maxVol>0)){msg.style.color='var(--dng)';msg.textContent='⚠️ Volume max invalide pour '+(p.label||('Plan '+p.plan));return;}
+    }
+    updated.push({...p,maxVol,monthly,annual});
+  }
+  // Cohérence : chaque palier doit être strictement croissant
+  for(let i=1;i<updated.length;i++){
+    if(updated[i].maxVol<=updated[i-1].maxVol){msg.style.color='var(--dng)';msg.textContent='⚠️ Les volumes max doivent être strictement croissants entre plans.';return;}
+  }
+  SUBSCRIPTION_PLANS=updated;
+  try{
+    await db.collection('platform').doc('subscription_plans').set({
+      plans:updated.map(p=>({...p,maxVol:p.maxVol===Infinity?null:p.maxVol}))
+    });
+  }catch(e){msg.style.color='var(--dng)';msg.textContent='❌ Erreur : '+e.message;return;}
+  msg.style.color='var(--acc)';msg.textContent='✅ Plans enregistrés.';
+  renderPlanCards();
+  if(typeof renderSubscriptions==='function')renderSubscriptions();
+  setTimeout(()=>{G('plans-modal').classList.add('hidden');},1200);
+}
+window.savePlans=savePlans;
 
 var _subCache={};
 
