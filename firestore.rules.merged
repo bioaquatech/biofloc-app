@@ -71,6 +71,13 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // ── Doses PWA par espèce — lues par tout utilisateur de ferme (le calcul
+    // PWA est utilisé par les opérateurs), écrites uniquement par le SuperAdmin.
+    match /platform/pwa_rates {
+      allow read: if isAuth();
+      allow write: if isSuperAdmin();
+    }
+
     // ── Platform params ───────────────────────────────────────────────
     match /platform/{doc} {
       allow read: if isResponsable();
