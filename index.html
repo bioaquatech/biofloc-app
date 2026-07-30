@@ -13353,8 +13353,12 @@ function ensureNav(){
   if(!G('tab-param-erp')){var b=document.createElement('button');b.className='tb';b.id='tab-param-erp';b.innerHTML='⚙️ Paramètres ERP';b.setAttribute('onclick',"sw('t15')");b.onclick=function(){if(window.sw)sw('t15');renderParamERP('bassins')};nav.appendChild(b)}
   var main=document.querySelector('#screen-farm .main'); if(main&&!G('t15')){var d=document.createElement('div');d.id='t15';d.className='pane';main.appendChild(d)}
 }
-function tabHtml(active){var tabs=[['bassins','Bassins'],['cycles','Cycles'],['clients','Clients'],['biofloc','Paramètres biofloc'],['finance','Paramètres financiers'],['invest','Investissements']];return '<div class="erp-tabs">'+tabs.map(function(t){return '<button class="'+(active===t[0]?'active':'')+'" onclick="renderParamERP(\''+t[0]+'\')">'+t[1]+'</button>'}).join('')+'</div>'}
-window.renderParamERP=function(which){ensureNav();var root=G('t15');if(!root)return;root.innerHTML=tabHtml(which||'bassins')+'<div id="erp-param-content"></div>';var c=G('erp-param-content');({bassins:renderBassins,cycles:renderCycles,clients:renderClients,biofloc:renderBiofloc,finance:renderFinance,invest:renderInvest})[which||'bassins'](c)};
+function tabHtml(active){var isSA=typeof isRationSuperAdmin==='function'&&isRationSuperAdmin();var tabs=[['bassins','Bassins'],['cycles','Cycles'],['clients','Clients'],['biofloc','Paramètres biofloc'],['finance','Paramètres financiers'],['invest','Investissements']].filter(function(t){return t[0]!=='biofloc'||isSA;});return '<div class="erp-tabs">'+tabs.map(function(t){return '<button class="'+(active===t[0]?'active':'')+'" onclick="renderParamERP(\''+t[0]+'\')">'+t[1]+'</button>'}).join('')+'</div>'}
+window.renderParamERP=function(which){
+  ensureNav();var root=G('t15');if(!root)return;
+  var isSA=typeof isRationSuperAdmin==='function'&&isRationSuperAdmin();
+  if(which==='biofloc'&&!isSA)which='bassins'; // section réservée au SuperAdmin — inaccessible même par appel direct
+  root.innerHTML=tabHtml(which||'bassins')+'<div id="erp-param-content"></div>';var c=G('erp-param-content');({bassins:renderBassins,cycles:renderCycles,clients:renderClients,biofloc:renderBiofloc,finance:renderFinance,invest:renderInvest})[which||'bassins'](c)};
 function renderBassins(c){
   var bs=bassins();
   var rows=bs.map(function(b,i){
