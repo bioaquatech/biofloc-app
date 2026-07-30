@@ -2801,10 +2801,6 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
       <span style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">Dose (L/m³)</span>
     </div>
     <div id="pwar-rows" style="display:flex;flex-direction:column;gap:4px;margin-bottom:.5rem"></div>
-    <div class="form-group" style="margin-bottom:.6rem">
-      <div class="form-lbl">Dose fixe rotation à 3,8 m³ (L) <span style="font-size:9px;color:var(--t3)">— cas particulier du dossier technique</span></div>
-      <input type="number" step="0.01" id="pwar-vol380" class="form-inp" style="width:140px">
-    </div>
     <div style="display:flex;gap:.5rem;margin-top:.5rem">
       <button class="sbtn" style="flex:1" onclick="savePwaRates()">💾 Enregistrer</button>
       <button class="dbtn" style="flex:1;padding:6px" onclick="G('pwa-rates-modal').classList.add('hidden')">Fermer</button>
@@ -5844,7 +5840,7 @@ function renderPrevisionnel(){
 
     // PWA — calcul par phase précis
     // Phase init (J1–J14) : primo(1) + entretien J3,J5,J7,J8,J10(5) + TAN J12,J14(2) = 8 apps
-    // Rotation mature (J14–fin) : 2×/semaine × vol bassin dose fixe 0.38L si vol=3.8m³
+    // Rotation mature (J14–fin) : 2×/semaine × vol bassin × taux L/m³ configuré pour l'espèce
     var doseRot=(typeof PWA_RATES!=='undefined'&&PWA_RATES&&PWA_RATES.rotation?PWA_RATES.rotation.dose:0.2)*volBassin;
     var pwaConso=0,pwaPrev=0;
 
@@ -6616,7 +6612,7 @@ let PWA_RATES_BY_SPECIES={
     primo:{label:'Primo inoculation J1',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:4.7},
     entretien:{label:'Entretien J3 · J5 · J7 · J8 · J10',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:0.2},
     tan:{label:'Test Maturite TAN J12-J14',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:0.2},
-    rotation:{label:'Systeme mature — post introduction alevins',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:0.2,vol380Fixed:0.76},
+    rotation:{label:'Systeme mature — post introduction alevins',moment:'Soirée · dose unique · avant BC100+ (+1h) Melasse (+4h)',dose:0.2},
     postintro:{label:'Systeme immature_post introduction alevins J14-J21',moment:'Soirée · dose unique',dose:0.1}
   }
 };
@@ -6691,8 +6687,6 @@ function loadPwaRatesInModal(sid){
         +'</div>';
     }).join('');
   }
-  const vol380=G('pwar-vol380');
-  if(vol380)vol380.value=(cfg&&cfg.rotation&&cfg.rotation.vol380Fixed!=null)?cfg.rotation.vol380Fixed:'';
 }
 window.loadPwaRatesInModal=loadPwaRatesInModal;
 
@@ -6708,11 +6702,9 @@ async function savePwaRates(){
     if(!(v>0)){msg.style.color='var(--dng)';msg.textContent='⚠️ Renseignez une dose &gt; 0 pour : '+PWA_ACTIVITY_META[key].label;return;}
     doses[key]=v;
   }
-  const vol380=+(G('pwar-vol380')?.value||0);
   const cfg={};
   keys.forEach(function(key){
     cfg[key]={label:PWA_ACTIVITY_META[key].label,moment:PWA_ACTIVITY_META[key].moment,dose:doses[key]};
-    if(key==='rotation'&&vol380>0)cfg[key].vol380Fixed=vol380;
   });
   PWA_RATES_BY_SPECIES[sid]=cfg;
   try{
@@ -6766,8 +6758,6 @@ function pwaDoseLitres(row){
   var r=rates[row.activity]||rates.entretien;
   if(!r)return 0;
   var cover=Number(row.coverVol!=null?row.coverVol:row.vol)||0;
-  // Cas spécial rotation 3.80 m³ = dose fixe (dossier technique), éditable par espèce
-  if(row.activity==='rotation'&&Math.abs(cover-3.8)<0.01)return (Number(r.vol380Fixed)||0.38)*(row.nb||1);
   return (Number(r.dose)||0)*cover*(row.nb||1);
 }
 function calcPWA(){
