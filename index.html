@@ -647,6 +647,27 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
       </div>
     </div>
 
+    <!-- Modale session (déconnexion automatique) par ferme -->
+    <div id="farm-session-modal" class="modal-overlay hidden">
+      <div class="modal-box" style="max-width:380px">
+        <div class="modal-title">⏱ Déconnexion automatique — <span id="farm-session-modal-code" style="color:var(--acc)"></span></div>
+        <p style="font-size:10px;color:var(--t2);line-height:1.7;margin-bottom:.6rem">Par défaut, cette ferme suit le réglage global de la plateforme (<span id="farm-session-global-min">—</span> min). Vous pouvez définir un délai spécifique à cette ferme, ou désactiver complètement la déconnexion automatique.</p>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);margin-bottom:.6rem">
+          <input type="checkbox" id="farm-session-disabled" style="width:14px;height:14px" onchange="G('farm-session-minutes').disabled=this.checked">
+          Désactiver la déconnexion automatique pour cette ferme
+        </label>
+        <div class="form-group">
+          <div class="form-lbl">Délai (minutes) <small style="color:var(--t3)">— laisser vide pour suivre le réglage global</small></div>
+          <input type="number" id="farm-session-minutes" class="form-inp" min="1" step="1" placeholder="ex: 15">
+        </div>
+        <div style="display:flex;gap:.5rem;margin-top:.75rem">
+          <button class="sbtn" style="flex:1" onclick="saveFarmSession()">💾 Enregistrer</button>
+          <button class="dbtn" onclick="G('farm-session-modal').classList.add('hidden')">Annuler</button>
+        </div>
+        <div id="farm-session-modal-status" style="font-size:10px;margin-top:.4rem"></div>
+      </div>
+    </div>
+
     <!-- TA2: GESTION UTILISATEURS -->
     <div id="ta2" class="pane">
       <div class="card" style="border-color:rgba(251,191,36,.3)">
@@ -2933,6 +2954,7 @@ auth.onAuthStateChanged(async function(firebaseUser){
     APP.farmCode=farmCode;
     APP.farmName=farmData.name||farmCode;
     APP.farmMessages=farmData.farmMessages||[];
+    APP.farmSessionTimeout=farmData.sessionTimeout!=null?Number(farmData.sessionTimeout):null;
     try{
       if(farmData.speciesId==='custom'&&farmData.speciesCustom){
         const idx=SPECIES_PROFILES.findIndex(s=>s.id==='custom');
@@ -3004,6 +3026,7 @@ let APP={
   farmName:null,
   farmPermissions:null,
   sessionMin:10,
+  farmSessionTimeout:null, // override par ferme : nombre de minutes, 0 = désactivé, null = suit sessionMin
   sessionTimer:null,
   warnTimer:null,
   warnCountdown:null,
@@ -3274,14 +3297,21 @@ function stopSession(){
   G('timeout-warn').classList.remove('show');
   ['click','keydown','mousemove','touchstart'].forEach(ev=>document.removeEventListener(ev,resetSession));
 }
+// Minutes effectives pour la ferme connectée : override farmSessionTimeout
+// (0 = désactivé, >0 = délai spécifique) sinon réglage global sessionMin.
+function effectiveSessionMin(){
+  return APP.farmSessionTimeout!=null?APP.farmSessionTimeout:APP.sessionMin;
+}
 function resetSession(){
   clearTimeout(APP.sessionTimer);clearTimeout(APP.warnTimer);clearInterval(APP.warnCountdown);
   G('timeout-warn').classList.remove('show');
-  const ms=APP.sessionMin*60*1000;
+  const min=effectiveSessionMin();
+  updateSessionBadge();
+  if(min===0)return; // déconnexion automatique désactivée pour cette ferme
+  const ms=min*60*1000;
   const warnMs=ms-60000;
   if(warnMs>0) APP.warnTimer=setTimeout(showTimeoutWarn,warnMs);
   APP.sessionTimer=setTimeout(()=>{doLogout(true);},ms);
-  updateSessionBadge();
 }
 function showTimeoutWarn(){
   APP.warnSecs=60;
@@ -3294,7 +3324,8 @@ function showTimeoutWarn(){
 }
 function updateSessionBadge(){
   const badge=G('session-badge'),abadge=G('adm-session-badge');
-  const txt=`⏱ ${APP.sessionMin}min`;
+  const min=effectiveSessionMin();
+  const txt=min===0?'⏱ ∞':`⏱ ${min}min`;
   if(badge)badge.textContent=txt;
   if(abadge)abadge.textContent=txt;
 }
@@ -3403,6 +3434,7 @@ async function doLogin(){
     try{
       const farmSnap=await db.collection('farms').doc(d.farmCode).get();
       const fd=farmSnap.exists?farmSnap.data():{};
+      APP.farmSessionTimeout=fd.sessionTimeout!=null?Number(fd.sessionTimeout):null;
       if(fd.speciesId==='custom'&&fd.speciesCustom){
         const idx=SPECIES_PROFILES.findIndex(s=>s.id==='custom');
         if(idx>=0)SPECIES_PROFILES[idx]={...SPECIES_PROFILES[idx],...fd.speciesCustom};
@@ -3495,7 +3527,7 @@ async function doLogout(expired=false){
   if(hasPendingSaves()){try{await flushPendingSaves();}catch(e){console.warn('flushPendingSaves:',e);}}
   APP.unsubs.forEach(u=>u());APP.unsubs=[];
   await auth.signOut();
-  APP.user=null;APP.farmCode=null;APP.farmName=null;APP.species=null;
+  APP.user=null;APP.farmCode=null;APP.farmName=null;APP.species=null;APP.farmSessionTimeout=null;
   localStorage.removeItem('ichtus_last_farmCode');
   APP.state={bassins:[],suivi:[],suiviId:0,logoUrl:null};
   applyFarmLogo(null);
@@ -4148,7 +4180,8 @@ function renderFarmsTable(){
       <td><button class="dbtn" onclick="deleteFarm('${escapeHtml(fc)}')">Supprimer</button>
           <button class="ebtn" onclick="adminEnterFarm('${escapeHtml(fc)}')" style="margin-left:4px;background:var(--acc2);color:#fff;border:none">🔑 Accéder</button>
           <button onclick="toggleFarmActivation('${escapeHtml(fc)}',${farmActive})" style="margin-left:4px;background:${farmActive?'rgba(255,61,87,.15)':'rgba(0,201,167,.15)'};color:${farmActive?'var(--dng)':'var(--acc)'};border:1px solid ${farmActive?'var(--dng)':'var(--acc)'};border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer">${farmActive?'🔴 Désactiver':'✅ Activer'}</button>
-          <button onclick="openFarmMsgModal('${escapeHtml(fc)}')" style="margin-left:4px;background:rgba(255,179,71,.12);color:var(--warn);border:1px solid rgba(255,179,71,.3);border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer" title="Gérer les messages de la ferme">📢 Messages</button></td>
+          <button onclick="openFarmMsgModal('${escapeHtml(fc)}')" style="margin-left:4px;background:rgba(255,179,71,.12);color:var(--warn);border:1px solid rgba(255,179,71,.3);border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer" title="Gérer les messages de la ferme">📢 Messages</button>
+          <button onclick="openFarmSessionModal('${escapeHtml(fc)}')" style="margin-left:4px;background:rgba(61,142,245,.12);color:var(--acc2);border:1px solid rgba(61,142,245,.3);border-radius:4px;padding:3px 8px;font-size:10px;cursor:pointer" title="Délai de déconnexion automatique de cette ferme">⏱ Session</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" style="color:var(--t3);padding:.75rem;text-align:center">Aucune ferme</td></tr>';
 }
@@ -12313,6 +12346,57 @@ async function saveFarmMessages(){
     setTimeout(()=>G('farm-msg-modal').classList.add('hidden'),1200);
   }catch(e){st.style.color='var(--dng)';st.textContent='❌ Erreur : '+e.message;}
 }
+window.openFarmMsgModal=openFarmMsgModal;
+window.saveFarmMessages=saveFarmMessages;
+
+// ═══════════════════════════════════════════════
+// SESSION — DÉLAI DE DÉCONNEXION PAR FERME
+// sessionTimeout sur farms/{code} : nombre de minutes (override du réglage
+// global), 0 = déconnexion automatique désactivée pour cette ferme,
+// absent/null = suit le réglage global (superadmin/settings.sessionTimeout).
+// ═══════════════════════════════════════════════
+let _farmSessionModalCode='';
+
+async function openFarmSessionModal(farmCode){
+  _farmSessionModalCode=farmCode;
+  G('farm-session-modal-code').textContent=farmCode;
+  G('farm-session-modal-status').textContent='';
+  G('farm-session-global-min').textContent=APP.sessionMin;
+  G('farm-session-minutes').value='';
+  G('farm-session-disabled').checked=false;
+  G('farm-session-minutes').disabled=false;
+  try{
+    const snap=await db.collection('farms').doc(farmCode).get();
+    const st=snap.exists?snap.data().sessionTimeout:null;
+    if(st===0){G('farm-session-disabled').checked=true;G('farm-session-minutes').disabled=true;}
+    else if(st!=null){G('farm-session-minutes').value=st;}
+  }catch(e){}
+  G('farm-session-modal').classList.remove('hidden');
+}
+window.openFarmSessionModal=openFarmSessionModal;
+
+async function saveFarmSession(){
+  if(!_farmSessionModalCode)return;
+  const disabled=G('farm-session-disabled').checked;
+  const minutesVal=G('farm-session-minutes').value.trim();
+  const st=G('farm-session-modal-status');
+  let sessionTimeout=null; // null = suit le réglage global
+  if(disabled){
+    sessionTimeout=0;
+  } else if(minutesVal){
+    const m=parseInt(minutesVal);
+    if(!(m>0)){st.style.color='var(--dng)';st.textContent='⚠️ Le délai doit être un nombre de minutes supérieur à 0';return;}
+    sessionTimeout=m;
+  }
+  st.textContent='Enregistrement…';st.style.color='var(--t2)';
+  try{
+    await db.collection('farms').doc(_farmSessionModalCode).set({sessionTimeout},{merge:true});
+    st.style.color='var(--acc)';st.textContent='✅ Réglage enregistré';
+    if(window._farms){const f=window._farms.find(x=>(x.code||x.id)===_farmSessionModalCode);if(f)f.sessionTimeout=sessionTimeout;}
+    setTimeout(()=>G('farm-session-modal').classList.add('hidden'),1200);
+  }catch(e){st.style.color='var(--dng)';st.textContent='❌ Erreur : '+e.message;}
+}
+window.saveFarmSession=saveFarmSession;
 
 // Afficher les messages de la ferme connectée sur son dashboard
 function updateFarmMsgBanner(farmMessages){
@@ -14716,6 +14800,8 @@ async function switchFarm(newFarmCode){
     const snap=await db.collection('farms').doc(newFarmCode).get();
     if(!snap.exists){showToast('Ferme introuvable: '+newFarmCode,'dng');return;}
     APP.farmName=snap.data().name||newFarmCode;
+    APP.farmSessionTimeout=snap.data().sessionTimeout!=null?Number(snap.data().sessionTimeout):null;
+    resetSession();
     APP.state.bassins=[];
     APP.state.suivi=[];
     APP_STOCK_ENTRIES=[];
@@ -14771,6 +14857,7 @@ async function switchFarmAuthenticated(){
     try{
       const farmSnap=await db.collection('farms').doc(d.farmCode).get();
       const fd=farmSnap.exists?farmSnap.data():{};
+      APP.farmSessionTimeout=fd.sessionTimeout!=null?Number(fd.sessionTimeout):null;
       if(fd.speciesId==='custom'&&fd.speciesCustom){
         const idx=SPECIES_PROFILES.findIndex(s=>s.id==='custom');
         if(idx>=0)SPECIES_PROFILES[idx]={...SPECIES_PROFILES[idx],...fd.speciesCustom};
