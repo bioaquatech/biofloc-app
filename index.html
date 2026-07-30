@@ -2964,6 +2964,8 @@ const FARM_SECTIONS=[
   {id:'t10',label:'Administration'},
   {id:'t12',label:'Rationnement'},
   {id:'t13',label:'Analyse'},
+  {id:'t14',label:'Direction'},
+  {id:'t15',label:'Paramètres ERP'},
 ];
 function renderSectionChecks(containerId, checked){
   const c=document.getElementById(containerId); if(!c)return;
@@ -2980,9 +2982,9 @@ function readSectionChecks(containerId){
 }
 window.renderSectionChecks=renderSectionChecks;
 const DEFAULT_FARM_PERMISSIONS={
-  'Opérateur':    {t1:true,  t4:true,  t5:false, t7:false, t8:true,  t9:false, t10:false, t12:true,  t13:false},
-  'Responsable':  {t1:true,  t4:true,  t5:true,  t7:true,  t8:true,  t9:false, t10:true,  t12:true,  t13:true},
-  'Administrateur':{t1:true, t4:true,  t5:true,  t7:true,  t8:true,  t9:true,  t10:true,  t12:true,  t13:true},
+  'Opérateur':    {t1:true,  t4:true,  t5:false, t7:false, t8:true,  t9:false, t10:false, t12:true,  t13:false, t14:false, t15:false},
+  'Responsable':  {t1:true,  t4:true,  t5:true,  t7:true,  t8:true,  t9:false, t10:true,  t12:true,  t13:true,  t14:true,  t15:false},
+  'Administrateur':{t1:true, t4:true,  t5:true,  t7:true,  t8:true,  t9:true,  t10:true,  t12:true,  t13:true,  t14:true,  t15:true},
 };
 
 let APP={
@@ -12796,8 +12798,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   function ensureTabs(){
     var nav=document.querySelector('#screen-farm .tabnav'); if(!nav)return;
-    if(!G('tab-t14')){var b=document.createElement('button');b.className='tb';b.id='tab-t14';b.textContent='🏢 Direction';b.onclick=function(){sw('t14');};var adm=G('tab-t10');nav.insertBefore(b,adm||null);}
-    if(!G('tab-t15')){var p=document.createElement('button');p.className='tb';p.id='tab-t15';p.textContent='⚙️ Paramètres ERP';p.onclick=function(){sw('t15');};var adm2=G('tab-t10');nav.insertBefore(p,adm2||null);}
+    if(!G('tab-t14')){var b=document.createElement('button');b.className='tb';b.id='tab-t14';b.textContent='🏢 Direction';b.setAttribute('onclick',"sw('t14')");b.onclick=function(){sw('t14');};var adm=G('tab-t10');nav.insertBefore(b,adm||null);}
+    if(!G('tab-t15')){var p=document.createElement('button');p.className='tb';p.id='tab-t15';p.textContent='⚙️ Paramètres ERP';p.setAttribute('onclick',"sw('t15')");p.onclick=function(){sw('t15');};var adm2=G('tab-t10');nav.insertBefore(p,adm2||null);}
   }
   function ensurePanes(){
     var main=document.querySelector('#screen-farm .main'); if(!main)return;
@@ -13348,7 +13350,7 @@ function fishStockByHarvest(hid){var h=harvests().find(function(x){return x.id==
 function totalFishStock(){return harvests().reduce(function(a,h){return a+fishStockByHarvest(h.id)},0)}
 function ensureNav(){
   var nav=document.querySelector('#screen-farm .tabnav'); if(!nav)return;
-  if(!G('tab-param-erp')){var b=document.createElement('button');b.className='tb';b.id='tab-param-erp';b.innerHTML='⚙️ Paramètres ERP';b.onclick=function(){if(window.sw)sw('t15');renderParamERP('bassins')};nav.appendChild(b)}
+  if(!G('tab-param-erp')){var b=document.createElement('button');b.className='tb';b.id='tab-param-erp';b.innerHTML='⚙️ Paramètres ERP';b.setAttribute('onclick',"sw('t15')");b.onclick=function(){if(window.sw)sw('t15');renderParamERP('bassins')};nav.appendChild(b)}
   var main=document.querySelector('#screen-farm .main'); if(main&&!G('t15')){var d=document.createElement('div');d.id='t15';d.className='pane';main.appendChild(d)}
 }
 function tabHtml(active){var tabs=[['bassins','Bassins'],['cycles','Cycles'],['clients','Clients'],['biofloc','Paramètres biofloc'],['finance','Paramètres financiers'],['invest','Investissements']];return '<div class="erp-tabs">'+tabs.map(function(t){return '<button class="'+(active===t[0]?'active':'')+'" onclick="renderParamERP(\''+t[0]+'\')">'+t[1]+'</button>'}).join('')+'</div>'}
@@ -13448,13 +13450,17 @@ function renderBiofloc(c){
   var cfg=load('biofloc_cfg',{primo:4.7,entretien:0.2,postintro:0.1,pfa_ml_kg:10,lab_l_m3:0.5,vol_ref:1.75});
   var bs=APP.state&&APP.state.bassins?APP.state.bassins.filter(function(b){return b.statut!=='Archivé'}):[];
   var volRef=n(cfg.vol_ref)||1.75;
+  var isSA=typeof isRationSuperAdmin==='function'&&isRationSuperAdmin();
+  var dis=isSA?'':'disabled';
   // Exemple : 1 bassin, volume de référence
   var ex_primo=(n(cfg.primo)||4.7)*volRef;
   var ex_entretien=(n(cfg.entretien)||0.2)*volRef;
   var ex_lab=(n(cfg.lab_l_m3)||0.5)*volRef;
 
   c.innerHTML='<div class="card"><div class="ctitle"><span class="dot"></span>Paramètres biofloc — doses de traitement</div>'
-  +'<div class="erp-note">Ces doses <b>pilotent directement les calculs</b> dans l\'onglet 🧪 PWA/PFA/LAB. Quand vous ajoutez une activité (primo-inoculation, entretien...) et saisissez le volume à traiter en m³, la quantité de produit à préparer est calculée automatiquement selon ces valeurs.</div></div>'
+  +'<div class="erp-note">Ces doses <b>pilotent directement les calculs</b> dans l\'onglet 🧪 PWA/PFA/LAB. Quand vous ajoutez une activité (primo-inoculation, entretien...) et saisissez le volume à traiter en m³, la quantité de produit à préparer est calculée automatiquement selon ces valeurs.</div>'
+  +(isSA?'':'<div style="background:rgba(245,166,35,.1);border:1px solid var(--warn);border-radius:8px;padding:.5rem .7rem;margin-top:.5rem;font-size:11px;color:var(--warn)">🔒 Réservé au SuperAdmin — ces doses touchent les calculs de toute la ferme, vous pouvez les consulter mais pas les modifier.</div>')
+  +'</div>'
 
   // BLOC PWA
   +'<div class="card" style="padding:.7rem .8rem;margin-bottom:.5rem">'
@@ -13463,16 +13469,16 @@ function renderBiofloc(c){
   +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
   +'<div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">DOSE PRIMO-INOCULATION (L/m³)</div>'
   +'<div style="font-size:9px;color:var(--t3);margin-bottom:4px">Premier traitement — J1. Dose élevée pour amorcer le biofloc dès le départ.</div>'
-  +'<input id="bio-primo" type="number" min="0" step="0.1" class="form-inp" style="margin:0;width:100%" value="'+(n(cfg.primo)||4.7)+'"></div>'
+  +'<input id="bio-primo" type="number" min="0" step="0.1" class="form-inp" style="margin:0;width:100%" value="'+(n(cfg.primo)||4.7)+'" '+dis+'></div>'
   +'<div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">DOSE ENTRETIEN (L/m³)</div>'
   +'<div style="font-size:9px;color:var(--t3);margin-bottom:4px">J3/J5/J7/J8/J10 et système mature. Dose d\'entretien pour maintenir la population bactérienne.</div>'
-  +'<input id="bio-entretien" type="number" min="0" step="0.05" class="form-inp" style="margin:0;width:100%" value="'+(n(cfg.entretien)||0.2)+'"></div>'
+  +'<input id="bio-entretien" type="number" min="0" step="0.05" class="form-inp" style="margin:0;width:100%" value="'+(n(cfg.entretien)||0.2)+'" '+dis+'></div>'
   +'<div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">DOSE POST-INTRO ALEVINS (L/m³)</div>'
   +'<div style="font-size:9px;color:var(--t3);margin-bottom:4px">J14–J21 après introduction. Demi-dose car biofloc en cours de stabilisation.</div>'
-  +'<input id="bio-postintro" type="number" min="0" step="0.05" class="form-inp" style="margin:0;width:100%" value="'+(n(cfg.postintro)||0.1)+'"></div>'
+  +'<input id="bio-postintro" type="number" min="0" step="0.05" class="form-inp" style="margin:0;width:100%" value="'+(n(cfg.postintro)||0.1)+'" '+dis+'></div>'
   +'<div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">VOLUME DE RÉFÉRENCE PAR BASSIN (m³)</div>'
   +'<div style="font-size:9px;color:var(--t3);margin-bottom:4px">Volume habituel traité par bassin — utilisé pour les exemples ci-dessous.</div>'
-  +'<input id="bio-vol-ref" type="number" min="0.1" step="0.1" class="form-inp" style="margin:0;width:100%" value="'+volRef+'"></div>'
+  +'<input id="bio-vol-ref" type="number" min="0.1" step="0.1" class="form-inp" style="margin:0;width:100%" value="'+volRef+'" '+dis+'></div>'
   +'</div>'
   // Exemples calculés
   +'<div style="background:rgba(0,201,167,.07);border:1px solid rgba(0,201,167,.2);border-radius:8px;padding:.6rem .8rem">'
@@ -13498,7 +13504,7 @@ function renderBiofloc(c){
   +'<div style="font-size:10px;color:var(--t3);margin-bottom:10px">Produit mélangé <b>directement à l\'aliment</b> avant chaque distribution. Il ne va pas dans l\'eau — il est ingéré par le poisson. Améliore la digestion, réduit les maladies intestinales et améliore le FCR (taux de conversion alimentaire).</div>'
   +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
   +'<div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">DOSE (ml de PFA par kg d\'aliment)</div>'
-  +'<input id="bio-pfa" type="number" min="0" step="1" class="form-inp" style="margin:0;width:120px" value="'+(n(cfg.pfa_ml_kg)||10)+'"></div>'
+  +'<input id="bio-pfa" type="number" min="0" step="1" class="form-inp" style="margin:0;width:120px" value="'+(n(cfg.pfa_ml_kg)||10)+'" '+dis+'></div>'
   +'<div style="font-size:10px;color:var(--t3);padding:.4rem .6rem;background:rgba(0,0,0,.15);border-radius:6px">Si vous distribuez <b>2 kg d\'aliment</b> aujourd\'hui → ajouter <b>'+(2*(n(cfg.pfa_ml_kg)||10))+' ml de PFA</b> et mélanger avant distribution.</div>'
   +'</div></div>'
 
@@ -13508,13 +13514,14 @@ function renderBiofloc(c){
   +'<div style="font-size:10px;color:var(--t3);margin-bottom:10px">Préparé sur place par fermentation de son de blé ou de farine de manioc avec du sucre. Versé dans le bassin comme le PWA. Enrichit le microbiome du biofloc, acidifie légèrement l\'eau et inhibe les bactéries pathogènes. Coût très faible.</div>'
   +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
   +'<div><div style="font-size:9px;color:var(--t3);margin-bottom:3px">DOSE (L par m³ d\'eau)</div>'
-  +'<input id="bio-lab" type="number" min="0" step="0.1" class="form-inp" style="margin:0;width:120px" value="'+(n(cfg.lab_l_m3)||0.5)+'"></div>'
+  +'<input id="bio-lab" type="number" min="0" step="0.1" class="form-inp" style="margin:0;width:120px" value="'+(n(cfg.lab_l_m3)||0.5)+'" '+dis+'></div>'
   +'<div style="font-size:10px;color:var(--t3);padding:.4rem .6rem;background:rgba(0,0,0,.15);border-radius:6px">Pour <b>'+volRef+' m³</b> → préparer <b>'+ex_lab.toFixed(2)+' L de LAB</b></div>'
   +'</div></div>'
 
-  +'<button class="sbtn" onclick="saveBioflocERP()">💾 Enregistrer et appliquer aux calculs</button>';
+  +(isSA?'<button class="sbtn" onclick="saveBioflocERP()">💾 Enregistrer et appliquer aux calculs</button>':'');
 }
 window.saveBioflocERP=function(){
+  if(typeof isRationSuperAdmin!=='function'||!isRationSuperAdmin()){alert('🔒 Réservé au SuperAdmin — ces doses touchent les calculs de toute la ferme.');return;}
   var primo=n(G('bio-primo').value)||4.7;
   var entretien=n(G('bio-entretien').value)||0.2;
   var postintro=n(G('bio-postintro').value)||0.1;
