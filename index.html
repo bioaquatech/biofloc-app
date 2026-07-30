@@ -5419,11 +5419,9 @@ async function toggleFarmActivation(farmCode, currentlyActive){
 const UNITS_LIST=['kg','g','L','mL','m','cm','pièces','sacs','bidons','bouteilles','boîtes','rouleaux','lots','doses','autre'];
 
 const DEFAULT_INTRANTS=[
-  // Aliments
-  {id:'k1',name:'Aliment K1 Starter',unit:'kg',conditionnement:'1.2 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
-  {id:'k4',name:'Aliment K4 Granulé 2mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
-  {id:'k5',name:'Aliment K5 Granulé 3mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
-  {id:'k6',name:'Aliment K6 Granulé 4.5mm',unit:'kg',conditionnement:'25 kg/sac',monitoringType:'strategic',category:'aliment',isDefault:true},
+  // Aliments : plus de liste figée ici — générés/synchronisés automatiquement
+  // depuis le fournisseur d'aliment actif (voir syncFeedIntrants()), pour que
+  // les mêmes identifiants soient utilisés à l'achat ET à la consommation.
   // Basifiants — facteurK = facteur direct de la formule
   // CaCO₃ : K=0.75 (dissolution réelle 65% × fraction prudente 50%) · remesure H+24
   // NaHCO₃ : K=0.84 (stoéch ×1.68 × fraction prudente 50%) · remesure H+4–6
@@ -6035,6 +6033,7 @@ async function loadIntrants(){
       APP_INTRANTS=[...DEFAULT_INTRANTS.filter(i=>!customIds.has(i.id)),...custom];
     }
   }catch(e){console.warn('Intrants:',e);}
+  try{if(typeof syncFeedIntrants==='function')await syncFeedIntrants();}catch(e){console.warn('syncFeedIntrants:',e);}
   try{
     const snap=await withTimeout(farmCol('stock_entries').get(),6000);
     if(snap&&!snap.empty)APP_STOCK_ENTRIES=snap.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -8106,7 +8105,13 @@ async function saveBassinRow(i){
       const sn=b.name.replace(/\s+/g,'_');
       const who=APP.user?.name||'?';
       const mkMov=(type,intrantId,qty,unit)=>({id:'mov_'+type+'_'+sn+'_'+dateStr,intrantId,quantity:qty,unit,date:dateStr,type:'sortie',source:'daily',bassin:b.name,createdAt:new Date().toISOString(),createdBy:who});
-      if(b.alimReel>0){const feedId=b.feedId||'aliment';pendingMovs.push(mkMov('alim',feedId,b.alimReel,'kg'));}
+      if(b.alimReel>0){
+        // Même intrant que celui réellement utilisé pour ce bassin (figé ou auto-sélectionné par poids) —
+        // jamais le mot littéral 'aliment', qui ne correspond à aucun intrant du catalogue.
+        const autoFt=typeof getRationEntry==='function'?getRationEntry(b.poids||1):null;
+        const feedId=b.feedId||(autoFt&&autoFt.id)||'aliment';
+        pendingMovs.push(mkMov('alim',feedId,b.alimReel,'kg'));
+      }
       if(b.probiot>0){pendingMovs.push(mkMov('pwa','pwa_prep',b.probiot/1000,'L'));}
       if(b.carb>0){
         const carbIntrant=APP_INTRANTS.find(x=>x.category==='carbohydrate'&&(x.id===(b.carbType||'').toLowerCase().replace(/[éèê]/g,'e').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')||x.name.toLowerCase().includes((b.carbType||'').toLowerCase())));
@@ -10879,6 +10884,30 @@ function getRatEntry(poids){
   return{aliment:getFeedFullName(ft),freq:ft.freq||1,pct:ft.rate||0,color:ft.color||'#60a5fa'};
 }
 
+// Synchronise le catalogue d'intrants (achats/stock/CUMP, Logistique) avec le
+// fournisseur d'aliment ACTIF (FEED_TYPES) : crée l'intrant manquant pour
+// chaque aliment, avec le MÊME identifiant que celui utilisé à la consommation
+// (b.feedId) — sinon achats et sorties de stock ne se rejoignent jamais.
+// N'écrase ni ne supprime jamais un intrant existant, ajoute uniquement.
+async function syncFeedIntrants(){
+  if(!Array.isArray(FEED_TYPES)||!FEED_TYPES.length)return;
+  if(typeof APP_INTRANTS==='undefined'||!Array.isArray(APP_INTRANTS))return;
+  const missing=FEED_TYPES.filter(f=>f&&f.id&&!APP_INTRANTS.find(i=>i.id===f.id));
+  if(!missing.length)return;
+  missing.forEach(f=>{
+    APP_INTRANTS.push({id:f.id,name:getFeedFullName(f),unit:'kg',category:'aliment',monitoringType:'strategic',isDefault:false});
+  });
+  if(!APP.farmCode||!window.db)return;
+  try{
+    const batch=db.batch();
+    missing.forEach(f=>{
+      batch.set(farmCol('intrants').doc(f.id),{id:f.id,name:getFeedFullName(f),unit:'kg',category:'aliment',monitoringType:'strategic',isDefault:false});
+    });
+    await batch.commit();
+  }catch(e){console.warn('syncFeedIntrants save:',e);}
+}
+window.syncFeedIntrants=syncFeedIntrants;
+
 // Tableau de référence (Guide de rationnement) — reconstruit à partir du
 // fournisseur d'aliment ACTIF (FEED_TYPES) et du calendrier C/N actif
 // (CN_SCHEDULE), pour rester toujours cohérent après un changement de
@@ -10965,6 +10994,9 @@ function applySupplier(sup,silent=false){
     stage:t.stage||'',
     batches:FEED_TYPES.find(f=>f.id===t.id)?.batches||[{id:Date.now(),qty:100,price:700}]
   }));
+  // Créer les intrants correspondants dans le catalogue Logistique (achats/CUMP)
+  // s'ils n'existent pas encore, avec le même identifiant que la consommation.
+  if(typeof syncFeedIntrants==='function')syncFeedIntrants();
   // Nettoyer les aliments figés qui n'existent plus dans le nouveau fournisseur —
   // sinon le menu déroulant affiche un choix trompeur (calcBassin, lui, retombe
   // déjà proprement sur l'auto-sélection par poids). L'historique n'est pas touché.
