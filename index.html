@@ -649,6 +649,17 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
 
     <!-- TA2: GESTION UTILISATEURS -->
     <div id="ta2" class="pane">
+      <div class="card" style="border-color:rgba(251,191,36,.3)">
+        <div class="ctitle"><span class="dot" style="background:var(--gold)"></span>🔑 Créer un SuperAdmin</div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:.6rem">Accès total à l'espace SuperAdmin (toutes les fermes, tous les paramètres). À réserver aux personnes de confiance.</div>
+        <div class="admin-form">
+          <div class="form-group"><div class="form-lbl">Nom complet</div><input id="nsa-name" class="form-inp" placeholder="Ex: Awa Diallo"></div>
+          <div class="form-group"><div class="form-lbl">Email de connexion</div><input id="nsa-email" class="form-inp" type="email" placeholder="ex: awa@biofloc.app"></div>
+          <div class="form-group"><div class="form-lbl">Mot de passe</div><input id="nsa-pass" class="form-inp" type="password" placeholder="Min. 6 caractères"></div>
+        </div>
+        <button class="sbtn" style="background:var(--gold);color:#000" onclick="createSuperAdmin()">🔑 Créer le SuperAdmin</button>
+        <div id="nsa-msg" style="font-size:11px;margin-top:.5rem"></div>
+      </div>
       <div class="card">
         <div class="ctitle"><span class="dot"></span>Créer un utilisateur</div>
         <div class="admin-form">
@@ -3444,7 +3455,18 @@ async function doAdminLogin(){
   showLoader('Connexion…');
   try{
     await withTimeout(auth.signInWithEmailAndPassword(email,password),10000);
-    APP.user={uid:auth.currentUser.uid,email,name:'Administrateur',role:'Administrateur',farmCode:null};
+    const uid=auth.currentUser.uid;
+    // Le vrai contrôle d'accès vit dans les règles Firestore (users/{uid}.role).
+    // On lit ce profil ici pour l'afficher correctement ; s'il n'existe pas
+    // (ex. compte admin historique créé hors app), on ne bloque pas la connexion
+    // pour ne pas se verrouiller soi-même — mais toute écriture protégée par
+    // isSuperAdmin() échouera côté serveur si le rôle réel n'est pas admin.
+    let adminName='Administrateur';
+    try{
+      const uSnap=await withTimeout(db.collection('users').doc(uid).get(),8000);
+      if(uSnap.exists&&uSnap.data().name)adminName=uSnap.data().name;
+    }catch(_){}
+    APP.user={uid,email,name:adminName,role:'Administrateur',farmCode:null};
   }catch(e){
     _authRestoreInProgress=false; // libérer le verrou en cas d'échec
     hideLoader();
@@ -4234,6 +4256,41 @@ async function deleteFarm(code){
   catch(e){alert('Erreur : '+e.message);}
   hideLoader();
 }
+
+// Création d'un compte SuperAdmin (accès total à l'espace screen-admin).
+// Réservé à un SuperAdmin déjà connecté — cette fonction n'est exposée que
+// depuis l'onglet ta2 de l'espace SuperAdmin (screen-admin), donc déjà
+// protégée par l'accès à cet espace. Écrit dans users/{uid} avec
+// role:'Administrateur' — c'est ce document que lisent les règles Firestore
+// (isSuperAdmin()) pour accorder les droits, donc le compte est
+// immédiatement opérationnel partout dans l'app, pas seulement côté client.
+async function createSuperAdmin(){
+  const name=G('nsa-name').value.trim();
+  const email=G('nsa-email').value.trim().toLowerCase();
+  const password=G('nsa-pass').value.trim();
+  const msg=G('nsa-msg');
+  if(!name||!email||!password){msg.style.color='var(--dng)';msg.textContent='⚠️ Tous les champs sont obligatoires';return;}
+  if(password.length<6){msg.style.color='var(--dng)';msg.textContent='⚠️ Mot de passe minimum 6 caractères';return;}
+  showLoader('Création du SuperAdmin…');
+  try{
+    const cred=await secondaryAuth.createUserWithEmailAndPassword(email,password);
+    const uid=cred.user.uid;
+    await secondaryAuth.signOut();
+    await db.collection('users').doc(uid).set({
+      uid,email,name,role:'Administrateur',farmCode:null,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      createdBy:(APP.user&&APP.user.email)||null
+    });
+    G('nsa-name').value='';G('nsa-email').value='';G('nsa-pass').value='';
+    await logAudit('modification',`Création SuperAdmin`,`${name} (${email})`);
+    msg.style.color='var(--acc)';msg.textContent=`✅ SuperAdmin "${name}" créé — il peut se connecter avec ${email}`;
+  }catch(e){
+    msg.style.color='var(--dng)';
+    msg.textContent=e.code==='auth/email-already-in-use'?'❌ Cet email existe déjà':'❌ Erreur : '+e.message;
+  }
+  hideLoader();
+}
+window.createSuperAdmin=createSuperAdmin;
 
 async function createOperator(){
   const farmCode=G('nu-farm').value.trim().toUpperCase();
@@ -14647,10 +14704,13 @@ function scheduleAppNotifications(){
 }
 
 // ── FEATURE 9: GESTION MULTI-FERME ───────────────────────────────────
+// Bascule rapide — réservée au SuperAdmin (isRationSuperAdmin), qui a de
+// toute façon accès en lecture/écriture à toutes les fermes via les règles
+// Firestore (isSuperAdmin()). Pas de mot de passe requis : juste le code.
 async function switchFarm(newFarmCode){
   if(!newFarmCode||newFarmCode===APP.farmCode)return;
+  if(typeof isRationSuperAdmin!=='function'||!isRationSuperAdmin()){alert('🔒 Réservé au SuperAdmin.');return;}
   if(!confirm(`Changer de ferme vers "${newFarmCode}" ? Les données en cours seront sauvegardées.`))return;
-  // Sauvegarder si nécessaire
   APP.farmCode=newFarmCode;
   try{
     const snap=await db.collection('farms').doc(newFarmCode).get();
@@ -14668,25 +14728,120 @@ async function switchFarm(newFarmCode){
     showToast('🏠 Ferme changée: '+APP.farmName,'ok');
   }catch(e){showToast('Erreur changement ferme: '+e.message,'dng');}
 }
+window.switchFarm=switchFarm;
 
-function openFarmSwitcherModal(){
-  const modal=G('farm-switcher-modal');
-  if(!modal){
-    const m=document.createElement('div');m.id='farm-switcher-modal';m.className='modal-overlay';
-    m.style.cssText='position:fixed;inset:0;background:rgba(10,25,41,.82);z-index:9000;display:flex;align-items:center;justify-content:center;padding:1rem';
+// Bascule pour Responsable/Opérateur : ré-authentification complète (code
+// ferme + identifiant + mot de passe), identique à une reconnexion normale —
+// pas de simple changement de contexte sans preuve d'appartenance à la ferme cible.
+async function switchFarmAuthenticated(){
+  const farmCode=(G('fsw-farm').value||'').trim().toUpperCase();
+  const username=(G('fsw-user').value||'').trim().toLowerCase();
+  const password=(G('fsw-pass').value||'').trim();
+  const errEl=G('fsw-err');
+  if(!farmCode||!username||!password){errEl.textContent='⚠️ Tous les champs sont obligatoires';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  showLoader('Changement de ferme…');
+  try{
+    const email=`${username.replace(/[^a-z0-9]/g,'')}_${farmCode.toLowerCase().replace(/[^a-z0-9]/g,'')}@biofloc.app`;
+    await auth.signOut();
+    await auth.signInWithEmailAndPassword(email,password);
+    let d;
+    try{
+      const loginBackend=firebase.functions().httpsCallable('loginUser');
+      const result=await withTimeout(loginBackend({farmCode:farmCode}),8000);
+      d=result.data;
+    }catch(fnErr){
+      const uSnap=await withTimeout(db.collection('users').doc(auth.currentUser.uid).get(),8000);
+      if(!uSnap.exists) throw new Error('not-found');
+      const ud=uSnap.data();
+      if(String(ud.farmCode||'').trim().toUpperCase()!==farmCode) throw new Error('permission-denied');
+      const fSnap=await withTimeout(db.collection('farms').doc(farmCode).get(),8000);
+      if(!fSnap.exists) throw new Error('failed-precondition');
+      const fd=fSnap.data();
+      if(fd.active===false) throw new Error('failed-precondition');
+      d={uid:auth.currentUser.uid,name:ud.name||'',role:ud.role||'Opérateur',farmCode:farmCode,
+         farmName:fd.name||farmCode,canBackup:ud.canBackup===true,sections:ud.sections||null,
+         farmMessages:fd.farmMessages||[]};
+    }
+    APP.user={uid:d.uid,email,name:d.name,role:d.role,farmCode:d.farmCode,canBackup:d.canBackup,sections:d.sections||null};
+    APP.farmCode=d.farmCode;
+    APP.farmName=d.farmName;
+    APP.farmMessages=d.farmMessages||[];
+    localStorage.setItem('ichtus_last_farmCode',d.farmCode);
+    try{
+      const farmSnap=await db.collection('farms').doc(d.farmCode).get();
+      const fd=farmSnap.exists?farmSnap.data():{};
+      if(fd.speciesId==='custom'&&fd.speciesCustom){
+        const idx=SPECIES_PROFILES.findIndex(s=>s.id==='custom');
+        if(idx>=0)SPECIES_PROFILES[idx]={...SPECIES_PROFILES[idx],...fd.speciesCustom};
+        APP.species=SPECIES_PROFILES[idx>=0?idx:0];
+      } else if(fd.speciesId){
+        APP.species=SPECIES_PROFILES.find(s=>s.id===fd.speciesId)||SPECIES_PROFILES[0];
+      } else { APP.species=SPECIES_PROFILES[0]; }
+    }catch(specErr){APP.species=SPECIES_PROFILES[0];}
+    await loadFarmData();
+    hideLoader();
+    logAudit('CONNEXION','Changement de ferme — '+(d.role||'')).catch(()=>{});
+    const m=G('farm-switcher-modal');if(m)m.remove();
+    showFarmApp();
+    showToast('🏠 Ferme changée: '+APP.farmName,'ok');
+  }catch(e){
+    hideLoader();
+    const code=(e&&e.code||'')+''; const em=(e&&e.message||'')+'';
+    let msg;
+    if(code.indexOf('permission-denied')>=0||em.indexOf('permission-denied')>=0) msg='❌ Accès refusé à cette ferme';
+    else if(code.indexOf('not-found')>=0||em.indexOf('not-found')>=0) msg='❌ Profil utilisateur introuvable';
+    else if(code.indexOf('failed-precondition')>=0||em.indexOf('failed-precondition')>=0) msg='🚫 Ferme introuvable ou désactivée';
+    else if(code==='auth/wrong-password'||code==='auth/user-not-found'||code==='auth/invalid-credential'||code==='auth/invalid-email') msg='❌ Identifiant ou mot de passe incorrect';
+    else msg='❌ '+(em||'Erreur de connexion');
+    errEl.textContent=msg;errEl.style.display='block';
+    G('fsw-pass').value='';
+  }
+}
+window.switchFarmAuthenticated=switchFarmAuthenticated;
+
+async function openFarmSwitcherModal(){
+  const old=G('farm-switcher-modal');if(old)old.remove();
+  const isSA=typeof isRationSuperAdmin==='function'&&isRationSuperAdmin();
+  const m=document.createElement('div');m.id='farm-switcher-modal';m.className='modal-overlay';
+  m.style.cssText='position:fixed;inset:0;background:rgba(10,25,41,.82);z-index:9000;display:flex;align-items:center;justify-content:center;padding:1rem';
+  if(isSA){
     m.innerHTML=`<div class="modal-box" style="max-width:360px">
       <div class="modal-title">🏠 Changer de ferme</div>
-      <div style="font-size:10px;color:var(--t3);margin-bottom:.7rem">Ferme actuelle: <strong style="color:var(--acc)">${APP.farmCode||'—'}</strong></div>
-      <div><label class="form-lbl">Code de la nouvelle ferme</label>
-      <input type="text" id="farm-switch-code" class="form-inp" placeholder="ex: FERME02" style="text-transform:uppercase"></div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:.7rem">Ferme actuelle: <strong style="color:var(--acc)">${APP.farmCode||'—'}</strong> · Accès SuperAdmin — aucun mot de passe requis</div>
+      <div><label class="form-lbl">Ferme</label>
+      <select id="farm-switch-select" class="form-inp si"><option value="">-- Chargement… --</option></select></div>
       <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem">
         <button class="sbtn" onclick="G('farm-switcher-modal').remove()" style="background:var(--inp)">Annuler</button>
-        <button class="sbtn" onclick="switchFarm(G('farm-switch-code').value.trim().toUpperCase());G('farm-switcher-modal').remove()">✅ Changer</button>
+        <button class="sbtn" onclick="switchFarm(G('farm-switch-select').value);G('farm-switcher-modal').remove()">✅ Changer</button>
       </div>
     </div>`;
     document.body.appendChild(m);
-  } else {modal.style.display='flex';}
+    try{
+      const snap=await db.collection('farms').get();
+      const sel=G('farm-switch-select');
+      if(sel)sel.innerHTML='<option value="">-- Choisir une ferme --</option>'+snap.docs.map(d=>`<option value="${d.id}">${escapeHtml((d.data().name||d.id))} (${d.id})</option>`).join('');
+    }catch(e){const sel=G('farm-switch-select');if(sel)sel.innerHTML='<option value="">Erreur de chargement</option>';}
+  } else {
+    m.innerHTML=`<div class="modal-box" style="max-width:360px">
+      <div class="modal-title">🏠 Changer de ferme</div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:.7rem">Ferme actuelle: <strong style="color:var(--acc)">${APP.farmCode||'—'}</strong> · Ré-authentification requise</div>
+      <div style="margin-bottom:.5rem"><label class="form-lbl">Code de la ferme</label>
+      <input type="text" id="fsw-farm" class="form-inp" placeholder="ex: FERME02" style="text-transform:uppercase"></div>
+      <div style="margin-bottom:.5rem"><label class="form-lbl">Identifiant</label>
+      <input type="text" id="fsw-user" class="form-inp" placeholder="nom d'utilisateur"></div>
+      <div><label class="form-lbl">Mot de passe</label>
+      <input type="password" id="fsw-pass" class="form-inp"></div>
+      <div id="fsw-err" style="display:none;color:var(--dng);font-size:11px;margin-top:.5rem"></div>
+      <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem">
+        <button class="sbtn" onclick="G('farm-switcher-modal').remove()" style="background:var(--inp)">Annuler</button>
+        <button class="sbtn" onclick="switchFarmAuthenticated()">✅ Changer</button>
+      </div>
+    </div>`;
+    document.body.appendChild(m);
+  }
 }
+window.openFarmSwitcherModal=openFarmSwitcherModal;
 
 // ═══ SYNC BASSINS MODAL ═══
 function showSyncBassinsModal(){
