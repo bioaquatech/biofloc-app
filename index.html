@@ -10984,6 +10984,7 @@ function isRationSuperAdmin(){return ['Administrateur','SuperAdmin','superadmin'
 let SUPPLIERS=[JSON.parse(JSON.stringify(KOUDIJS_PROFILE))];
 let EDITING_SUP_TYPES=[]; // types en cours d\'édition dans le modal
 let EDITING_CN_ROWS=[]; // paliers C/N en cours d'édition dans le modal
+let SUP_MODAL_NEW=false; // true si le modal fournisseur est ouvert en mode création
 
 // Calendrier C/N par défaut (valeurs Koudijs/Tilapia actuelles) — remplacé par
 // celui du fournisseur actif dès qu'un calendrier personnalisé est enregistré.
@@ -11217,6 +11218,7 @@ function openSupplierModal(newMode=false){
   if(supList){
     supList.innerHTML=SUPPLIERS.map(s=>`<option value="${s.id}">${s.nom}</option>`).join('');
   }
+  SUP_MODAL_NEW=!!newMode;
   if(newMode){
     if(title)title.textContent='🏭 Nouveau fournisseur';
     G('sup-name').value='';
@@ -11329,8 +11331,12 @@ async function saveSupplier(){
   const supList=G('sup-list');
   if(supList){supList.innerHTML=SUPPLIERS.map(s=>`<option value="${s.id}">${s.nom}</option>`).join('');supList.value=sup.id;}
   msg.style.color='var(--acc)';msg.textContent=`✅ Fournisseur "${name}" enregistré !`;
-  // Si c\'est le fournisseur actif, ré-appliquer sans alert pour mettre à jour silencieusement
-  if(ACTIVE_SUPPLIER.id===sup.id){
+  // Un fournisseur qui vient d'être créé n'a aucune raison d'être utilisé ailleurs
+  // que via ce modal : on l'active tout de suite, sinon le tableau C/N (lié à
+  // ACTIVE_SUPPLIER) resterait figé sur l'ancien profil jusqu'à un clic "Utiliser" séparé.
+  const shouldActivate=ACTIVE_SUPPLIER.id===sup.id||SUP_MODAL_NEW;
+  SUP_MODAL_NEW=false;
+  if(shouldActivate){
     ACTIVE_SUPPLIER=JSON.parse(JSON.stringify(sup));
     FEED_TYPES=sup.types.map((t,i)=>({
       id:t.id||('F'+(i+1)),name:t.name,granule:t.granule||'',protein:t.protein||0,
