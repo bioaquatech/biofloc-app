@@ -234,8 +234,21 @@ exports.saveConfigData = functions.https.onCall(async (data, context) => {
   if (!userSnap.exists) {
     throw new functions.https.HttpsError("not-found", "Profil introuvable.");
   }
-  if (String(userSnap.data().farmCode || "").trim().toUpperCase() !== farmCode) {
+  const callerData = userSnap.data();
+  if (String(callerData.farmCode || "").trim().toUpperCase() !== farmCode) {
     throw new functions.https.HttpsError("permission-denied", "Accès refusé à cette ferme.");
+  }
+  // config/ (notamment config/permissions, qui pilote les accès par rôle)
+  // est réservé à Responsable/SuperAdmin côté règles Firestore — cette
+  // fonction utilise l'Admin SDK et contourne ces règles, donc elle doit
+  // reproduire la même restriction pour ne pas permettre à un Opérateur
+  // de s'octroyer des permissions élevées sur sa propre ferme.
+  const ADMIN_ROLES = ["Responsable", "Administrateur", "SuperAdmin", "superadmin"];
+  if (!ADMIN_ROLES.includes(callerData.role)) {
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "Réservé au Responsable ou au SuperAdmin."
+    );
   }
   await admin.firestore()
     .collection("farms").doc(farmCode)
