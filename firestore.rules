@@ -64,8 +64,19 @@ service cloud.firestore {
     }
 
     // ── Table logins (email↔uid) — gérée par responsable/superadmin ──
+    // Cloisonnée par ferme : un responsable ne doit voir/modifier que les
+    // identifiants de SA ferme (le document contient farmCode). Sans ce
+    // filtre, n'importe quel responsable pouvait lire/écraser les emails
+    // de connexion de toutes les fermes de la plateforme — y compris
+    // détourner la réinitialisation de mot de passe d'une autre ferme.
     match /logins/{doc} {
-      allow read, write: if isResponsable();
+      allow get: if isSuperAdmin() || (isResponsable() && resource.data.farmCode == userData().farmCode);
+      allow list: if isSuperAdmin(); // jamais de liste globale pour un responsable
+      allow create: if isSuperAdmin() || (isResponsable() && isValidData() && request.resource.data.farmCode == userData().farmCode);
+      allow update: if isSuperAdmin() || (isResponsable()
+        && resource.data.farmCode == userData().farmCode
+        && request.resource.data.farmCode == userData().farmCode);
+      allow delete: if isSuperAdmin() || (isResponsable() && resource.data.farmCode == userData().farmCode);
     }
 
     // ── Paramètres plateforme ────────────────────────────────────────
