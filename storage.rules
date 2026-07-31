@@ -45,8 +45,9 @@ service firebase.storage {
     match /backups/{farmCode}/{file} {
       // Lecture / restauration : membre de la ferme, ou admin/superadmin.
       allow read: if isSameFarm(farmCode) || isAdmin();
-      // Écriture : membre de la ferme · JSON · max 25 Mo.
-      allow write: if isSameFarm(farmCode)
+      // Écriture : membre de la ferme, ou admin/superadmin (sauvegarde
+      // globale depuis le dashboard SuperAdmin) · JSON · max 25 Mo.
+      allow write: if (isSameFarm(farmCode) || isAdmin())
         && request.resource.contentType.matches('application/json.*')
         && request.resource.size < 25 * 1024 * 1024;
       // Suppression (purge des > 10 dernières) : membre de la ferme ou admin.
