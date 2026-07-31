@@ -757,6 +757,13 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
             </div>
             <input type="file" id="restore-file-admin" accept=".json" style="display:none" onchange="restoreBackupAdmin(this)">
             <div id="backup-admin-msg" style="font-size:11px;margin-top:.4rem"></div>
+            <div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--b1)">
+              <p style="font-size:11px;color:var(--t2);line-height:1.8;margin-bottom:.5rem">
+                Sauvegarde <strong style="color:var(--t1)">cloud</strong> (Firebase Storage) de toutes les fermes en une fois — même mécanisme que la sauvegarde automatique par ferme, déclenché ici manuellement pour l'ensemble de la plateforme.
+              </p>
+              <button class="sbtn" style="width:100%;background:var(--gold);color:#000" onclick="cloudBackupAllFarms()">☁️ Sauvegarder toutes les fermes (cloud)</button>
+              <div id="backup-all-farms-msg" style="font-size:11px;margin-top:.5rem"></div>
+            </div>
           </div>
         </div>
         <div>
@@ -3306,7 +3313,7 @@ function startSession(){
   clearInterval(APP.backupIntervalTimer);
   APP.backupIntervalTimer=setInterval(()=>{
     if(APP.farmCode&&typeof autoSaveFarm==='function')autoSaveFarm();
-  },60*60*1000);
+  },20*60*1000);
 }
 function stopSession(){
   clearTimeout(APP.sessionTimer);clearTimeout(APP.warnTimer);clearInterval(APP.warnCountdown);
@@ -10436,8 +10443,47 @@ function restoreERPData(erp){
   });
 }
 
-// Sauvegarde automatique silencieuse à chaque connexion
-// Stocke dans localStorage (clé: ichtus_autosave_{farmCode}) + garde les 3 dernières
+// Construit le snapshot d'une ferme et l'écrit dans Firebase Storage
+// (backups/{farmCode}/{horodatage}.json, 10 dernières conservées). Factorisé
+// pour être appelé aussi bien par autoSaveFarm() (ferme connectée) que par
+// cloudBackupAllFarms() (SuperAdmin, boucle sur toutes les fermes).
+async function writeCloudBackupForFarm(farmCode,farmName,savedBy){
+  const col=(c)=>db.collection('farms').doc(farmCode).collection(c);
+  const [bS,sS,fS,dS,stS,mvS,inS,chS]=await Promise.all([
+    col('bassins').get(),col('suivi').get(),col('feed').get(),col('daily').get(),
+    col('stock_entries').get().catch(()=>({docs:[]})),
+    col('stock_movements').get().catch(()=>({docs:[]})),
+    col('intrants').get().catch(()=>({docs:[]})),
+    col('charges').get().catch(()=>({docs:[]})),
+  ]);
+  const snapshot={
+    version:'2.0',date:new Date().toISOString(),
+    farmCode,farmName:farmName||farmCode,
+    savedBy:savedBy||'Auto',
+    bassins:bS.docs.map(d=>d.data()),
+    suivi:sS.docs.map(d=>d.data()),
+    feed:fS.docs.map(d=>({id:d.id,...d.data()})),
+    daily:(()=>{const o={};dS.docs.forEach(d=>{o[d.id]=d.data();});return o;})(),
+    stock_entries:stS.docs.map(d=>({id:d.id,...d.data()})),
+    stock_movements:mvS.docs.map(d=>({id:d.id,...d.data()})),
+    intrants:inS.docs.map(d=>({id:d.id,...d.data()})),
+    charges:chS.docs.map(d=>({id:d.id,...d.data()})),
+    erp:farmCode===APP.farmCode?collectERPData():null, // ERP local uniquement dispo pour la ferme active
+  };
+  if(!window.storage)throw new Error('Stockage cloud indisponible (window.storage)');
+  const stamp=snapshot.date.replace(/[:.]/g,'-');
+  await storage.ref('backups/'+farmCode+'/'+stamp+'.json')
+    .putString(JSON.stringify(snapshot),'raw',{contentType:'application/json'});
+  const dir=storage.ref('backups/'+farmCode);
+  const list=await dir.listAll();
+  const names=list.items.map(it=>it.name).sort(); // noms ISO → tri chronologique
+  if(names.length>10)await Promise.all(names.slice(0,names.length-10).map(nm=>dir.child(nm).delete().catch(()=>{})));
+  return snapshot;
+}
+window.writeCloudBackupForFarm=writeCloudBackupForFarm;
+
+// Sauvegarde automatique silencieuse à chaque connexion (ferme active)
+// Stocke aussi dans localStorage (clé: ichtus_autosave_{farmCode}) + garde les 3 dernières
 async function autoSaveFarm(){
   if(window._isLoadingData) return; // ne pas sauvegarder pendant le chargement Firestore (anti-écrasement)
   if(!APP.farmCode)return;
@@ -10493,6 +10539,44 @@ async function autoSaveFarm(){
     if(window.showToast&&cloudOk)showToast('💾 Sauvegarde automatique effectuée (cloud + locale)','acc');
   }catch(e){console.warn('autoSaveFarm:',e);}
 }
+
+// SuperAdmin : sauvegarde cloud de TOUTES les fermes en une fois, depuis le
+// dashboard admin. Réutilise writeCloudBackupForFarm() ferme par ferme —
+// mêmes règles Storage (isSameFarm || isAdmin), donc fonctionne pour un
+// SuperAdmin sur n'importe quelle ferme.
+async function cloudBackupAllFarms(){
+  const msg=G('backup-all-farms-msg');
+  if(msg){msg.style.color='var(--t2)';msg.textContent='⏳ Sauvegarde en cours…';}
+  showLoader('Sauvegarde cloud de toutes les fermes…');
+  try{
+    const farmsSnap=await db.collection('farms').get();
+    const results=[];
+    for(const farmDoc of farmsSnap.docs){
+      const farmCode=farmDoc.id;
+      const farmData=farmDoc.data();
+      if(farmData.active===false)continue;
+      try{
+        await writeCloudBackupForFarm(farmCode,farmData.name,(APP.user?.name||'SuperAdmin')+' (sauvegarde globale)');
+        results.push({farmCode,ok:true});
+      }catch(e){
+        console.error('[cloudBackupAllFarms] échec pour '+farmCode+' :',e);
+        results.push({farmCode,ok:false,error:e.message});
+      }
+    }
+    const okCount=results.filter(r=>r.ok).length;
+    const failed=results.filter(r=>!r.ok);
+    await logAudit('sauvegarde','Sauvegarde cloud globale',`${okCount}/${results.length} fermes réussies`);
+    if(msg){
+      if(!failed.length){msg.style.color='var(--acc)';msg.textContent=`✅ ${okCount} ferme(s) sauvegardée(s) dans le cloud.`;}
+      else{msg.style.color='var(--dng)';msg.textContent=`⚠️ ${okCount}/${results.length} réussies. Échecs : ${failed.map(f=>f.farmCode).join(', ')} (voir console).`;}
+    }
+  }catch(e){
+    console.error('[cloudBackupAllFarms]',e);
+    if(msg){msg.style.color='var(--dng)';msg.textContent='❌ Erreur : '+e.message;}
+  }
+  hideLoader();
+}
+window.cloudBackupAllFarms=cloudBackupAllFarms;
 
 // Restaure depuis la dernière sauvegarde automatique
 window.restoreFromAutoSave=async function(){
