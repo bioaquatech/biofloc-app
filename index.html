@@ -1401,6 +1401,7 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
           <tbody id="b-tbody"></tbody>
         </table>
       </div>
+      <div id="species-extra-params"></div>
       <div class="mgrid" style="margin-top:.8rem" id="b-metrics"></div>
       <div style="margin-top:.6rem;display:flex;gap:.5rem;justify-content:flex-end" class="no-print">
         <button onclick="exportBassinsPDF()" style="background:var(--dng);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer">📄 Fiche journalière PDF</button>
@@ -5193,10 +5194,13 @@ async function openBassinStats(bassinName){
   }
 }
 // ═══════════════════════════════════════════════
-// MOTEUR D\'ANALYSE — Paramètres eau v4.1
+// MOTEUR D\'ANALYSE — Paramètres eau v4.1 (Tilapia) + grilles par espèce
+// Croisement de deux recherches littérature BFT (juillet 2026) pour
+// Clarias, Carpe et Crevette — Tilapia inchangé (base validée dossier
+// technique). Sources citées dans les commentaires par paramètre.
 // ═══════════════════════════════════════════════
 
-const ANALYSE_RULES={
+const ANALYSE_RULES_TILAPIA={
   DO:{
     label:'DO — Oxygène dissous', unit:'mg/L', icon:'💧',
     rules:[
@@ -5344,10 +5348,351 @@ const ANALYSE_RULES={
   }
 };
 
+// Clarias gariepinus — Sources : Dauda et al. 2019 (DO) ; Fagbenro et al. 1993,
+// FAO 2001 (pH/temp, conventionnel) ; Hargreaves & Kucuk 2001 (NH₃) ;
+// Atawale et al. 2019 (NO₂ — sensibilité forte malgré la croyance inverse) ;
+// De Schryver et al. 2008 (TAC — mucus abondant consomme l'alcalinité).
+const ANALYSE_RULES_CLARIAS={
+  DO:{label:'DO — Oxygène dissous', unit:'mg/L', icon:'💧', rules:[
+    {max:1.5, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Hypoxie sévère — la respiration aérienne (organe labyrinthique) ne suffit plus à compenser en BFT dense.',
+      actions:['Arrêter l\'alimentation immédiatement','Vérifier souffleurs et diffuseurs','Réduire le volume de floc si Imhoff trop élevé','Remesurer toutes les 30 minutes']},
+    {min:1.5,max:3, level:'ALERTE', color:'var(--dng)',
+      interpretation:'DO bas — la croissance stagne malgré la survie de l\'espèce grâce à la respiration aérienne.',
+      actions:['Réduire la ration alimentaire','Vérifier l\'aération','Ne pas augmenter la mélasse']},
+    {min:3,max:4, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Stress modéré — seuil plus bas que le tilapia, mais objectif ici est la croissance optimale, pas seulement la survie.',
+      actions:['Surveiller le DO après chaque repas','Vérifier les souffleurs','Contrôler le volume de floc']},
+  ]},
+  ph:{label:'pH', unit:'', icon:'⚗️', rules:[
+    {max:6, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Le Clarias est peu tolérant aux pH acides.',
+      actions:['Apporter un basifiant à action rapide (NaHCO₃) — calculateur Basifiants','Mesurer le TAC','Arrêter l\'alimentation']},
+    {min:6,max:6.5, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Zone acide critique — nitrification très réduite.',
+      actions:['Apporter un correcteur d\'alcalinité — calculateur Basifiants','Réduire la ration']},
+    {min:6.5,max:7, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Zone limite basse.',
+      actions:['Apport CaCO₃ d\'entretien — calculateur Basifiants','Vérifier le TAC']},
+    {min:7.5,max:8, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Zone limite haute — mieux tolérée que le pH acide chez cette espèce, mais à surveiller.',
+      actions:['Mesurer le TAN','Réduire les apports de mélasse si nécessaire']},
+  ]},
+  temp:{label:'Température', unit:'°C', icon:'🌡️', rules:[
+    {max:24, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Ralentissement métabolique sévère sous 25°C.',
+      actions:['Vérifier la source d\'eau','Réduire fortement la ration']},
+    {min:24,max:26, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Croissance fortement ralentie.',
+      actions:['Réduire la ration','Surveiller le FCR']},
+    {min:26,max:28, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Sous l\'optimum.',
+      actions:['Réduire légèrement la ration']},
+    {min:30,max:32, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Limite haute.',
+      actions:['Augmenter la fréquence de mesure du DO']},
+  ]},
+  NH3:{label:'NH₃ — Ammoniac', unit:'mg/L', icon:'☣️', rules:[
+    {min:0.5,max:1, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Toxicité amoindrie par le biofloc, mais branchies sensibles.',
+      actions:['Remesurer le TAN sous 24h','Réduire la ration','Vérifier le ratio C/N de la mélasse']},
+    {min:1,max:2, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Pression ammoniacale significative.',
+      actions:['Réduire fortement la ration','Vidange partielle','Mélasse corrective']},
+    {min:2, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Toxicité élevée malgré le tampon biofloc.',
+      actions:['Arrêter l\'alimentation','Vidange importante','Correcteur bactérien']},
+  ]},
+  NO2:{label:'NO₂ — Nitrites', unit:'mg/L', icon:'🔴', rules:[
+    {min:0.3,max:0.8, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Espèce en réalité très sensible aux nitrites (méthémoglobinémie), contrairement à une idée reçue.',
+      actions:['Sel en dose préventive','Remesurer sous 48h','Vérifier le volume de floc']},
+    {min:0.8,max:1.5, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Risque de méthémoglobinémie.',
+      actions:['Vidange partielle','Sel en dose corrective','Réduire la ration']},
+    {min:1.5, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Méthémoglobinémie probable — poissons suffoquent malgré DO correct.',
+      actions:['Vidange urgente','Sel à dose élevée','Arrêter l\'alimentation']},
+  ]},
+  TAN:{label:'TAN — Azote ammoniacal total', unit:'mg/L', icon:'⚠️', rules:[
+    {min:1,max:2, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Dépend fortement du pH et de la température (standard BFT).',
+      actions:['Remesurer sous 24h','Réduire la ration','Vérifier le C/N mélasse']},
+    {min:2,max:3, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Risque NH₃ libre significatif.',
+      actions:['Réduire fortement la ration','Vidange partielle','Mélasse corrective']},
+    {min:3, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Intoxication imminente.',
+      actions:['Arrêter l\'alimentation','Vidange importante','Correcteur bactérien en dose de choc']},
+  ]},
+  TAC:{label:'TAC — Alcalinité', unit:'mg/L CaCO₃', icon:'🧪', rules:[
+    {min:100,max:150, level:'ACCEPTABLE', color:'var(--t2)',
+      interpretation:'Tampon suffisant. Le mucus abondant du Clarias consomme de l\'alcalinité en continu.',
+      actions:['Apport régulier de CaCO₃ en entretien']},
+    {min:80,max:100, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Réserve en baisse.',
+      actions:['Apporter du CaCO₃ — calculateur Basifiants','Remesurer sous 48h']},
+    {min:50,max:80, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Réserve presque épuisée.',
+      actions:['CaCO₃ en urgence + NaHCO₃ en appoint']},
+    {max:50, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Crash pH imminent.',
+      actions:['CaCO₃ et NaHCO₃ immédiatement','Mesurer le pH toutes les 3 heures']},
+  ]},
+  imhoff:{label:'Imhoff — Volume floc', unit:'ml/L', icon:'🔬', rules:[
+    {min:25,max:40, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Optimum Clarias plus bas que le tilapia — floc en développement.',
+      actions:['Maintenir l\'apport de mélasse','Mesurer le DO après repas']},
+    {min:40,max:60, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Un Imhoff trop haut chez le Clarias signe souvent un surdosage en carbone.',
+      actions:['Vidange partielle','Réduire les apports de mélasse']},
+    {min:60, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Floc excessif — risque hypoxie nocturne.',
+      actions:['Vidanges répétées','Arrêter la mélasse temporairement']},
+  ]}
+};
+
+// Cyprinus carpio — Sources : Luo et al. 2014 (DO, dureté) ; Zhao et al. 2014 (pH) ;
+// Steffens 1989 (temp, conventionnel) ; Colt & Armstrong 1981 (NH₃, conventionnel) ;
+// Prakash et al. 2019 (dureté calcique — voir paramètre additionnel séparé).
+const ANALYSE_RULES_CARPE={
+  DO:{label:'DO — Oxygène dissous', unit:'mg/L', icon:'💧', rules:[
+    {max:3, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Métabolisme carpe moins adapté aux chutes de DO que le tilapia.',
+      actions:['Aération maximale immédiate','Arrêter l\'alimentation','Vidange partielle oxygénée']},
+    {min:3,max:4, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Hypoxie modérée à sévère.',
+      actions:['Réduire fortement la ration','Vérifier souffleurs']},
+    {min:4,max:5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Sous l\'optimum.',
+      actions:['Réduire la ration','Contrôler le volume de floc']},
+  ]},
+  ph:{label:'pH', unit:'', icon:'⚗️', rules:[
+    {max:6.5, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Zone très acide.',
+      actions:['Basifiant à action rapide','Arrêter l\'alimentation']},
+    {min:6.5,max:7, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Zone acide.',
+      actions:['Correcteur d\'alcalinité','Réduire la ration']},
+    {min:7,max:7.5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Sous l\'optimum — le biofloc fonctionne mieux à pH 7,5–8,0 pour la carpe.',
+      actions:['Apport CaCO₃ d\'entretien']},
+  ]},
+  temp:{label:'Température', unit:'°C', icon:'🌡️', rules:[
+    {max:20, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Croissance quasi à l\'arrêt.',
+      actions:['Vérifier la source d\'eau','Suspendre une partie de la ration']},
+    {min:20,max:23, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Croissance fortement ralentie.',
+      actions:['Réduire la ration']},
+    {min:23,max:25, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Sous l\'optimum (25–28°C).',
+      actions:['Réduire légèrement la ration']},
+  ]},
+  NH3:{label:'NH₃ — Ammoniac', unit:'mg/L', icon:'☣️', rules:[
+    {min:0.2,max:0.5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'La carpe est très sensible à l\'ammoniac libre — seuils plus bas que tilapia/Clarias.',
+      actions:['Remesurer le TAN sous 24h','Réduire la ration']},
+    {min:0.5,max:1, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Risque NH₃ libre significatif.',
+      actions:['Vidange partielle','Réduire fortement la ration']},
+    {min:1, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Intoxication imminente.',
+      actions:['Arrêter l\'alimentation','Vidange importante']},
+  ]},
+  NO2:{label:'NO₂ — Nitrites', unit:'mg/L', icon:'🔴', rules:[
+    {min:0.1,max:0.3, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Susceptibilité classique de la carpe aux nitrites (« brown blood disease »).',
+      actions:['Sel en dose préventive','Remesurer sous 48h']},
+    {min:0.3,max:0.5, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Risque de méthémoglobinémie.',
+      actions:['Vidange partielle','Sel en dose corrective']},
+    {min:0.5, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Méthémoglobinémie probable.',
+      actions:['Vidange urgente','Sel à dose élevée','Arrêter l\'alimentation']},
+  ]},
+  TAN:{label:'TAN — Azote ammoniacal total', unit:'mg/L', icon:'⚠️', rules:[
+    {min:0.8,max:1.5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Standard BFT carpe.',
+      actions:['Remesurer sous 24h','Réduire la ration']},
+    {min:1.5,max:2.5, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Risque NH₃ libre significatif.',
+      actions:['Réduire fortement la ration','Vidange partielle']},
+    {min:2.5, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Intoxication imminente.',
+      actions:['Arrêter l\'alimentation','Vidange importante']},
+  ]},
+  TAC:{label:'TAC — Alcalinité', unit:'mg/L CaCO₃', icon:'🧪', rules:[
+    {min:150,max:200, level:'ACCEPTABLE', color:'var(--t2)',
+      interpretation:'La carpe consomme beaucoup de carbonates pour son métabolisme osseux — TAC cible plus haut que les autres espèces.',
+      actions:['Apport régulier de CaCO₃']},
+    {min:100,max:150, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Réserve en baisse.',
+      actions:['Apporter du CaCO₃','Remesurer sous 48h']},
+    {min:80,max:100, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Réserve presque épuisée.',
+      actions:['CaCO₃ en urgence']},
+    {max:80, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Crash pH imminent.',
+      actions:['CaCO₃ et NaHCO₃ immédiatement']},
+  ]},
+  imhoff:{label:'Imhoff — Volume floc', unit:'ml/L', icon:'🔬', rules:[
+    {min:40,max:60, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'La carpe (détritivore) tolère des Imhoff plus élevés que le tilapia — acceptable si le DO est maintenu.',
+      actions:['Surveiller le DO nocturne']},
+    {min:60,max:80, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Floc dense.',
+      actions:['Vidange partielle','Surveiller le DO la nuit']},
+    {min:80, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Risque hypoxie nocturne.',
+      actions:['Vidanges répétées urgentes','Arrêter la mélasse temporairement']},
+  ]},
+  dureteCa:{label:'Dureté Ca²⁺', unit:'mg/L CaCO₃', icon:'🦴', rules:[
+    {min:50,max:75, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'En BFT, les bactéries consomment le calcium pour leur paroi — carence rapide si le TAC n\'est pas maintenu.',
+      actions:['Apporter du CaCO₃ — calculateur Basifiants','Remesurer sous 48h']},
+    {max:50, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Carence calcique — risque de déformations osseuses et d\'arrêt de croissance, même si le TAC est correct.',
+      actions:['Apport CaCO₃ en urgence','Vérifier le TAC séparément — les deux paramètres sont distincts']},
+  ]}
+};
+
+// Litopenaeus vannamei — Sources : Samocha et al. 2017 (DO, salinité) ; Furtado et al.
+// 2011/2014 (TAC, pH) ; Ray & Lotz 1992 (temp) ; Lin & Chen 2001 (NH₃) ; Tseng & Chen
+// 2004 (NO₂) ; Schweitzer et al. 2013 (TSS) ; Kuhn et al. 2010 (NO₃). Espèce la plus
+// exigeante — l'Imhoff classique est peu pertinent (remplacé par le TSS en phase 2).
+const ANALYSE_RULES_CREVETTE={
+  DO:{label:'DO — Oxygène dissous', unit:'mg/L', icon:'💧', rules:[
+    {max:3, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Le floc consomme beaucoup d\'O₂ la nuit — mortalité rapide sous 2,5 mg/L.',
+      actions:['Aération maximale immédiate','Arrêter l\'alimentation','Vérifier l\'aération nocturne en priorité']},
+    {min:3,max:4, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Hypoxie sévère.',
+      actions:['Réduire fortement la ration','Surveiller le DO nocturne']},
+    {min:4,max:5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Sous l\'optimum (>5 mg/L requis).',
+      actions:['Réduire la ration','Contrôler le TSS/floc']},
+  ]},
+  ph:{label:'pH', unit:'', icon:'⚗️', rules:[
+    {max:6.8, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Un pH < 7 empêche le durcissement de la cuticule après la mue.',
+      actions:['Basifiant à action rapide','Mesurer le TAC en priorité']},
+    {min:6.8,max:7, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Le pH chute lors des mues — zone à risque pour le durcissement de cuticule.',
+      actions:['Correcteur d\'alcalinité','Surveiller les animaux en mue']},
+    {min:7,max:7.5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Sous l\'optimum (7,5–8,0).',
+      actions:['Apport CaCO₃ d\'entretien']},
+    {min:8,max:8.5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Limite haute.',
+      actions:['Mesurer le TAN']},
+  ]},
+  temp:{label:'Température', unit:'°C', icon:'🌡️', rules:[
+    {max:26, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Optimum crevette plus élevé que les poissons (29–31°C) — croissance à l\'arrêt sous 26°C.',
+      actions:['Vérifier la source d\'eau','Réduire fortement la ration']},
+    {min:26,max:28, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Croissance fortement ralentie.',
+      actions:['Réduire la ration']},
+    {min:28,max:29, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Sous l\'optimum.',
+      actions:['Surveiller l\'évolution']},
+  ]},
+  NH3:{label:'NH₃ — Ammoniac', unit:'mg/L', icon:'☣️', rules:[
+    {min:0.2,max:0.5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Toxicité extrême lors des mues — seuils très bas chez cette espèce.',
+      actions:['Remesurer le TAN sous 24h','Réduire la ration']},
+    {min:0.5,max:1, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Risque NH₃ libre significatif, aggravé pendant les mues.',
+      actions:['Vidange partielle','Mélasse corrective']},
+    {min:1, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Toxicité extrême — risque élevé pendant les mues.',
+      actions:['Arrêter l\'alimentation','Vidange importante']},
+  ]},
+  NO2:{label:'NO₂ — Nitrites', unit:'mg/L', icon:'🔴', rules:[
+    {min:0.3,max:0.5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Sensibilité accrue aux nitrites.',
+      actions:['Remesurer sous 48h','Surveiller le comportement']},
+    {min:0.5,max:1, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Risque significatif.',
+      actions:['Vidange partielle','Réduire la ration']},
+    {min:1, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Risque de mortalité.',
+      actions:['Vidange urgente','Arrêter l\'alimentation']},
+  ]},
+  TAN:{label:'TAN — Azote ammoniacal total', unit:'mg/L', icon:'⚠️', rules:[
+    {min:1,max:2, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Standard BFT crevette.',
+      actions:['Remesurer sous 24h','Réduire la ration']},
+    {min:2,max:3, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Risque NH₃ libre significatif.',
+      actions:['Réduire fortement la ration','Vidange partielle']},
+    {min:3, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Intoxication imminente.',
+      actions:['Arrêter l\'alimentation','Vidange importante']},
+  ]},
+  TAC:{label:'TAC — Alcalinité', unit:'mg/L CaCO₃', icon:'🧪', rules:[
+    {min:120,max:180, level:'ACCEPTABLE', color:'var(--t2)',
+      interpretation:'Indispensable pour la mue — l\'exosquelette est construit en carbonate.',
+      actions:['Apport régulier de CaCO₃']},
+    {min:100,max:120, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Réserve en baisse — risque pour la prochaine mue.',
+      actions:['Apporter du CaCO₃','Remesurer sous 48h']},
+    {min:80,max:100, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Réserve presque épuisée — mues à risque.',
+      actions:['CaCO₃ en urgence']},
+    {max:80, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Crash pH imminent — mortalité pendant la mue probable.',
+      actions:['CaCO₃ et NaHCO₃ immédiatement']},
+  ]},
+  imhoff:{label:'Imhoff — Volume floc', unit:'ml/L', icon:'🔬', rules:[
+    {min:5,max:10, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Floc insuffisant — l\'Imhoff classique est peu pertinent pour la crevette (le TSS est la vraie référence, voir phase 2).',
+      actions:['Augmenter les apports de mélasse']},
+    {min:40,max:45, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Floc dense — risque colmatage branchial.',
+      actions:['Vidange partielle','Réduire les apports de mélasse']},
+    {min:45, level:'URGENCE', color:'var(--dng)',
+      interpretation:'Floc excessif — risque hypoxie nocturne et colmatage branchial.',
+      actions:['Vidanges répétées','Arrêter la mélasse temporairement']},
+  ]},
+  salinite:{label:'Salinité', unit:'ppt', icon:'🧂', rules:[
+    {min:2,max:5, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'L. vannamei tolère l\'eau douce mais c\'est biologiquement stressant — problèmes osmotiques en approche.',
+      actions:['Envisager un apport de sel marin','Surveiller les mues (syndrome de la mue précoce)']},
+    {max:2, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Stress osmotique majeur — risque de « syndrome de la mue précoce ».',
+      actions:['Ajouter du sel marin pour remonter vers 5-15 ppt','Surveiller la mortalité post-mue']},
+  ]},
+  no3:{label:'NO₃⁻ — Nitrate', unit:'mg/L', icon:'🟠', rules:[
+    {min:50,max:100, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Plus critique pour la crevette que pour les poissons en BFT — perturbation de la croissance à long terme.',
+      actions:['Renouveler une partie de l\'eau si possible','Surveiller la tendance sur plusieurs mesures']},
+    {min:100, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Accumulation chronique — impact significatif sur la croissance.',
+      actions:['Vidange partielle','Réduire la charge organique (mélasse)']},
+  ]},
+  tss:{label:'TSS — Matières en suspension', unit:'mg/L', icon:'🌫️', rules:[
+    {min:400,max:500, level:'VIGILANCE', color:'var(--warn)',
+      interpretation:'Remplace avantageusement l\'Imhoff pour cette espèce — zone haute de la fenêtre opérationnelle.',
+      actions:['Surveiller l\'évolution','Éviter d\'augmenter la mélasse']},
+    {min:500, level:'ALERTE', color:'var(--dng)',
+      interpretation:'Risque de colmatage branchial et de baisse d\'appétit.',
+      actions:['Vidange partielle','Réduire les apports de mélasse','Surveiller la prise alimentaire']},
+  ]}
+};
+
+// Sélectionne la grille active selon l\'espèce de la ferme connectée.
+// Repli sur Tilapia pour toute espèce non couverte (ex. 'custom').
+function getAnalyseRules(){
+  const id=(APP.species&&APP.species.id)||'tilapia';
+  return {tilapia:ANALYSE_RULES_TILAPIA,clarias:ANALYSE_RULES_CLARIAS,carpe:ANALYSE_RULES_CARPE,crevette:ANALYSE_RULES_CREVETTE}[id]||ANALYSE_RULES_TILAPIA;
+}
+
 function getAlertForParam(param, value){
   if(value===null||value===undefined)return null;
   const v=parseFloat(value);if(isNaN(v))return null;
-  const ruleset=ANALYSE_RULES[param];if(!ruleset)return null;
+  const ruleset=getAnalyseRules()[param];if(!ruleset)return null;
   for(const rule of ruleset.rules){
     const aboveMin=rule.min===undefined||v>=rule.min;
     const belowMax=rule.max===undefined||v<rule.max;
@@ -5388,18 +5733,23 @@ function openAnalyse(){
 
   let totalAlertes=0,totalUrgences=0;
   const results=[];
+  // Paramètres de base + additionnels spécifiques à l'espèce active (voir
+  // SPECIES_EXTRA_PARAMS — dureté Ca pour la carpe, salinité/NO₃/TSS pour la crevette).
+  const sid=(APP.species&&APP.species.id)||'tilapia';
+  const extraKeys=(SPECIES_EXTRA_PARAMS[sid]||[]).map(p=>p.key);
+  const analyseParams=['DO','ph','temp','NH3','NO2','TAN','TAC','imhoff',...extraKeys];
 
   selected.forEach(b=>{
     const alerts=[];
-    ['DO','ph','temp','NH3','NO2','TAN','TAC','imhoff'].forEach(p=>{
+    analyseParams.forEach(p=>{
       const alert=getAlertForParam(p,b[p]);
       if(alert)alerts.push(alert);
     });
-    const ok=['DO','ph','temp','NH3','NO2','TAN','TAC','imhoff'].filter(p=>{
+    const ok=analyseParams.filter(p=>{
       const v=b[p];if(v===null||v===undefined)return false;
       return !getAlertForParam(p,v);
     });
-    const paramSaisis=['DO','ph','temp','NH3','NO2','TAN','TAC','imhoff'].filter(p=>b[p]!==null&&b[p]!==undefined).length;
+    const paramSaisis=analyseParams.filter(p=>b[p]!==null&&b[p]!==undefined).length;
     if(paramSaisis===0)return;
     const urgCount=alerts.filter(a=>['URGENCE','CRISE'].includes(a.level)).length;
     const warnCount=alerts.filter(a=>['ALERTE','VIGILANCE','INSUFFISANT'].includes(a.level)).length;
@@ -5428,7 +5778,8 @@ function openAnalyse(){
           <div style="font-size:20px">📊</div><div style="font-size:18px;font-weight:800;color:var(--acc2)">${results.length}</div>
           <div style="font-size:10px;color:var(--t2)">Analysés</div>
         </div>
-      </div>`;
+      </div>
+      <div style="font-size:9px;color:var(--t3);margin-bottom:.5rem">🧬 Normes appliquées : <strong style="color:var(--t2)">${escapeHtml((APP.species&&APP.species.nom)||'Tilapia')}</strong></div>`;
   }
 
   const container=G('analyse-results');
@@ -5462,7 +5813,7 @@ function openAnalyse(){
               <div style="font-size:9px;color:var(--t1)"><strong>Actions :</strong><br>${a.actions.map(act=>'→ '+act).join('<br>')}</div>
             </div>`).join('')}
           </div>`}
-        ${ok.length>0&&alerts.length>0?`<div style="padding:.3rem 1rem .5rem;font-size:9px;color:var(--t3)">✓ Normaux : ${ok.map(p=>ANALYSE_RULES[p]?.label||p).join(' · ')}</div>`:''}
+        ${ok.length>0&&alerts.length>0?`<div style="padding:.3rem 1rem .5rem;font-size:9px;color:var(--t3)">✓ Normaux : ${ok.map(p=>getAnalyseRules()[p]?.label||p).join(' · ')}</div>`:''}
         ${bassin.note?`<div style="padding:.4rem 1rem .6rem;display:flex;align-items:flex-start;gap:6px;border-top:1px solid var(--b1)"><span style="font-size:12px;margin-top:1px">📝</span><div style="font-size:10px;color:var(--t2);font-style:italic;line-height:1.5">${String(bassin.note).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}</div></div>`:''}
       </div>`;
     }).join('');
@@ -8737,7 +9088,50 @@ function buildBTable(){
     tb.appendChild(tr);
   });
   renderBassinCheckboxes();
+  renderSpeciesExtraParams();
 }
+
+// Paramètres additionnels spécifiques à certaines espèces — Carpe (dureté
+// calcique) et Crevette (salinité, nitrate, TSS). Rendu dans une carte
+// séparée sous le tableau principal (plutôt que d'ajouter des colonnes
+// fixes utilisées par une seule espèce) — sources dans ANALYSE_RULES_CARPE
+// / ANALYSE_RULES_CREVETTE.
+const SPECIES_EXTRA_PARAMS={
+  carpe:[{key:'dureteCa',label:'Dureté Ca²⁺',unit:'mg/L CaCO₃',step:1,title:'Dureté calcique — distincte du TAC (alcalinité). Une carence en Ca²⁺ en BFT entraîne déformations osseuses et arrêt de croissance chez la carpe, même si le TAC est bon.'}],
+  crevette:[
+    {key:'salinite',label:'Salinité',unit:'ppt',step:0.5,title:'L. vannamei tolère l\'eau douce mais c\'est biologiquement stressant — optimum 5-15 ppt en BFT.'},
+    {key:'no3',label:'NO₃⁻',unit:'mg/L',step:1,title:'Nitrate — bien plus critique pour la crevette que pour les poissons en BFT.'},
+    {key:'tss',label:'TSS',unit:'mg/L',step:10,title:'Matières en suspension — remplace l\'Imhoff (peu pertinent pour la crevette). Colmatage branchial si trop élevé.'},
+  ],
+};
+function renderSpeciesExtraParams(){
+  const el=G('species-extra-params');if(!el)return;
+  const sid=(APP.species&&APP.species.id)||'tilapia';
+  const params=SPECIES_EXTRA_PARAMS[sid];
+  if(!params||!params.length){el.innerHTML='';return;}
+  const bassins=getDisplayBassins();
+  el.innerHTML=`<div class="card" style="margin-top:.6rem;padding:.6rem .8rem">
+    <div class="ctitle" style="margin-bottom:.4rem"><span class="dot" style="background:var(--purp)"></span>🧬 Paramètres spécifiques — ${escapeHtml(APP.species&&APP.species.nom||'')}</div>
+    <div class="tw"><table style="font-size:10px;width:100%">
+      <thead><tr><th>Bassin</th>${params.map(p=>`<th style="color:var(--purp)" title="${escapeHtml(p.title)}">${escapeHtml(p.label)} ${escapeHtml(p.unit)} <small style="color:var(--t3)">(opt.)</small></th>`).join('')}</tr></thead>
+      <tbody>${bassins.map((b,i)=>`<tr>
+        <td class="cf" style="font-weight:700">${escapeHtml(b.name)}</td>
+        ${params.map(p=>{
+          const v=b[p.key];
+          const alert=getAlertForParam(p.key,v);
+          const color=alert?alert.color:(v!=null?'var(--acc)':'rgba(167,139,250,.25)');
+          return `<td>
+            <input type="number" id="bX-${p.key}-${i}" class="${v!=null?'ci':'ci opt'}" value="${v??''}" step="${p.step}" style="width:65px;border-color:${color}" placeholder="—"
+              title="${escapeHtml(p.title)}"
+              onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].${p.key}=v;saveBassin(${i});}else APP_historyData[${i}].${p.key}=v;renderSpeciesExtraParams()">
+            <div style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;color:${color}">${alert?alert.level:''}</div>
+          </td>`;
+        }).join('')}
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+window.renderSpeciesExtraParams=renderSpeciesExtraParams;
   let tBio=0,tTheo=0,tReel=0,actifs=0,sumPh=0,sumT=0,phCnt=0,tCnt=0,recoltes=0;
   APP.state.bassins.forEach((b,i)=>{
     const c=calcBassin(b);
