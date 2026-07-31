@@ -3128,7 +3128,7 @@ const SPECIES_PROFILES=[
     nomSci:'Litopenaeus vannamei',
     icon:'🦐',
     color:'#f87171',
-    gmqCible:0.15,       // g/jour — croissance crevette (beaucoup plus lente)
+    gmqCible:0.18,       // g/jour — croissance crevette (beaucoup plus lente) — littérature biofloc 0.18-0.22 g/j
     poidsDepart:0.1,
     tempMin:23, tempOpt:28, tempMax:32,
     phMin:7.5, phOpt:8.1, phMax:8.5,
@@ -9189,7 +9189,7 @@ function renderChart(){
   const cols=['#0077B6','#00B4D8','#F4A261','#E76F51','#5C7A99','#2D6A4F'];
   const ds=[];
   const maxD=Math.max(...APP.state.suivi.map(r=>{const br=APP.state.suivi.filter(s=>s.bassin===r.bassin);const fd=br.sort((a,b)=>a.date.localeCompare(b.date))[0]?.date;return fd?(new Date(r.date)-new Date(fd))/(86400000):0;}),30);
-  ds.push({label:'Cible +${sp().gmqCible}g/j',data:Array.from({length:Math.ceil(maxD)+1},(_,i)=>({x:i,y:sp().poidsDepart+sp().gmqCible*i})),borderColor:'#f5a623',backgroundColor:'transparent',pointRadius:0,showLine:true,borderDash:[5,4],borderWidth:1.5,tension:0});
+  ds.push({label:`Cible +${sp().gmqCible}g/j`,data:Array.from({length:Math.ceil(maxD)+1},(_,i)=>({x:i,y:sp().poidsDepart+sp().gmqCible*i})),borderColor:'#f5a623',backgroundColor:'transparent',pointRadius:0,showLine:true,borderDash:[5,4],borderWidth:1.5,tension:0});
   const show=fb?[fb]:[...new Set(APP.state.suivi.map(r=>r.bassin))];
   show.forEach((bn,ci)=>{
     const rows=APP.state.suivi.filter(r=>r.bassin===bn).sort((a,b)=>a.date.localeCompare(b.date));
