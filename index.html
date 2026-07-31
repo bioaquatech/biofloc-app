@@ -14792,27 +14792,41 @@ function scheduleAppNotifications(){
 // toute façon accès en lecture/écriture à toutes les fermes via les règles
 // Firestore (isSuperAdmin()). Pas de mot de passe requis : juste le code.
 async function switchFarm(newFarmCode){
-  if(!newFarmCode||newFarmCode===APP.farmCode)return;
+  if(!newFarmCode){alert('⚠️ Sélectionnez une ferme dans la liste avant de cliquer sur Changer.');return;}
+  if(newFarmCode===APP.farmCode){showToast('Vous êtes déjà sur cette ferme','warn');return;}
   if(typeof isRationSuperAdmin!=='function'||!isRationSuperAdmin()){alert('🔒 Réservé au SuperAdmin.');return;}
   if(!confirm(`Changer de ferme vers "${newFarmCode}" ? Les données en cours seront sauvegardées.`))return;
-  APP.farmCode=newFarmCode;
+  showLoader('Changement de ferme…');
   try{
     const snap=await db.collection('farms').doc(newFarmCode).get();
-    if(!snap.exists){showToast('Ferme introuvable: '+newFarmCode,'dng');return;}
-    APP.farmName=snap.data().name||newFarmCode;
-    APP.farmSessionTimeout=snap.data().sessionTimeout!=null?Number(snap.data().sessionTimeout):null;
-    resetSession();
+    if(!snap.exists){hideLoader();showToast('Ferme introuvable: '+newFarmCode,'dng');return;}
+    const fd=snap.data();
+    APP.farmCode=newFarmCode;
+    APP.farmName=fd.name||newFarmCode;
+    APP.farmMessages=fd.farmMessages||[];
+    APP.farmSessionTimeout=fd.sessionTimeout!=null?Number(fd.sessionTimeout):null;
+    if(fd.speciesId==='custom'&&fd.speciesCustom){
+      const idx=SPECIES_PROFILES.findIndex(s=>s.id==='custom');
+      if(idx>=0)SPECIES_PROFILES[idx]={...SPECIES_PROFILES[idx],...fd.speciesCustom};
+      APP.species=SPECIES_PROFILES[idx>=0?idx:0];
+    } else if(fd.speciesId){
+      APP.species=SPECIES_PROFILES.find(s=>s.id===fd.speciesId)||SPECIES_PROFILES[0];
+    } else { APP.species=SPECIES_PROFILES[0]; }
+    // Repartir d'un état propre : évite de mélanger les données de l'ancienne
+    // et de la nouvelle ferme (bassins, stock, intrants, ERP local) le temps
+    // que showFarmApp() recharge tout depuis Firestore pour la nouvelle ferme.
     APP.state.bassins=[];
     APP.state.suivi=[];
     APP_STOCK_ENTRIES=[];
     APP_STOCK_MOVEMENTS=[];
     APP_INTRANTS=[...DEFAULT_INTRANTS];
-    await loadIntrants();
-    await loadBassinsByDate(today());
-    buildBTable();
-    upAll();
+    Object.keys(localStorage).filter(k=>k.startsWith('ichtus_')&&k!=='ichtus_last_farmCode').forEach(k=>localStorage.removeItem(k));
+    localStorage.setItem('ichtus_last_farmCode',newFarmCode);
+    await loadFarmData();
+    hideLoader();
+    await showFarmApp();
     showToast('🏠 Ferme changée: '+APP.farmName,'ok');
-  }catch(e){showToast('Erreur changement ferme: '+e.message,'dng');}
+  }catch(e){hideLoader();showToast('Erreur changement ferme: '+e.message,'dng');}
 }
 window.switchFarm=switchFarm;
 
@@ -14897,18 +14911,26 @@ async function openFarmSwitcherModal(){
       <div class="modal-title">🏠 Changer de ferme</div>
       <div style="font-size:10px;color:var(--t3);margin-bottom:.7rem">Ferme actuelle: <strong style="color:var(--acc)">${APP.farmCode||'—'}</strong> · Accès SuperAdmin — aucun mot de passe requis</div>
       <div><label class="form-lbl">Ferme</label>
-      <select id="farm-switch-select" class="form-inp si"><option value="">-- Chargement… --</option></select></div>
+      <select id="farm-switch-select" class="form-inp si" disabled><option value="">-- Chargement… --</option></select></div>
+      <div id="farm-switch-err" style="display:none;color:var(--dng);font-size:11px;margin-top:.5rem"></div>
       <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem">
         <button class="sbtn" onclick="G('farm-switcher-modal').remove()" style="background:var(--inp)">Annuler</button>
-        <button class="sbtn" onclick="switchFarm(G('farm-switch-select').value);G('farm-switcher-modal').remove()">✅ Changer</button>
+        <button id="farm-switch-btn" class="sbtn" disabled onclick="switchFarm(G('farm-switch-select').value);G('farm-switcher-modal').remove()">✅ Changer</button>
       </div>
     </div>`;
     document.body.appendChild(m);
     try{
       const snap=await db.collection('farms').get();
       const sel=G('farm-switch-select');
-      if(sel)sel.innerHTML='<option value="">-- Choisir une ferme --</option>'+snap.docs.map(d=>`<option value="${d.id}">${escapeHtml((d.data().name||d.id))} (${d.id})</option>`).join('');
-    }catch(e){const sel=G('farm-switch-select');if(sel)sel.innerHTML='<option value="">Erreur de chargement</option>';}
+      if(sel){
+        sel.innerHTML='<option value="">-- Choisir une ferme --</option>'+snap.docs.map(d=>`<option value="${d.id}">${escapeHtml((d.data().name||d.id))} (${d.id})</option>`).join('');
+        sel.disabled=false;
+      }
+      const btn=G('farm-switch-btn');if(btn)btn.disabled=false;
+    }catch(e){
+      const sel=G('farm-switch-select');if(sel)sel.innerHTML='<option value="">Erreur de chargement</option>';
+      const err=G('farm-switch-err');if(err){err.style.display='block';err.textContent='❌ Impossible de charger la liste des fermes : '+(e&&e.message||e);}
+    }
   } else {
     m.innerHTML=`<div class="modal-box" style="max-width:360px">
       <div class="modal-title">🏠 Changer de ferme</div>
