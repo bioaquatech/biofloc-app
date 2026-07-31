@@ -3028,6 +3028,7 @@ let APP={
   farmPermissions:null,
   sessionMin:10,
   farmSessionTimeout:null, // override par ferme : nombre de minutes, 0 = désactivé, null = suit sessionMin
+  backupIntervalTimer:null, // sauvegarde cloud périodique (toutes les heures) tant que la session reste ouverte
   sessionTimer:null,
   warnTimer:null,
   warnCountdown:null,
@@ -3292,9 +3293,19 @@ function startSession(){
   stopSession();
   resetSession();
   ['click','keydown','mousemove','touchstart'].forEach(ev=>document.addEventListener(ev,resetSession,{passive:true}));
+  // Sauvegarde cloud périodique tant que la session reste ouverte — vient
+  // s'ajouter à la sauvegarde déclenchée au login (showFarmApp). N'a besoin
+  // que d'une session Firebase Auth valide côté client (règles Storage) :
+  // indépendant de la Cloud Function loginUser, qui peut être indisponible
+  // sans empêcher cette sauvegarde de fonctionner.
+  clearInterval(APP.backupIntervalTimer);
+  APP.backupIntervalTimer=setInterval(()=>{
+    if(APP.farmCode&&typeof autoSaveFarm==='function')autoSaveFarm();
+  },60*60*1000);
 }
 function stopSession(){
   clearTimeout(APP.sessionTimer);clearTimeout(APP.warnTimer);clearInterval(APP.warnCountdown);
+  clearInterval(APP.backupIntervalTimer);
   G('timeout-warn').classList.remove('show');
   ['click','keydown','mousemove','touchstart'].forEach(ev=>document.removeEventListener(ev,resetSession));
 }
