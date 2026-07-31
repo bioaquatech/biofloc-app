@@ -6507,7 +6507,7 @@ function renderPrevisionnel(){
   rows.forEach(function(r,i){
     var bg=i%2===0?'':'background:var(--panel)';
     html+='<tr style="'+bg+'">'
-      +'<td style="font-weight:700;color:var(--t1);padding:4px 6px">'+r.nom+'</td>'
+      +'<td style="font-weight:700;color:var(--t1);padding:4px 6px">'+escapeHtml(r.nom)+'</td>'
       +'<td style="text-align:center;padding:4px 6px">S'+r.semaineActuelle+'/22</td>'
       +'<td style="text-align:center;color:var(--warn);font-weight:700;padding:4px 6px">'+r.semainesRestantes+' sem</td>'
       +'<td style="text-align:center;padding:4px 6px">'+fmt2(r.poidsActuel)+' g</td>'
