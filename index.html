@@ -3581,7 +3581,12 @@ async function showFarmApp(){
   loadParamLists();
   loadIntrants(); // Module Logistique
   // Appliquer les doses biofloc sauvegardées aux PWA_RATES
-  (function(){var cfg=load('biofloc_cfg',{});if(typeof PWA_RATES!=='undefined'&&PWA_RATES){if(cfg.primo)PWA_RATES.primo.dose=cfg.primo;if(cfg.entretien){PWA_RATES.entretien.dose=cfg.entretien;if(PWA_RATES.rotation)PWA_RATES.rotation.dose=cfg.entretien;}if(cfg.postintro&&PWA_RATES.postintro)PWA_RATES.postintro.dose=cfg.postintro;}})();
+  try{
+    if(typeof load==='function'){
+      var cfg=load('biofloc_cfg',{});
+      if(typeof PWA_RATES!=='undefined'&&PWA_RATES){if(cfg.primo)PWA_RATES.primo.dose=cfg.primo;if(cfg.entretien){PWA_RATES.entretien.dose=cfg.entretien;if(PWA_RATES.rotation)PWA_RATES.rotation.dose=cfg.entretien;}if(cfg.postintro&&PWA_RATES.postintro)PWA_RATES.postintro.dose=cfg.postintro;}
+    }
+  }catch(e){console.warn('biofloc_cfg:',e);}
   const role=APP.user?.role||'Opérateur';
   if(role==='Responsable'||role==='Administrateur'){
     checkNotifications();
