@@ -2922,6 +2922,11 @@ db.enablePersistence({synchronizeTabs:true}).catch(function(err){
 });
 const auth=firebase.auth();
 const storage=firebase.storage();
+// `let`/`const` au niveau module ne créent PAS de propriété window en JS
+// navigateur (contrairement à `var`) — plusieurs endroits du code testent
+// `window.storage` en fallback (ex. autoSaveFarm, downloadBackupAdmin) et
+// échouaient silencieusement puisque cette propriété n'a jamais existé.
+window.storage=storage;
 // Secondary app for user creation without signing out admin
 let secondaryApp;
 try{secondaryApp=firebase.app('secondary');}
