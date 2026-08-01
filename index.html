@@ -603,7 +603,10 @@ input.ci:focus,select.si:focus,.form-inp:focus{border-color:#00D4B4!important;bo
     <!-- TA1: GESTION FERMES -->
     <div id="ta1" class="pane">
       <div class="card">
-        <div class="ctitle"><span class="dot"></span>Créer une nouvelle ferme</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+          <div class="ctitle"><span class="dot"></span>Créer une nouvelle ferme</div>
+          <button class="sbtn no-print" style="background:var(--purp)" onclick="exportFarmIntakeChecklist()" title="Fiche à remplir avec le client avant de créer sa ferme">📋 Fiche de collecte (à imprimer)</button>
+        </div>
         <div class="admin-form">
           <div class="form-group"><div class="form-lbl">Nom de la ferme</div><input id="nf-name" class="form-inp" placeholder="Ex: Ferme du Nord"></div>
           <div class="form-group"><div class="form-lbl">Code ferme (unique)</div><input id="nf-code" class="form-inp" placeholder="Ex: FARM01" style="text-transform:uppercase"></div>
@@ -4276,6 +4279,132 @@ async function createFarm(){
   }catch(e){msg.style.color='var(--dng)';msg.textContent='❌ Erreur : '+e.message;}
   hideLoader();
 }
+
+// Fiche imprimable de collecte d'informations client, à remplir AVANT de
+// créer une ferme (champs alignés sur ceux exigés par createFarm() ci-dessus,
+// plus abonnement, comptes utilisateurs et points à clarifier).
+function exportFarmIntakeChecklist(){
+  const w=window.open('','_blank','width=860,height=900');
+  if(!w){alert('Autorisez les pop-ups pour ouvrir la fiche.');return;}
+  const userRow=(i)=>`<tr><td class="ut-num">${i}</td><td><input class="fl" placeholder="……………"></td><td><input class="fl" placeholder="……………"></td><td><input class="fl" placeholder="……………"></td><td><input class="fl" style="min-width:3rem" placeholder="O / R"></td><td><input class="fl" placeholder="……………"></td></tr>`;
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Fiche de collecte — Nouvelle ferme</title>
+  <style>
+    :root{--bg:#faf7f0;--paper:#fff;--ink:#16302b;--ink-soft:#4a615c;--line:#cdd9d2;--line-soft:#e3ebe6;--aqua:#06a77d;--gold:#c07f12;--gold-bg:#fbf2e1}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;line-height:1.5}
+    .sheet{max-width:780px;margin:0 auto;padding:2rem 1.25rem 3rem}
+    .no-print{display:flex;justify-content:flex-end;margin-bottom:1rem}
+    .no-print button{font-size:.85rem;font-weight:700;border:1px solid var(--line);background:var(--paper);color:#0b4f6c;border-radius:8px;padding:.5rem 1rem;cursor:pointer}
+    header.masthead{border-bottom:3px solid #0b4f6c;padding-bottom:1.1rem;margin-bottom:1.6rem}
+    .eyebrow{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--aqua);margin:0 0 .35rem}
+    h1{font-family:Georgia,serif;font-size:1.7rem;font-weight:600;margin:0 0 .4rem}
+    .sub{color:var(--ink-soft);font-size:.9rem;max-width:60ch;margin:0}
+    .meta-row{display:flex;gap:1.3rem;flex-wrap:wrap;margin-top:1rem;font-size:.82rem;color:var(--ink-soft)}
+    .fillblank{border-bottom:1px dotted var(--ink-soft);display:inline-block;min-width:9em}
+    section.block{background:var(--paper);border:1px solid var(--line-soft);border-radius:12px;padding:1.2rem 1.3rem 1.4rem;margin-bottom:1.1rem}
+    .block-head{display:flex;align-items:baseline;gap:.55rem;margin-bottom:.9rem;padding-bottom:.6rem;border-bottom:1px solid var(--line-soft)}
+    .block-num{font-family:Georgia,serif;font-weight:600;font-size:1rem;color:var(--aqua)}
+    .block-head h2{font-family:Georgia,serif;font-size:1.05rem;font-weight:600;margin:0}
+    .block-note{font-size:.76rem;color:var(--ink-soft);margin:-.4rem 0 .9rem}
+    .field-row{display:grid;grid-template-columns:1fr auto;gap:.4rem 1rem;align-items:end;padding:.5rem 0;border-bottom:1px dashed var(--line)}
+    .field-row:last-child{border-bottom:none}
+    .field-label{font-size:.85rem}
+    .field-label small{display:block;color:var(--ink-soft);font-size:.72rem;margin-top:.15rem}
+    .req{color:var(--gold);font-weight:700}
+    .fl{border:none;border-bottom:1px dotted var(--ink-soft);background:transparent;min-width:160px;font-size:.85rem;color:var(--ink);padding:.15rem 0;font-family:inherit}
+    .check-row{display:flex;align-items:flex-start;gap:.55rem;padding:.45rem 0;border-bottom:1px dashed var(--line)}
+    .check-row:last-child{border-bottom:none}
+    .box{width:14px;height:14px;flex-shrink:0;margin-top:.15rem;border:1.5px solid var(--ink-soft);border-radius:4px}
+    .check-row .txt{font-size:.85rem}
+    .check-row .txt small{display:block;color:var(--ink-soft);font-size:.73rem;margin-top:.1rem}
+    .required-flag{display:inline-block;background:var(--gold-bg);color:var(--gold);font-size:.65rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:.1rem .35rem;margin-left:.3rem}
+    table.plan{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:.2rem}
+    table.plan th{text-align:left;color:var(--ink-soft);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;padding:.35rem .45rem;border-bottom:1px solid var(--line)}
+    table.plan td{padding:.45rem .45rem;border-bottom:1px solid var(--line-soft)}
+    table.user td{padding:.3rem .35rem}
+    table.user .fl{width:100%;font-size:.78rem}
+    table.user .ut-num{color:var(--ink-soft);text-align:center}
+    footer.sig{margin-top:1.8rem;padding-top:1.3rem;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:1.3rem}
+    .sig-block{font-size:.82rem;color:var(--ink-soft)}
+    .sig-line{border-bottom:1px dotted var(--ink-soft);height:2rem;margin-bottom:.3rem}
+    @media print{body{background:#fff}.no-print{display:none}section.block{break-inside:avoid;border-color:#ccc}.sheet{padding:0 .2rem}}
+  </style></head><body>
+  <div class="sheet">
+    <div class="no-print"><button onclick="window.print()">Imprimer / PDF</button></div>
+    <header class="masthead">
+      <p class="eyebrow">BioFloc · Intake nouvelle ferme</p>
+      <h1>Fiche de collecte — avant création de compte</h1>
+      <p class="sub">À remplir avec le client avant de créer sa ferme sur la plateforme. Les champs <span class="required-flag">Obligatoire</span> sont exigés par le formulaire de création.</p>
+      <div class="meta-row"><span>Client : <span class="fillblank">&nbsp;</span></span><span>Date : <span class="fillblank">&nbsp;</span></span><span>Reçu par : <span class="fillblank">&nbsp;</span></span></div>
+    </header>
+
+    <section class="block">
+      <div class="block-head"><span class="block-num">1</span><h2>Identité de la ferme</h2></div>
+      <div class="field-row"><label class="field-label">Nom commercial de la ferme <span class="req">*</span><small>Affiché partout dans l'appli</small></label><input class="fl" placeholder="……………………………"></div>
+      <div class="field-row"><label class="field-label">Code ferme <span class="req">*</span><small>Identifiant unique, ex. FERME01 — définitif</small></label><input class="fl" placeholder="……………………"></div>
+      <div class="field-row"><label class="field-label">Nom du responsable de ferme <span class="req">*</span></label><input class="fl" placeholder="……………………………"></div>
+      <div class="field-row"><label class="field-label">Localisation <span class="req">*</span><small>Ville / région</small></label><input class="fl" placeholder="……………………………"></div>
+      <div class="field-row"><label class="field-label">Téléphone / WhatsApp de contact</label><input class="fl" placeholder="……………………………"></div>
+      <div class="field-row"><label class="field-label">Adresse email de contact</label><input class="fl" placeholder="……………………………"></div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><span class="block-num">2</span><h2>Espèce &amp; production</h2></div>
+      <p class="block-note">Le choix de l'espèce est définitif après création.</p>
+      <div class="check-row"><div class="box"></div><div class="txt">🐟 Tilapia (Oreochromis niloticus)</div></div>
+      <div class="check-row"><div class="box"></div><div class="txt">🐠 Poisson-chat / Clarias (Clarias gariepinus)</div></div>
+      <div class="check-row"><div class="box"></div><div class="txt">🐡 Carpe commune (Cyprinus carpio)</div></div>
+      <div class="check-row"><div class="box"></div><div class="txt">🦐 Crevette (Litopenaeus vannamei) <small>Nécessite un suivi de salinité — préciser eau douce/salée en section 5</small></div></div>
+      <div class="check-row"><div class="box"></div><div class="txt">⚙️ Espèce personnalisée — nom : <span class="fillblank">&nbsp;</span></div></div>
+      <div class="field-row" style="margin-top:.5rem"><label class="field-label">Nombre de bassins prévus au démarrage</label><input class="fl" placeholder="……"></div>
+      <div class="field-row"><label class="field-label">Volume total estimé (m³) <small>Détermine le plan d'abonnement</small></label><input class="fl" placeholder="……"></div>
+      <div class="field-row"><label class="field-label">Fournisseur d'aliment habituel</label><input class="fl" placeholder="……………………………"></div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><span class="block-num">3</span><h2>Comptes utilisateurs à créer</h2></div>
+      <p class="block-note">Identifiant + mot de passe (min. 6 caractères) — créés par le SuperAdmin après enregistrement. O = Opérateur, R = Responsable.</p>
+      <table class="plan user">
+        <thead><tr><th style="width:1.4rem">#</th><th>Nom complet</th><th>Identifiant</th><th>Email personnel</th><th style="width:4rem">Rôle</th><th>Sections (si restreint)</th></tr></thead>
+        <tbody>${[1,2,3,4,5,6].map(userRow).join('')}</tbody>
+      </table>
+      <p class="block-note" style="margin:.8rem 0 0">6 emplacements (1 principal + 5 supplémentaires) — au-delà, dupliquer une ligne à la main.</p>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><span class="block-num">4</span><h2>Abonnement</h2></div>
+      <table class="plan">
+        <thead><tr><th>Plan</th><th>Volume couvert</th><th>Mensuel</th><th>Annuel</th></tr></thead>
+        <tbody>
+          <tr><td>Plan 1</td><td>≤ 45,9 m³</td><td>32 000 XOF</td><td>326 400 XOF</td></tr>
+          <tr><td>Plan 2</td><td>46 – 99,9 m³</td><td>45 000 XOF</td><td>459 000 XOF</td></tr>
+          <tr><td>Plan 3</td><td>100 – 300 m³</td><td>60 000 XOF</td><td>612 000 XOF</td></tr>
+          <tr><td>Plan 4</td><td>&gt; 300 m³</td><td>70 000 XOF</td><td>714 000 XOF</td></tr>
+        </tbody>
+      </table>
+      <p class="block-note" style="margin-top:.7rem">Tarifs indicatifs — modifiables par le SuperAdmin, à confirmer avant signature.</p>
+      <div class="check-row"><div class="box"></div><div class="txt">Mensuel</div></div>
+      <div class="check-row"><div class="box"></div><div class="txt">Annuel</div></div>
+      <div class="field-row"><label class="field-label">Date de début souhaitée</label><input class="fl" placeholder="…… / …… / ………"></div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><span class="block-num">5</span><h2>Points optionnels à clarifier</h2></div>
+      <div class="check-row"><div class="box"></div><div class="txt">Crevette en eau douce ? <small>Si oui, prévoir un ajout de sel marin</small></div></div>
+      <div class="check-row"><div class="box"></div><div class="txt">Délai de déconnexion automatique souhaité <small>par défaut celui de la plateforme, réglable par ferme</small></div></div>
+      <div class="check-row"><div class="box"></div><div class="txt">Logo de la ferme disponible <small>pour affichage dans l'appli et les exports PDF</small></div></div>
+      <div class="check-row"><div class="box"></div><div class="txt">Message de bienvenue à afficher au tableau de bord</div></div>
+    </section>
+
+    <footer class="sig">
+      <div class="sig-block"><div class="sig-line"></div>Signature du client</div>
+      <div class="sig-block"><div class="sig-line"></div>Signature du représentant BioFloc</div>
+    </footer>
+  </div>
+  </body></html>`;
+  w.document.write(html);w.document.close();
+}
+window.exportFarmIntakeChecklist=exportFarmIntakeChecklist;
 
 // Super Admin accède à une ferme spécifique pour voir ses données
 async function adminEnterFarm(farmCode){
