@@ -416,6 +416,17 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
         <button class="sbtn" onclick="createFarm()">+ Créer la ferme</button>
         <div id="nf-msg" style="font-size:11px;margin-top:.5rem"></div>
       </div>
+      <div class="card" style="border-color:rgba(230,90,50,.3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+          <div class="ctitle"><span class="dot" style="background:var(--warn)"></span>🩺 Audit global — toutes les fermes</div>
+          <button class="sbtn" style="background:var(--warn)" onclick="runGlobalAudit()">🔍 Lancer l'audit global</button>
+          <button class="sbtn" style="background:var(--dng)" onclick="exportGlobalAuditPDF()">📄 Export PDF</button>
+        </div>
+        <p style="font-size:11px;color:var(--t2);margin:.5rem 0 0">Balaie toutes les fermes actives : qualité d'eau (normes par espèce), stock sous seuil, anomalies de suivi. Clique sur une ferme pour l'ouvrir directement.</p>
+        <div id="global-audit-status" style="font-size:11px;margin-top:.5rem"></div>
+        <div id="global-audit-results" style="margin-top:.6rem"></div>
+      </div>
+
       <div class="card">
         <div class="ctitle"><span class="dot"></span>Fermes existantes</div>
         <div class="tw"><table>
@@ -1177,6 +1188,12 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
             🔬 Analyser les paramètres sélectionnés
           </button>
           <div style="font-size:9px;color:var(--t3);margin-top:4px">Interprétation et mesures correctives selon les normes de production</div>
+          <div style="margin-top:.6rem">
+            <button onclick="openFarmAudit()" style="background:none;border:1.5px solid var(--gold);color:var(--gold);border-radius:10px;padding:8px 24px;font-size:12px;font-weight:800;cursor:pointer">
+              🩺 Lancer l'audit complet de la ferme
+            </button>
+            <div style="font-size:9px;color:var(--t3);margin-top:4px">Qualité d'eau (tous bassins) + stock + anomalies de suivi, en une seule vue</div>
+          </div>
         </div>
       </div>
       <div class="tw">
@@ -2277,6 +2294,23 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
 
     <!-- Résultats par bassin -->
     <div id="analyse-results"></div>
+  </div>
+</div>
+
+<!-- Modal Audit complet de la ferme -->
+<div id="farm-audit-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:820px;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;position:sticky;top:0;background:var(--panel);padding:.5rem 0;z-index:1">
+      <span style="font-size:22px">🩺</span>
+      <div style="flex:1">
+        <div class="modal-title" style="margin-bottom:0">Audit de la ferme — <span id="audit-date"></span></div>
+        <div style="font-size:10px;color:var(--t3)">Qualité d'eau, stock et anomalies de suivi — vue consolidée</div>
+      </div>
+      <button onclick="G('farm-audit-modal').classList.add('hidden')" style="background:none;border:1px solid var(--b2);border-radius:6px;color:var(--t2);padding:4px 12px;cursor:pointer">✕ Fermer</button>
+      <button onclick="exportFarmAuditPDF()" style="background:var(--dng);color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:11px;font-weight:700">📄 Export PDF</button>
+    </div>
+    <div id="audit-summary" style="margin-bottom:1rem"></div>
+    <div id="audit-sections"></div>
   </div>
 </div>
 
@@ -5624,17 +5658,20 @@ const ANALYSE_RULES_CREVETTE={
   ]}
 };
 
-// Sélectionne la grille active selon l\'espèce de la ferme connectée.
+// Sélectionne la grille active selon l\'espèce de la ferme connectée
+// (ou l'espèce explicite passée en paramètre — utilisé par l'audit
+// SuperAdmin inter-fermes pour évaluer une ferme distincte de celle
+// connectée, sans changer l'espèce active globale APP.species).
 // Repli sur Tilapia pour toute espèce non couverte (ex. 'custom').
-function getAnalyseRules(){
-  const id=(APP.species&&APP.species.id)||'tilapia';
+function getAnalyseRules(speciesId){
+  const id=speciesId||(APP.species&&APP.species.id)||'tilapia';
   return {tilapia:ANALYSE_RULES_TILAPIA,clarias:ANALYSE_RULES_CLARIAS,carpe:ANALYSE_RULES_CARPE,crevette:ANALYSE_RULES_CREVETTE}[id]||ANALYSE_RULES_TILAPIA;
 }
 
-function getAlertForParam(param, value){
+function getAlertForParam(param, value, speciesId){
   if(value===null||value===undefined)return null;
   const v=parseFloat(value);if(isNaN(v))return null;
-  const ruleset=getAnalyseRules()[param];if(!ruleset)return null;
+  const ruleset=getAnalyseRules(speciesId)[param];if(!ruleset)return null;
   for(const rule of ruleset.rules){
     const aboveMin=rule.min===undefined||v>=rule.min;
     const belowMax=rule.max===undefined||v<rule.max;
@@ -5806,6 +5843,259 @@ function exportAnalysePDF(){
   setTimeout(()=>{ try{ printWin.print(); }catch(e){} },300);
 }
 window.exportAnalysePDF=exportAnalysePDF;
+
+// Export PDF réutilisable pour un rapport HTML déjà rendu dans le DOM
+// (audit ferme, audit global) — même gabarit/overrides CSS que
+// exportAnalysePDF() ci-dessus, factorisé pour éviter la duplication.
+function exportHtmlReportPDF(title,summaryHtml,bodyHtml,farmName){
+  const name=farmName||APP.farmName||APP.farmCode||'BioFloc';
+  const date=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const printWin=window.open('','_blank','width=800,height=600');
+  if(!printWin){alert('Autorisez les pop-ups pour exporter le PDF.');return;}
+  const logoUrl=APP.state?.logoUrl||'';
+  const logoHtml=logoUrl?`<img src="${escapeHtml(logoUrl)}" style="height:52px;width:auto;object-fit:contain">`:'<span style="font-size:28px">🐟</span>';
+  printWin.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>${escapeHtml(title)} — ${escapeHtml(name)}</title>
+    <style>
+      *{box-sizing:border-box}
+      body{font-family:Arial,sans-serif;padding:24px;background:#ffffff;color:#1e293b;font-size:12px;margin:0}
+      .doc-header{display:flex;align-items:center;gap:14px;border-bottom:2px solid #cbd5e1;padding-bottom:12px;margin-bottom:16px}
+      .doc-header h1{font-size:15px;color:#0f172a;margin:0 0 2px}
+      .doc-header .sub{font-size:10px;color:#64748b;margin:0}
+      [style*="var(--dng)"],[style*="color:var(--dng)"]{color:#dc2626!important}
+      [style*="var(--warn)"]{color:#d97706!important}
+      [style*="var(--acc)"]{color:#059669!important}
+      [style*="var(--acc2)"]{color:#0284c7!important}
+      [style*="var(--purp)"]{color:#7c3aed!important}
+      [style*="var(--t1)"]{color:#1e293b!important}
+      [style*="var(--t2)"]{color:#475569!important}
+      [style*="var(--t3)"]{color:#64748b!important}
+      [style*="var(--b1)"]{border-color:#e2e8f0!important}
+      [style*="var(--inp)"]{background:#f8fafc!important}
+      [style*="background:rgba(255,61,87"]{background:rgba(220,38,38,.08)!important}
+      [style*="background:rgba(245,166,35"]{background:rgba(217,119,6,.08)!important}
+      [style*="background:rgba(0,201,167"]{background:rgba(5,150,105,.07)!important}
+      [style*="background:rgba(61,142,245"]{background:rgba(2,132,199,.07)!important}
+      [style*="background:rgba(192,132,252"]{background:rgba(124,58,237,.07)!important}
+      [style*="background:rgba(0,0,0,.04)"]{background:#f8fafc!important}
+      [style*="background:rgba(0,0,0,.1)"]{background:#e2e8f0!important}
+      [style*="border:2px solid var(--dng)"]{border-color:#dc2626!important}
+      [style*="border:2px solid var(--warn)"]{border-color:#d97706!important}
+      [style*="border:2px solid var(--acc)"]{border-color:#059669!important}
+      table{border-collapse:collapse;width:100%}
+      th,td{border-bottom:1px solid #e2e8f0;padding:5px 8px}
+      @media print{body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    </style></head><body>
+    <div class="doc-header">
+      ${logoHtml}
+      <div><h1>${escapeHtml(name)} — ${escapeHtml(title)}</h1><p class="sub">${date}</p></div>
+    </div>
+    <div id="pdf-summary">${summaryHtml||''}</div>
+    <div id="pdf-content">${bodyHtml||''}</div>
+</body></html>`);
+  printWin.document.close();
+  setTimeout(()=>{ try{ printWin.print(); }catch(e){} },300);
+}
+window.exportHtmlReportPDF=exportHtmlReportPDF;
+
+function exportFarmAuditPDF(){
+  exportHtmlReportPDF('Audit de la ferme',G('audit-summary')?.innerHTML,G('audit-sections')?.innerHTML);
+}
+window.exportFarmAuditPDF=exportFarmAuditPDF;
+
+function exportGlobalAuditPDF(){
+  exportHtmlReportPDF('Audit global — toutes les fermes',G('global-audit-status')?.innerHTML,G('global-audit-results')?.innerHTML,'BioFloc — Plateforme');
+}
+window.exportGlobalAuditPDF=exportGlobalAuditPDF;
+
+// ═══════════════════════════════════════════════
+// AUDIT COMPLET DE LA FERME — vue consolidée
+// Qualité d'eau (tous bassins actifs, normes par espèce) + stock (seuils
+// intrants) + anomalies de suivi (bassins sans donnée récente). Réutilise
+// getAlertForParam()/getAnalyseRules() (moteur d'analyse existant) et
+// getItemCurrentStock() (module Logistique) — aucune duplication de logique.
+// ═══════════════════════════════════════════════
+// ctx (optionnel) permet d'auditer une ferme DISTINCTE de celle connectée
+// (utilisé par l'audit SuperAdmin inter-fermes) sans toucher à l'état
+// global APP : {bassins, intrants, stockEntries, stockMovements, speciesId}.
+// Sans ctx, audite la ferme actuellement connectée (comportement d'origine).
+function auditFarm(ctx){
+  const bassins=ctx?(ctx.bassins||[]):(APP.state.bassins||[]);
+  const bassinsActifs=bassins.filter(b=>b.statut==='Actif');
+  const sid=ctx?(ctx.speciesId||'tilapia'):((APP.species&&APP.species.id)||'tilapia');
+  const extraKeys=(typeof SPECIES_EXTRA_PARAMS!=='undefined'&&SPECIES_EXTRA_PARAMS[sid])?SPECIES_EXTRA_PARAMS[sid].map(p=>p.key):[];
+  const waterParams=['DO','ph','temp','NH3','NO2','TAN','TAC','imhoff',...extraKeys];
+
+  // ── Qualité d'eau : tous les bassins actifs, pas de sélection manuelle ──
+  const waterIssues=[];
+  let noDataCount=0;
+  bassinsActifs.forEach(b=>{
+    const alerts=waterParams.map(p=>getAlertForParam(p,b[p],sid)).filter(Boolean);
+    const paramSaisis=waterParams.filter(p=>b[p]!==null&&b[p]!==undefined).length;
+    if(paramSaisis===0){noDataCount++;return;}
+    if(alerts.length)waterIssues.push({bassin:b,alerts});
+  });
+
+  // ── Stock : intrants sous leur seuil d'alerte ──
+  const intrants=ctx?(ctx.intrants||[]):(APP_INTRANTS||[]);
+  const stockOf=(intrantId)=>{
+    if(!ctx)return getItemCurrentStock(intrantId);
+    const totalIn=(ctx.stockEntries||[]).filter(e=>e.validated&&e.intrantId===intrantId).reduce((s,e)=>s+(e.quantity||0),0);
+    const totalOut=(ctx.stockMovements||[]).filter(m=>m.intrantId===intrantId&&m.type==='sortie').reduce((s,m)=>s+(m.quantity||0),0);
+    return Math.max(0,totalIn-totalOut);
+  };
+  const stockIssues=intrants.filter(it=>it.seuil>0).map(it=>{
+    const stock=stockOf(it.id);
+    return{item:it,stock,low:stock<it.seuil};
+  }).filter(r=>r.low);
+
+  // ── Anomalies de suivi diverses ──
+  const followUpIssues=[];
+  bassinsActifs.forEach(b=>{
+    const nbActuel=(b.nbInit||0)-(b.mort||0);
+    if(nbActuel<=0)followUpIssues.push({bassin:b.name,msg:'Effectif restant nul ou négatif — vérifier mortalité/nbInit'});
+    if(b.mort>0&&b.nbInit>0&&(b.mort/b.nbInit)>0.15)followUpIssues.push({bassin:b.name,msg:`Mortalité cumulée élevée (${Math.round(b.mort/b.nbInit*100)}%)`});
+  });
+
+  const totalUrg=waterIssues.reduce((s,w)=>s+w.alerts.filter(a=>['URGENCE','CRISE'].includes(a.level)).length,0);
+  const totalWarn=waterIssues.reduce((s,w)=>s+w.alerts.filter(a=>!['URGENCE','CRISE'].includes(a.level)).length,0);
+
+  return{bassinsActifs,waterIssues,noDataCount,stockIssues,followUpIssues,totalUrg,totalWarn};
+}
+
+function openFarmAudit(){
+  const modal=G('farm-audit-modal');if(!modal)return;
+  modal.classList.remove('hidden');
+  const dateEl=G('audit-date');
+  if(dateEl)dateEl.textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+
+  const r=auditFarm();
+  const totalIssues=r.totalUrg+r.totalWarn+r.stockIssues.length+r.followUpIssues.length;
+
+  const summary=G('audit-summary');
+  if(summary){
+    summary.innerHTML=`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin-bottom:.5rem">
+        <div style="background:rgba(255,61,87,.08);border:1px solid rgba(255,61,87,.2);border-radius:10px;padding:.6rem;text-align:center">
+          <div style="font-size:20px">🚨</div><div style="font-size:18px;font-weight:800;color:var(--dng)">${r.totalUrg}</div>
+          <div style="font-size:10px;color:var(--t2)">Urgences eau</div>
+        </div>
+        <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);border-radius:10px;padding:.6rem;text-align:center">
+          <div style="font-size:20px">⚠️</div><div style="font-size:18px;font-weight:800;color:var(--warn)">${r.totalWarn}</div>
+          <div style="font-size:10px;color:var(--t2)">Alertes eau</div>
+        </div>
+        <div style="background:rgba(192,132,252,.08);border:1px solid rgba(192,132,252,.2);border-radius:10px;padding:.6rem;text-align:center">
+          <div style="font-size:20px">📦</div><div style="font-size:18px;font-weight:800;color:var(--purp)">${r.stockIssues.length}</div>
+          <div style="font-size:10px;color:var(--t2)">Stock sous seuil</div>
+        </div>
+        <div style="background:rgba(61,142,245,.08);border:1px solid rgba(61,142,245,.2);border-radius:10px;padding:.6rem;text-align:center">
+          <div style="font-size:20px">📋</div><div style="font-size:18px;font-weight:800;color:var(--acc2)">${r.followUpIssues.length}</div>
+          <div style="font-size:10px;color:var(--t2)">Anomalies suivi</div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:var(--t3)">🧬 Normes appliquées : <strong style="color:var(--t2)">${escapeHtml((APP.species&&APP.species.nom)||'Tilapia')}</strong> · ${r.bassinsActifs.length} bassin(s) actif(s) analysé(s)${r.noDataCount?` · ${r.noDataCount} sans donnée saisie aujourd'hui`:''}</div>`;
+  }
+
+  const sections=G('audit-sections');
+  if(!sections)return;
+  if(totalIssues===0){
+    sections.innerHTML='<div style="text-align:center;color:var(--acc);padding:2rem;font-size:13px;font-weight:700">✅ Aucune anomalie détectée sur cette ferme aujourd\'hui.</div>';
+    return;
+  }
+  let html='';
+  if(r.waterIssues.length){
+    html+='<div style="font-size:12px;font-weight:800;color:var(--t1);margin:.8rem 0 .5rem">💧 Qualité d\'eau</div>';
+    html+=r.waterIssues.sort((a,b)=>{
+      const rank=x=>x.alerts.some(a=>['URGENCE','CRISE'].includes(a.level))?0:1;
+      return rank(a)-rank(b);
+    }).map(({bassin,alerts})=>{
+      const urg=alerts.some(a=>['URGENCE','CRISE'].includes(a.level));
+      return `<div style="margin-bottom:.6rem;border:2px solid ${urg?'var(--dng)':'var(--warn)'};border-radius:10px;padding:.6rem .8rem">
+        <div style="font-size:12px;font-weight:800;color:${urg?'var(--dng)':'var(--warn)'};margin-bottom:.3rem">${urg?'🚨':'⚠️'} ${escapeHtml(bassin.name)}</div>
+        ${alerts.map(a=>`<div style="font-size:10px;color:var(--t2);margin-bottom:.15rem"><strong style="color:${a.color}">${a.level}</strong> — ${a.label} : ${a.value} ${a.unit} · ${escapeHtml(a.interpretation)}</div>`).join('')}
+      </div>`;
+    }).join('');
+  }
+  if(r.stockIssues.length){
+    html+='<div style="font-size:12px;font-weight:800;color:var(--t1);margin:.8rem 0 .5rem">📦 Stock sous le seuil d\'alerte</div>';
+    html+='<div class="tw"><table style="width:100%;font-size:11px"><thead><tr><th style="text-align:left">Intrant</th><th>Stock actuel</th><th>Seuil</th></tr></thead><tbody>'+
+      r.stockIssues.map(s=>`<tr><td>${escapeHtml(s.item.name)}</td><td style="text-align:center;color:var(--dng);font-weight:700">${fmt(s.stock,2)} ${escapeHtml(s.item.unit||'')}</td><td style="text-align:center;color:var(--t3)">${fmt(s.item.seuil,2)}</td></tr>`).join('')+
+      '</tbody></table></div>';
+  }
+  if(r.followUpIssues.length){
+    html+='<div style="font-size:12px;font-weight:800;color:var(--t1);margin:.8rem 0 .5rem">📋 Anomalies de suivi</div>';
+    html+=r.followUpIssues.map(f=>`<div style="font-size:11px;color:var(--t2);padding:.4rem .6rem;background:var(--inp);border-radius:6px;margin-bottom:.3rem"><strong style="color:var(--t1)">${escapeHtml(f.bassin)}</strong> — ${escapeHtml(f.msg)}</div>`).join('');
+  }
+  sections.innerHTML=html;
+}
+window.openFarmAudit=openFarmAudit;
+window.auditFarm=auditFarm;
+
+// SuperAdmin — audit inter-fermes : balaie toutes les fermes actives et
+// calcule les mêmes anomalies (eau/stock/suivi) que l'audit local, ferme
+// par ferme, via auditFarm(ctx) avec les données de CETTE ferme (pas celle
+// connectée). Lecture directe Firestore, protégée par isSuperAdmin() côté
+// règles (déjà en place pour bassins/intrants/stock_*).
+async function runGlobalAudit(){
+  const status=G('global-audit-status'),results=G('global-audit-results');
+  if(status){status.style.color='var(--t2)';status.textContent='⏳ Audit en cours…';}
+  if(results)results.innerHTML='';
+  try{
+    const farmsSnap=await db.collection('farms').get();
+    const farmDocs=farmsSnap.docs.map(d=>({id:d.id,data:d.data()})).filter(f=>f.data.active!==false);
+    const rows=await Promise.all(farmDocs.map(async f=>{
+      try{
+        const col=(c)=>db.collection('farms').doc(f.id).collection(c);
+        const [bS,inS,stS,mvS]=await Promise.all([
+          col('bassins').get(),
+          col('intrants').get().catch(()=>({docs:[]})),
+          col('stock_entries').get().catch(()=>({docs:[]})),
+          col('stock_movements').get().catch(()=>({docs:[]})),
+        ]);
+        const r=auditFarm({
+          bassins:bS.docs.map(d=>d.data()),
+          intrants:inS.docs.map(d=>({id:d.id,...d.data()})),
+          stockEntries:stS.docs.map(d=>d.data()),
+          stockMovements:mvS.docs.map(d=>d.data()),
+          speciesId:f.data.speciesId||'tilapia'
+        });
+        return{farmCode:f.id,farmName:f.data.name||f.id,ok:true,...r};
+      }catch(e){
+        console.warn('[runGlobalAudit] échec pour '+f.id+' :',e);
+        return{farmCode:f.id,farmName:f.data.name||f.id,ok:false,error:e.message};
+      }
+    }));
+    const withIssues=rows.filter(r=>r.ok&&(r.totalUrg+r.totalWarn+r.stockIssues.length+r.followUpIssues.length)>0);
+    const clean=rows.filter(r=>r.ok&&(r.totalUrg+r.totalWarn+r.stockIssues.length+r.followUpIssues.length)===0);
+    const failed=rows.filter(r=>!r.ok);
+    if(status){
+      status.style.color='var(--acc)';
+      status.textContent=`✅ ${rows.length} ferme(s) auditée(s) — ${withIssues.length} avec anomalie(s), ${clean.length} sans anomalie${failed.length?`, ${failed.length} échec(s) de lecture`:''}.`;
+    }
+    if(!results)return;
+    if(!withIssues.length){
+      results.innerHTML='<div style="text-align:center;color:var(--acc);padding:1rem;font-size:12px;font-weight:700">✅ Aucune ferme avec anomalie détectée.</div>';
+      return;
+    }
+    results.innerHTML='<div class="tw"><table style="width:100%;font-size:11px"><thead><tr>'
+      +'<th style="text-align:left">Ferme</th><th>🚨 Urgences eau</th><th>⚠️ Alertes eau</th><th>📦 Stock</th><th>📋 Suivi</th><th></th>'
+      +'</tr></thead><tbody>'
+      +withIssues.sort((a,b)=>(b.totalUrg-a.totalUrg)||(b.totalWarn-a.totalWarn)).map(r=>`<tr>
+        <td style="font-weight:700">${escapeHtml(r.farmName)} <span style="color:var(--t3);font-weight:400">(${escapeHtml(r.farmCode)})</span></td>
+        <td style="text-align:center;color:${r.totalUrg?'var(--dng)':'var(--t3)'};font-weight:700">${r.totalUrg}</td>
+        <td style="text-align:center;color:${r.totalWarn?'var(--warn)':'var(--t3)'};font-weight:700">${r.totalWarn}</td>
+        <td style="text-align:center;color:${r.stockIssues.length?'var(--purp)':'var(--t3)'};font-weight:700">${r.stockIssues.length}</td>
+        <td style="text-align:center;color:${r.followUpIssues.length?'var(--acc2)':'var(--t3)'};font-weight:700">${r.followUpIssues.length}</td>
+        <td><button class="sbtn" style="font-size:10px;padding:3px 10px" onclick="adminEnterFarm('${escapeHtml(r.farmCode)}')">Ouvrir →</button></td>
+      </tr>`).join('')
+      +'</tbody></table></div>'
+      +(failed.length?`<div style="font-size:10px;color:var(--t3);margin-top:.5rem">Échecs de lecture : ${failed.map(f=>escapeHtml(f.farmCode)).join(', ')} (voir console).</div>`:'');
+  }catch(e){
+    if(status){status.style.color='var(--dng)';status.textContent='❌ Erreur : '+e.message;}
+    console.error('[runGlobalAudit]',e);
+  }
+}
+window.runGlobalAudit=runGlobalAudit;
 
 // ═══════════════════════════════════════════════
 // MOT DE PASSE OUBLIÉ — Réinitialisation
