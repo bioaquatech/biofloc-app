@@ -5957,20 +5957,51 @@ function auditFarm(ctx){
     if(b.mort>0&&b.nbInit>0&&(b.mort/b.nbInit)>0.15)followUpIssues.push({bassin:b.name,msg:`Mortalité cumulée élevée (${Math.round(b.mort/b.nbInit*100)}%)`});
   });
 
+  // ── Écarts d'inventaire suspects (piste de vol/perte) — depuis le
+  // dernier inventaire validé, si fourni par l'appelant (ctx.latestInventaire).
+  const deviationIssues=[];
+  const latestInv=ctx&&ctx.latestInventaire;
+  if(latestInv&&Array.isArray(latestInv.items)){
+    latestInv.items.forEach(item=>{
+      if(!item.suspect)return;
+      const intrantMeta=intrants.find(it=>it.id===item.intrantId);
+      deviationIssues.push({
+        intrant:intrantMeta?.name||item.intrantId,
+        unit:intrantMeta?.unit||'',
+        theorique:item.theorique||0,
+        actualQty:item.actualQty||0,
+        ecart:item.ecart!=null?item.ecart:(item.actualQty||0)-(item.theorique||0),
+        date:latestInv.date
+      });
+    });
+  }
+
   const totalUrg=waterIssues.reduce((s,w)=>s+w.alerts.filter(a=>['URGENCE','CRISE'].includes(a.level)).length,0);
   const totalWarn=waterIssues.reduce((s,w)=>s+w.alerts.filter(a=>!['URGENCE','CRISE'].includes(a.level)).length,0);
 
-  return{bassinsActifs,waterIssues,noDataCount,stockIssues,followUpIssues,totalUrg,totalWarn};
+  return{bassinsActifs,waterIssues,noDataCount,stockIssues,followUpIssues,deviationIssues,totalUrg,totalWarn};
 }
 
-function openFarmAudit(){
+async function openFarmAudit(){
   const modal=G('farm-audit-modal');if(!modal)return;
   modal.classList.remove('hidden');
   const dateEl=G('audit-date');
   if(dateEl)dateEl.textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
 
-  const r=auditFarm();
-  const totalIssues=r.totalUrg+r.totalWarn+r.stockIssues.length+r.followUpIssues.length;
+  // Dernier inventaire validé — pour les écarts suspects (voir validateInventaire()).
+  let latestInventaire=null;
+  try{
+    const invSnap=await farmCol('inventaires').orderBy('date','desc').limit(1).get();
+    if(!invSnap.empty)latestInventaire=invSnap.docs[0].data();
+  }catch(e){console.warn('[openFarmAudit] lecture inventaire:',e);}
+
+  const r=auditFarm({
+    bassins:APP.state.bassins||[],
+    intrants:APP_INTRANTS||[],
+    speciesId:(APP.species&&APP.species.id)||'tilapia',
+    latestInventaire
+  });
+  const totalIssues=r.totalUrg+r.totalWarn+r.stockIssues.length+r.followUpIssues.length+r.deviationIssues.length;
 
   const summary=G('audit-summary');
   if(summary){
@@ -5988,12 +6019,16 @@ function openFarmAudit(){
           <div style="font-size:20px">📦</div><div style="font-size:18px;font-weight:800;color:var(--purp)">${r.stockIssues.length}</div>
           <div style="font-size:10px;color:var(--t2)">Stock sous seuil</div>
         </div>
+        <div style="background:rgba(255,23,68,.08);border:1px solid rgba(255,23,68,.25);border-radius:10px;padding:.6rem;text-align:center">
+          <div style="font-size:20px">🕵️</div><div style="font-size:18px;font-weight:800;color:#ff1744">${r.deviationIssues.length}</div>
+          <div style="font-size:10px;color:var(--t2)">Écarts suspects</div>
+        </div>
         <div style="background:rgba(61,142,245,.08);border:1px solid rgba(61,142,245,.2);border-radius:10px;padding:.6rem;text-align:center">
           <div style="font-size:20px">📋</div><div style="font-size:18px;font-weight:800;color:var(--acc2)">${r.followUpIssues.length}</div>
           <div style="font-size:10px;color:var(--t2)">Anomalies suivi</div>
         </div>
       </div>
-      <div style="font-size:9px;color:var(--t3)">🧬 Normes appliquées : <strong style="color:var(--t2)">${escapeHtml((APP.species&&APP.species.nom)||'Tilapia')}</strong> · ${r.bassinsActifs.length} bassin(s) actif(s) analysé(s)${r.noDataCount?` · ${r.noDataCount} sans donnée saisie aujourd'hui`:''}</div>`;
+      <div style="font-size:9px;color:var(--t3)">🧬 Normes appliquées : <strong style="color:var(--t2)">${escapeHtml((APP.species&&APP.species.nom)||'Tilapia')}</strong> · ${r.bassinsActifs.length} bassin(s) actif(s) analysé(s)${r.noDataCount?` · ${r.noDataCount} sans donnée saisie aujourd'hui`:''}${latestInventaire?` · dernier inventaire : ${escapeHtml(latestInventaire.date)}`:' · aucun inventaire validé pour l\'instant'}</div>`;
   }
 
   const sections=G('audit-sections');
@@ -6003,6 +6038,13 @@ function openFarmAudit(){
     return;
   }
   let html='';
+  if(r.deviationIssues.length){
+    html+='<div style="font-size:12px;font-weight:800;color:#ff1744;margin:.8rem 0 .5rem">🕵️ Écarts d\'inventaire suspects — piste de vol/perte</div>';
+    html+='<div style="font-size:9px;color:var(--t3);margin-bottom:.5rem">Déviation négative ≥15% et ≥'+INVENTAIRE_SEUIL_ECART_ABS+' unité(s) constatée lors du dernier inventaire ('+escapeHtml(r.deviationIssues[0]?.date||'')+'). À investiguer : erreur de comptage, mauvaise consommation enregistrée, ou vol.</div>';
+    html+='<div class="tw"><table style="width:100%;font-size:11px"><thead><tr><th style="text-align:left">Intrant</th><th>Théorique</th><th>Réel (compté)</th><th>Écart</th></tr></thead><tbody>'+
+      r.deviationIssues.map(d=>`<tr><td style="font-weight:700">${escapeHtml(d.intrant)}</td><td style="text-align:center;color:var(--t3)">${fmt(d.theorique,2)} ${escapeHtml(d.unit)}</td><td style="text-align:center">${fmt(d.actualQty,2)} ${escapeHtml(d.unit)}</td><td style="text-align:center;color:#ff1744;font-weight:800">${fmt(d.ecart,2)} ${escapeHtml(d.unit)}</td></tr>`).join('')+
+      '</tbody></table></div>';
+  }
   if(r.waterIssues.length){
     html+='<div style="font-size:12px;font-weight:800;color:var(--t1);margin:.8rem 0 .5rem">💧 Qualité d\'eau</div>';
     html+=r.waterIssues.sort((a,b)=>{
@@ -6046,18 +6088,20 @@ async function runGlobalAudit(){
     const rows=await Promise.all(farmDocs.map(async f=>{
       try{
         const col=(c)=>db.collection('farms').doc(f.id).collection(c);
-        const [bS,inS,stS,mvS]=await Promise.all([
+        const [bS,inS,stS,mvS,invS]=await Promise.all([
           col('bassins').get(),
           col('intrants').get().catch(()=>({docs:[]})),
           col('stock_entries').get().catch(()=>({docs:[]})),
           col('stock_movements').get().catch(()=>({docs:[]})),
+          col('inventaires').orderBy('date','desc').limit(1).get().catch(()=>({empty:true})),
         ]);
         const r=auditFarm({
           bassins:bS.docs.map(d=>d.data()),
           intrants:inS.docs.map(d=>({id:d.id,...d.data()})),
           stockEntries:stS.docs.map(d=>d.data()),
           stockMovements:mvS.docs.map(d=>d.data()),
-          speciesId:f.data.speciesId||'tilapia'
+          speciesId:f.data.speciesId||'tilapia',
+          latestInventaire:invS.empty?null:invS.docs[0].data()
         });
         return{farmCode:f.id,farmName:f.data.name||f.id,ok:true,...r};
       }catch(e){
@@ -6065,8 +6109,8 @@ async function runGlobalAudit(){
         return{farmCode:f.id,farmName:f.data.name||f.id,ok:false,error:e.message};
       }
     }));
-    const withIssues=rows.filter(r=>r.ok&&(r.totalUrg+r.totalWarn+r.stockIssues.length+r.followUpIssues.length)>0);
-    const clean=rows.filter(r=>r.ok&&(r.totalUrg+r.totalWarn+r.stockIssues.length+r.followUpIssues.length)===0);
+    const withIssues=rows.filter(r=>r.ok&&(r.totalUrg+r.totalWarn+r.stockIssues.length+r.followUpIssues.length+r.deviationIssues.length)>0);
+    const clean=rows.filter(r=>r.ok&&(r.totalUrg+r.totalWarn+r.stockIssues.length+r.followUpIssues.length+r.deviationIssues.length)===0);
     const failed=rows.filter(r=>!r.ok);
     if(status){
       status.style.color='var(--acc)';
@@ -6078,13 +6122,14 @@ async function runGlobalAudit(){
       return;
     }
     results.innerHTML='<div class="tw"><table style="width:100%;font-size:11px"><thead><tr>'
-      +'<th style="text-align:left">Ferme</th><th>🚨 Urgences eau</th><th>⚠️ Alertes eau</th><th>📦 Stock</th><th>📋 Suivi</th><th></th>'
+      +'<th style="text-align:left">Ferme</th><th>🚨 Urgences eau</th><th>⚠️ Alertes eau</th><th>📦 Stock</th><th>🕵️ Écarts suspects</th><th>📋 Suivi</th><th></th>'
       +'</tr></thead><tbody>'
-      +withIssues.sort((a,b)=>(b.totalUrg-a.totalUrg)||(b.totalWarn-a.totalWarn)).map(r=>`<tr>
+      +withIssues.sort((a,b)=>(b.deviationIssues.length-a.deviationIssues.length)||(b.totalUrg-a.totalUrg)||(b.totalWarn-a.totalWarn)).map(r=>`<tr${r.deviationIssues.length?' style="background:rgba(255,23,68,.05)"':''}>
         <td style="font-weight:700">${escapeHtml(r.farmName)} <span style="color:var(--t3);font-weight:400">(${escapeHtml(r.farmCode)})</span></td>
         <td style="text-align:center;color:${r.totalUrg?'var(--dng)':'var(--t3)'};font-weight:700">${r.totalUrg}</td>
         <td style="text-align:center;color:${r.totalWarn?'var(--warn)':'var(--t3)'};font-weight:700">${r.totalWarn}</td>
         <td style="text-align:center;color:${r.stockIssues.length?'var(--purp)':'var(--t3)'};font-weight:700">${r.stockIssues.length}</td>
+        <td style="text-align:center;color:${r.deviationIssues.length?'#ff1744':'var(--t3)'};font-weight:700">${r.deviationIssues.length}</td>
         <td style="text-align:center;color:${r.followUpIssues.length?'var(--acc2)':'var(--t3)'};font-weight:700">${r.followUpIssues.length}</td>
         <td><button class="sbtn" style="font-size:10px;padding:3px 10px" onclick="adminEnterFarm('${escapeHtml(r.farmCode)}')">Ouvrir →</button></td>
       </tr>`).join('')
@@ -7254,6 +7299,21 @@ function checkStockAlerts(){
   G('stock-alert-dialog').classList.remove('hidden');
 }
 
+// Seuil au-delà duquel un écart d'inventaire (réel < théorique) est
+// signalé comme suspect — piste de vol/perte, distinct de l'alerte
+// "stock sous seuil" qui existe déjà. Volontairement double condition :
+// un pourcentage seul remonterait trop de bruit sur les petits stocks
+// (ex. 1kg théorique, 0.8kg réel = -20% mais négligeable en valeur) ;
+// un seuil absolu seul raterait les intrants à forte valeur/faible volume.
+const INVENTAIRE_SEUIL_ECART_PCT=15;   // % de déviation négative
+const INVENTAIRE_SEUIL_ECART_ABS=2;    // ET au moins cette quantité (unité de l'intrant)
+function isEcartSuspect(theorique,actualQty){
+  const ecart=(actualQty||0)-theorique;
+  if(ecart>=0)return false; // surplus = pas un vol (erreur de comptage à l'avantage du stock, pas alarmant)
+  const ecartPct=theorique>0?(ecart/theorique)*100:-100;
+  return Math.abs(ecartPct)>=INVENTAIRE_SEUIL_ECART_PCT&&Math.abs(ecart)>=INVENTAIRE_SEUIL_ECART_ABS;
+}
+
 function renderInventairePanel(){
   const container=G('inventaire-content');if(!container)return;
   if(!APP_INVENTAIRE_CURRENT){container.innerHTML='<div style="text-align:center;color:var(--t3);padding:2rem">Cliquez sur 📋 Nouvel inventaire pour démarrer.</div>';return;}
@@ -7262,9 +7322,11 @@ function renderInventairePanel(){
     const intrant=APP_INTRANTS.find(i=>i.id===item.intrantId);
     const theorique=getItemCurrentStock(item.intrantId);
     const ecart=(item.actualQty||0)-theorique;
-    const ecartColor=Math.abs(ecart)<0.01?'var(--acc)':ecart>0?'var(--warn)':'var(--dng)';
-    const seuilAlert=intrant?.seuil&&(item.actualQty||0)<intrant.seuil?' <span style="color:var(--dng);font-weight:700;font-size:10px">⚠️ < seuil</span>':'';
-    rows+='<tr style="border-bottom:1px solid var(--b1)"><td style="padding:6px 8px;font-weight:700">'+(intrant?.name||item.intrantId)+seuilAlert+'</td>'
+    const suspect=isEcartSuspect(theorique,item.actualQty);
+    const ecartColor=suspect?'#ff1744':Math.abs(ecart)<0.01?'var(--acc)':ecart>0?'var(--warn)':'var(--dng)';
+    const seuilAlert=intrant?.seuil&&(item.actualQty||0)<intrant.seuil?' <span style="color:var(--dng);font-weight:700;font-size:10px">⚠️ &lt; seuil</span>':'';
+    const suspectAlert=suspect?' <span style="color:#ff1744;font-weight:700;font-size:10px" title="Écart négatif ≥15% et ≥'+INVENTAIRE_SEUIL_ECART_ABS+' '+(intrant?.unit||'')+' — à investiguer">🚨 écart suspect</span>':'';
+    rows+='<tr style="border-bottom:1px solid var(--b1)'+(suspect?';background:rgba(255,23,68,.06)':'')+'"><td style="padding:6px 8px;font-weight:700">'+(intrant?.name||item.intrantId)+seuilAlert+suspectAlert+'</td>'
       +'<td style="padding:6px 8px;text-align:center">'+theorique.toFixed(2)+' '+(intrant?.unit||'')+'</td>'
       +'<td style="padding:6px 8px;text-align:center"><input type="number" value="'+(item.actualQty||0)+'" step="0.01" style="width:70px;background:var(--inp);border:1px solid var(--b2);border-radius:4px;padding:2px 4px;font-size:10px;color:var(--t1)" onchange="APP_INVENTAIRE_CURRENT.items['+idx+'].actualQty=+this.value;renderInventairePanel()"> '+(intrant?.unit||'')+'</td>'
       +'<td style="padding:6px 8px;text-align:center;font-weight:700;color:'+ecartColor+'">'+(ecart>=0?'+':'')+ecart.toFixed(2)+'</td></tr>';
@@ -7273,6 +7335,7 @@ function renderInventairePanel(){
     +'<div style="font-size:12px;font-weight:700">Inventaire du '+APP_INVENTAIRE_CURRENT.date+'</div>'
     +'<div style="display:flex;gap:.3rem"><button class="sbtn" onclick="validateInventaire()" style="font-size:10px">✅ Valider</button>'
     +'<button onclick="cancelInventaire()" style="font-size:10px;background:var(--dng);color:#fff;border:none;border-radius:4px;padding:3px 8px;cursor:pointer">✕ Annuler</button></div></div>'
+    +'<div style="font-size:9px;color:var(--t3);margin-bottom:.5rem">🚨 écart suspect = déviation négative ≥15% et ≥'+INVENTAIRE_SEUIL_ECART_ABS+' unité(s) — à investiguer (perte, erreur de saisie, ou vol).</div>'
     +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:var(--inp)">'
     +'<th style="padding:6px 8px;text-align:left">Intrant</th><th style="padding:6px 8px">Théorique</th><th style="padding:6px 8px">Réel</th><th style="padding:6px 8px">Écart</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
@@ -7287,23 +7350,39 @@ async function validateInventaire(){
   if(!APP_INVENTAIRE_CURRENT)return;
   // Synchroniser stockActuel dans les intrants depuis l\'inventaire et déclencher alertes seuil
   const alertMessages=[];
+  const suspectMessages=[];
   APP_INVENTAIRE_CURRENT.items.forEach(item=>{
     const intrant=APP_INTRANTS.find(i=>i.id===item.intrantId);
     if(intrant){
+      const theorique=getItemCurrentStock(item.intrantId);
+      const ecart=(item.actualQty||0)-theorique;
+      item.theorique=theorique;
+      item.ecart=ecart;
+      item.suspect=isEcartSuspect(theorique,item.actualQty);
       intrant.stockActuel=item.actualQty||0;
       if(intrant.seuil&&intrant.stockActuel<intrant.seuil){
         alertMessages.push('⚠️ '+intrant.name+' : stock réel '+intrant.stockActuel.toFixed(2)+' '+intrant.unit+' < seuil alerte '+intrant.seuil.toFixed(2)+' '+intrant.unit);
+      }
+      if(item.suspect){
+        suspectMessages.push('🚨 '+intrant.name+' : écart '+ecart.toFixed(2)+' '+intrant.unit+' (théorique '+theorique.toFixed(2)+' → réel '+(item.actualQty||0).toFixed(2)+') — à investiguer (perte ou vol possible)');
       }
     }
   });
   APP_INVENTAIRE_CURRENT.validatedAt=new Date().toISOString();
   APP_INVENTAIRE_CURRENT.validatedBy=APP.user?.name||'?';
+  APP_INVENTAIRE_CURRENT.hasSuspectDeviation=suspectMessages.length>0;
   try{
     await withTimeout(farmCol('inventaires').doc(APP_INVENTAIRE_CURRENT.date).set(APP_INVENTAIRE_CURRENT),6000);
     showToast('✅ Inventaire validé','acc');renderInventairePanel();
+    if(suspectMessages.length){
+      try{await logAudit('inventaire_ecart_suspect','Écart(s) suspect(s) à l\'inventaire',suspectMessages.join(' · '));}catch(e){}
+      setTimeout(()=>{
+        if(window.showToast)suspectMessages.forEach((msg,i)=>setTimeout(()=>showToast(msg,'dng'),i*500));
+      },600);
+    }
     if(alertMessages.length){
       setTimeout(()=>{
-        if(window.showToast)alertMessages.forEach((msg,i)=>setTimeout(()=>showToast(msg,'dng'),i*500));
+        if(window.showToast)alertMessages.forEach((msg,i)=>setTimeout(()=>showToast(msg,'dng'),i*(500+suspectMessages.length*500)));
       },600);
     }
     if(typeof updateLactoStatus==='function')updateLactoStatus();
