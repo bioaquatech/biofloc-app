@@ -1102,10 +1102,6 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
             <div style="font-size:9px;color:var(--t3);margin-bottom:2px">Semaine du cycle</div>
             <input type="number" id="rat-semaine" class="ci" value="1" min="1" max="30" style="width:55px" oninput="renderRationnement()">
           </div>
-          <div>
-            <div style="font-size:9px;color:var(--t3);margin-bottom:2px">% Protéines aliment</div>
-            <input type="number" id="rat-prot" class="ci" value="40" min="10" max="55" step="0.5" style="width:65px" oninput="renderRationnement()">
-          </div>
           <button class="sbtn" onclick="renderRationnement()" style="font-size:11px;margin-top:12px">♻️ Calculer</button>
         </div>
       </div>
@@ -4810,6 +4806,13 @@ function getFeedFullName(ft){
   return ft.name;
 }
 
+// Référence de calibration du protocole (dossier technique) : le tableau
+// de taux ft.rate (36/32/23/20/16/14 g/kg/j, réduction Biofloc -20% sur la
+// ration Koudijs) a été établi pour un aliment à 32% de protéines brutes.
+// Si l'aliment réellement utilisé (ft.protein) diffère, le taux est
+// corrigé proportionnellement (×32/CP) plutôt que de re-saisir ft.rate à
+// la main à chaque nouveau lot/fournisseur.
+const REF_PROTEIN_PCT=32;
 function calcBassin(b){
   const nbActuel=b.nbInit-b.mort;
   const biomasse=nbActuel*b.poids/1000;
@@ -4818,6 +4821,11 @@ function calcBassin(b){
   const autoFt=getRationEntry(b.poids||1);
   const ft=FEED_TYPES.find(f=>f.id===(b.feedId))||autoFt;
   let r=ft.rate||autoFt.rate;
+  // Correction protéines : repli sur la référence (pas de correction) si le
+  // type d\'aliment n\'a pas de %CP renseigné ou vaut 0 — évite une division
+  // par zéro/valeur vide sur un profil fournisseur mal complété.
+  const ftProtein=ft.protein>0?ft.protein:REF_PROTEIN_PCT;
+  r*=REF_PROTEIN_PCT/ftProtein;
   // Correction température Lomé
   if(temp<22)r*=0.60;
   else if(temp<24)r*=0.75;
@@ -4825,7 +4833,7 @@ function calcBassin(b){
   else if(temp>32)r*=0.70;
   else if(temp>31)r*=0.85;
   const alimTheo=biomasse*r;
-  return{nbActuel,biomasse,rat:r,alimTheo,ft,autoFt};
+  return{nbActuel,biomasse,rat:r,alimTheo,ft,ftProtein,autoFt};
 }
 
 // ═══════════════════════════════════════════════
@@ -8428,7 +8436,6 @@ function calcMelasseCorrective(tanMgL, volM3, cnRatio){
 // ─── Rendu principal Rationnement ───
 function renderRationnement(){
   const semaine=+(G('rat-semaine')?.value||1);
-  const protPct=+(G('rat-prot')?.value||40);
   const bassinSel=G('rat-bassin')?.value||'all';
   const {ratio,phase,color}=getCNRatio(semaine);
   const container=G('rat-results');if(!container)return;
@@ -8447,7 +8454,7 @@ function renderRationnement(){
   let html='<div style="background:'+bgColor+';border:1px solid '+color+';border-radius:10px;padding:.6rem 1rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.75rem">'
     +'<span style="font-size:20px">📅</span>'
     +'<div><div style="font-size:12px;font-weight:800;color:'+color+'">Semaine '+semaine+' — '+phase+'</div>'
-    +'<div style="font-size:11px;color:var(--t2)">Ratio C:N cible : <strong style="color:'+color+'">'+ratio+':1</strong> · Protéines aliment : <strong>'+protPct+'%</strong> · Facteur mélasse : 0.21</div></div></div>';
+    +'<div style="font-size:11px;color:var(--t2)">Ratio C:N cible : <strong style="color:'+color+'">'+ratio+':1</strong> · %CP selon type d\'aliment (K4/K5/K6) de chaque bassin · Facteur mélasse : 0.21</div></div></div>';
 
   // Cartes par bassin
   html+=bassins.map(b=>{
@@ -8457,8 +8464,8 @@ function renderRationnement(){
     const alimTheo=c.alimTheo; // kg/jour (avec réduction biofloc)
     const alimG=alimTheo*1000; // en grammes
 
-    // Mélasse préventive
-    const prev=calcMelassePreventive(alimG,protPct,ratio);
+    // Mélasse préventive — %CP propre au type d'aliment (K4/K5/K6) du bassin
+    const prev=calcMelassePreventive(alimG,c.ftProtein,ratio);
     const prevParRepas=prev.volMl/ratEntry.freq;
 
     // Mélasse corrective (si TAN ≥ 1)
