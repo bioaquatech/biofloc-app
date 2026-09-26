@@ -4824,7 +4824,8 @@ function calcBassin(b){
   // Correction protéines : repli sur la référence (pas de correction) si le
   // type d\'aliment n\'a pas de %CP renseigné ou vaut 0 — évite une division
   // par zéro/valeur vide sur un profil fournisseur mal complété.
-  const ftProtein=ft.protein>0?ft.protein:REF_PROTEIN_PCT;
+  const protFallback=!(ft.protein>0);
+  const ftProtein=protFallback?REF_PROTEIN_PCT:ft.protein;
   r*=REF_PROTEIN_PCT/ftProtein;
   // Correction température Lomé
   if(temp<22)r*=0.60;
@@ -4833,7 +4834,7 @@ function calcBassin(b){
   else if(temp>32)r*=0.70;
   else if(temp>31)r*=0.85;
   const alimTheo=biomasse*r;
-  return{nbActuel,biomasse,rat:r,alimTheo,ft,ftProtein,autoFt};
+  return{nbActuel,biomasse,rat:r,alimTheo,ft,ftProtein,protFallback,autoFt};
 }
 
 // ═══════════════════════════════════════════════
@@ -8498,7 +8499,9 @@ function renderRationnement(){
       +'<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap">'
       +'<div style="font-size:13px;font-weight:800;color:'+borderColor+'">'+b.name+'</div>'
       +'<div style="font-size:10px;color:var(--t3)">'+b.poids+'g · Biomasse '+biomasse.toFixed(2)+'kg · Vol '+b.vol+'m³</div>'
-      +'<div style="margin-left:auto;background:'+ratEntry.color+'20;color:'+ratEntry.color+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px">'+ratEntry.aliment+'</div></div>'
+      +'<div style="margin-left:auto;background:'+ratEntry.color+'20;color:'+ratEntry.color+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px">'+ratEntry.aliment+'</div>'
+      +(c.protFallback?'<div title="Type d\'aliment sans %CP renseigné (f.protein manquant/nul) — correction %CP inactive, valeur par défaut '+REF_PROTEIN_PCT+'% utilisée" style="background:rgba(255,61,87,.12);color:var(--dng);font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid var(--dng)">⚠️ %CP non renseigné — défaut '+REF_PROTEIN_PCT+'%</div>':'')
+      +'</div>'
       // Ration + fréquence
       +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.4rem;margin-bottom:.5rem">'
       +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:10px;color:var(--t3)">Ration journalière</div><div style="font-size:18px;font-weight:800;color:var(--acc)">'+alimTheo.toFixed(3)+'<span style="font-size:11px"> kg</span></div></div>'
