@@ -13901,8 +13901,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){
   function $(id){return document.getElementById(id);}
   function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur';}
-  function isAdminOrResp(){var r=role();return r==='Administrateur'||r==='Responsable'||r==='Responsable ferme'||r==='SuperAdmin'||r==='Super Admin';}
-  function canDeleteUnvalidated(){var r=role();return ['Opérateur','Operateur','Responsable','Responsable ferme','Administrateur','SuperAdmin','Super Admin'].indexOf(r)>=0;}
+  function isAdminOrResp(){var r=role();return r==='Administrateur'||r==='Responsable'||r==='Responsable ferme'||r==='SuperAdmin'||r==='Super Admin'||r==='superadmin';}
+  function canDeleteUnvalidated(){var r=role();return ['Opérateur','Operateur','Responsable','Responsable ferme','Administrateur','SuperAdmin','Super Admin','superadmin'].indexOf(r)>=0;}
   function toast(msg,type){ if(typeof window.showToast==='function') showToast(msg,type||'acc'); else alert(msg.replace(/^[✅⚠️❌📋🔒]+\s*/,'')); }
   function todaySafe(){return typeof window.today==='function'?today():(new Date()).toISOString().slice(0,10);}
   function fmtNum(v,d){v=Number(v)||0;return v.toFixed(d==null?2:d).replace('.',',');}
@@ -13968,7 +13968,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   function loadMonthlyPlan(){return _pwaLoad();}
   function saveMonthlyPlan(a){_pwaSave(a);}
   // Décalage J1 : nécessite Responsable ferme ou Super Admin
-  function canEditPwaJ1(){var r=role();return r==='Responsable'||r==='Responsable ferme'||r==='Administrateur'||r==='SuperAdmin'||r==='Super Admin';}
+  function canEditPwaJ1(){var r=role();return r==='Responsable'||r==='Responsable ferme'||r==='Administrateur'||r==='SuperAdmin'||r==='Super Admin'||r==='superadmin';}
   // Jours d'admin/prépa depuis J1 (0-indexed)
   var ADMIN_OFFSETS=[2,4,6,7,9]; // J3,J5,J7,J8,J10
   var PREP_OFFSETS=[0,2,4,5,7];  // J1,J3,J5,J6,J8 soir — H-36 (avant-veille soir) avant chaque admin
