@@ -6295,9 +6295,9 @@ const DEFAULT_INTRANTS=[
   {id:'bache',name:'Bâche / Géomembrane',unit:'m²',conditionnement:'rouleau',monitoringType:'optional',category:'materiel',amortissable:true,isDefault:true},
 ];
 
-let APP_INTRANTS=[...DEFAULT_INTRANTS];
-let APP_STOCK_ENTRIES=[];
-let APP_STOCK_MOVEMENTS=[];
+let APP_INTRANTS=[...DEFAULT_INTRANTS];window.APP_INTRANTS=APP_INTRANTS;
+let APP_STOCK_ENTRIES=[];window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES;
+let APP_STOCK_MOVEMENTS=[];window.APP_STOCK_MOVEMENTS=APP_STOCK_MOVEMENTS;
 let APP_INVENTAIRE_CURRENT=null;
 let APP_LOG_PANEL='intrants';
 
@@ -6874,17 +6874,17 @@ async function loadIntrants(){
     if(snap&&!snap.empty){
       const custom=snap.docs.map(d=>({...d.data(),id:d.id}));
       const customIds=new Set(custom.map(i=>i.id));
-      APP_INTRANTS=[...DEFAULT_INTRANTS.filter(i=>!customIds.has(i.id)),...custom];
+      APP_INTRANTS=[...DEFAULT_INTRANTS.filter(i=>!customIds.has(i.id)),...custom];window.APP_INTRANTS=APP_INTRANTS;
     }
   }catch(e){console.warn('Intrants:',e);}
   try{if(typeof syncFeedIntrants==='function')await syncFeedIntrants();}catch(e){console.warn('syncFeedIntrants:',e);}
   try{
     const snap=await withTimeout(farmCol('stock_entries').get(),6000);
-    if(snap&&!snap.empty)APP_STOCK_ENTRIES=snap.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    if(snap&&!snap.empty){APP_STOCK_ENTRIES=snap.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(b.date||'').localeCompare(a.date||''));window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES;}
   }catch(e){console.warn('Stock:',e);}
   try{
     const mSnap=await withTimeout(farmCol('stock_movements').get(),6000);
-    if(mSnap&&!mSnap.empty)APP_STOCK_MOVEMENTS=mSnap.docs.map(d=>({...d.data(),id:d.id}));
+    if(mSnap&&!mSnap.empty){APP_STOCK_MOVEMENTS=mSnap.docs.map(d=>({...d.data(),id:d.id}));window.APP_STOCK_MOVEMENTS=APP_STOCK_MOVEMENTS;}
   }catch(e){console.warn('Movements:',e);}
   try{const cs=await withTimeout(farmCol('config').doc('compta').get(),6000);if(cs.exists&&cs.data().prix)COMPTA_PRIX=cs.data().prix;}catch(e){console.warn('Compta prix:',e);}
   // Les alertes stock sont gérées par syncAllData à la connexion
@@ -7141,7 +7141,7 @@ async function deleteIntrant(id){
   if(!confirm('Supprimer ?'))return;
   try{
     await withTimeout(farmCol('intrants').doc(id).delete(),6000);
-    APP_INTRANTS=APP_INTRANTS.filter(i=>i.id!==id);
+    APP_INTRANTS=APP_INTRANTS.filter(i=>i.id!==id);window.APP_INTRANTS=APP_INTRANTS;
     renderIntrants();showToast('✅ Supprimé','acc');
   }catch(e){showToast('❌ '+e.message,'dng');}
 }
@@ -7276,7 +7276,7 @@ async function deleteStockEntry(id){
   if(!confirm('Supprimer définitivement cette entrée ?'))return;
   try{
     await withTimeout(farmCol('stock_entries').doc(id).delete(),6000);
-    APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(e=>e.id!==id);
+    APP_STOCK_ENTRIES=APP_STOCK_ENTRIES.filter(e=>e.id!==id);window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES;
     renderStockEntries();showToast('✅ Entrée supprimée','acc');
   }catch(e){showToast('❌ '+e.message,'dng');}
 }
@@ -15697,9 +15697,9 @@ async function switchFarm(newFarmCode){
     // que showFarmApp() recharge tout depuis Firestore pour la nouvelle ferme.
     APP.state.bassins=[];
     APP.state.suivi=[];
-    APP_STOCK_ENTRIES=[];
-    APP_STOCK_MOVEMENTS=[];
-    APP_INTRANTS=[...DEFAULT_INTRANTS];
+    APP_STOCK_ENTRIES=[];window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES;
+    APP_STOCK_MOVEMENTS=[];window.APP_STOCK_MOVEMENTS=APP_STOCK_MOVEMENTS;
+    APP_INTRANTS=[...DEFAULT_INTRANTS];window.APP_INTRANTS=APP_INTRANTS;
     Object.keys(localStorage).filter(k=>k.startsWith('ichtus_')&&k!=='ichtus_last_farmCode').forEach(k=>localStorage.removeItem(k));
     localStorage.setItem('ichtus_last_farmCode',newFarmCode);
     await loadFarmData();
