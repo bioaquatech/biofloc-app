@@ -13377,7 +13377,7 @@ async function reloadComptaConfig(){
  catch(e){console.warn('Compta config:',e);}
 }
 async function persistCompta(){const doc=getComptaDoc(); if(doc)await doc.set({prix:window.COMPTA_PRIX||{},prixValidations:window.COMPTA_PRIX_VALIDATIONS||{}},{merge:true});}
-window.saveComptaPriceAndWait=async function(entryId,val){window.COMPTA_PRIX=window.COMPTA_PRIX||{};window.COMPTA_PRIX[entryId]=Number(val)||0; if(window.COMPTA_PRIX_VALIDATIONS)delete COMPTA_PRIX_VALIDATIONS[entryId]; try{await persistCompta();}catch(e){console.warn(e);} if(window.renderComptaCUMP)renderComptaCUMP(); if(window.renderComptaPrix)renderComptaPrix();};
+window.saveComptaPriceAndWait=async function(entryId,val){window.COMPTA_PRIX=window.COMPTA_PRIX||{};window.COMPTA_PRIX[entryId]=parseComptaAmount(val); if(window.COMPTA_PRIX_VALIDATIONS)delete COMPTA_PRIX_VALIDATIONS[entryId]; try{await persistCompta();}catch(e){console.warn(e);} if(window.renderComptaCUMP)renderComptaCUMP(); if(window.renderComptaPrix)renderComptaPrix();};
 window.validateComptaPrice=async function(entryId){
  if(!isAdminOrSuper()){if(window.showToast)showToast('❌ Seul le responsable admin et le SuperAdmin peuvent valider les prix des factures entrées.','dng');return;}
  if(!window.COMPTA_PRIX||COMPTA_PRIX[entryId]===undefined||Number(COMPTA_PRIX[entryId])<=0){if(window.showToast)showToast('⚠️ Saisissez d\'abord un prix valide.','warn');return;}
@@ -13566,8 +13566,17 @@ async function reloadFinanceQuality(){
  try{if(window.farmCol){const snap=await farmCol('config').doc('compta').get(); if(snap.exists){const d=snap.data()||{}; if(d.devises)window.COMPTA_DEVISES=d.devises; if(d.prix)window.COMPTA_PRIX=d.prix; if(d.prixValidations)window.COMPTA_PRIX_VALIDATIONS=d.prixValidations;}}}catch(e){console.warn(e);}
 }
 async function persistFinanceQuality(){try{if(window.farmCol)await farmCol('config').doc('compta').set({prix:window.COMPTA_PRIX||{},prixValidations:window.COMPTA_PRIX_VALIDATIONS||{},devises:window.COMPTA_DEVISES||{}},{merge:true});}catch(e){console.warn(e);}}
-window.saveComptaPriceAndWait=async function(entryId,val){window.COMPTA_PRIX=window.COMPTA_PRIX||{};window.COMPTA_PRIX[entryId]=Number(val)||0;if(window.COMPTA_PRIX_VALIDATIONS)delete COMPTA_PRIX_VALIDATIONS[entryId];await persistFinanceQuality(); if(window.renderComptaPrix)renderComptaPrix(); if(window.renderComptaCUMP)renderComptaCUMP();};
+window.saveComptaPriceAndWait=async function(entryId,val){window.COMPTA_PRIX=window.COMPTA_PRIX||{};window.COMPTA_PRIX[entryId]=parseComptaAmount(val);if(window.COMPTA_PRIX_VALIDATIONS)delete COMPTA_PRIX_VALIDATIONS[entryId];await persistFinanceQuality(); if(window.renderComptaPrix)renderComptaPrix(); if(window.renderComptaCUMP)renderComptaCUMP();};
 window.saveComptaCurrency=async function(entryId,val){window.COMPTA_DEVISES=window.COMPTA_DEVISES||{};window.COMPTA_DEVISES[entryId]=val||'XOF';if(window.COMPTA_PRIX_VALIDATIONS)delete COMPTA_PRIX_VALIDATIONS[entryId];await persistFinanceQuality(); if(window.renderComptaPrix)renderComptaPrix(); if(window.renderComptaCUMP)renderComptaCUMP();};
+// Tolère la saisie "naturelle" d'un montant (espaces milliers normaux/insécables,
+// virgule décimale française) plutôt que de forcer un <input type="number">
+// qui vide tout le champ dès qu'un caractère non numérique est tapé.
+function parseComptaAmount(val){
+  const cleaned=String(val??'').replace(/[\s  ]/g,'').replace(',','.');
+  const n=parseFloat(cleaned);
+  return isFinite(n)&&n>=0?n:0;
+}
+window.parseComptaAmount=parseComptaAmount;
 function priceValidated(id){return !!(window.COMPTA_PRIX_VALIDATIONS&&COMPTA_PRIX_VALIDATIONS[id]&&COMPTA_PRIX_VALIDATIONS[id].validated);}
 function entryQualityErrors(e){
  const errs=[];
@@ -13602,7 +13611,7 @@ window.renderComptaPrix=function(){
    return `<div style="background:var(--card);border:1px solid ${ok?'var(--acc)':errs.length?'rgba(245,166,35,.45)':'rgba(0,212,180,.25)'};border-radius:8px;padding:.55rem .7rem;margin-bottom:.35rem">
     <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
      <div style="flex:1;min-width:210px"><strong>${escapeHtml(item.name||e.intrantId)}</strong> <span style="color:var(--acc);font-weight:700">${Number(e.quantity||0)} ${escapeHtml(item.unit||'')}</span>${e.lot?` <span style="color:var(--t3);font-size:9px">Lot:${escapeHtml(e.lot)}</span>`:''}${e.facture?` <span style="color:var(--t3);font-size:9px">Fact:${escapeHtml(e.facture)}</span>`:' <span style="color:var(--warn);font-size:9px">Facture manquante</span>'}<div style="font-size:9px;color:var(--t3)">${escapeHtml(e.date||'date manquante')} · Fournisseur : ${escapeHtml(e.supplier||'Fournisseur à renseigner')}</div>${errs.length?`<div style="font-size:9px;color:var(--warn);margin-top:2px">À compléter : ${errs.map(escapeHtml).join(', ')}</div>`:''}</div>
-     <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap"><label style="font-size:10px;color:var(--t3)">Prix total:</label><input type="number" value="${escapeHtml(val)}" placeholder="Montant" ${ok&&!isAdminOrSuper()?'disabled':''} style="width:110px;border:1px solid var(--b2);border-radius:4px;background:var(--bg);color:var(--t1);padding:3px 6px;font-size:11px" onchange="saveComptaPriceAndWait('${e.id}',this.value)"><select class="si" style="font-size:10px;padding:3px 6px" onchange="saveComptaCurrency('${e.id}',this.value)"><option value="">Devise</option>${currencies.map(c=>`<option value="${c}" ${dev===c?'selected':''}>${c}</option>`).join('')}</select>
+     <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap"><label style="font-size:10px;color:var(--t3)">Prix total:</label><input type="number" min="0" step="0.01" value="${escapeHtml(val)}" placeholder="Montant" ${ok&&!isAdminOrSuper()?'disabled':''} style="width:110px;border:1px solid var(--b2);border-radius:4px;background:var(--bg);color:var(--t1);padding:3px 6px;font-size:11px" onchange="saveComptaPriceAndWait('${e.id}',this.value)"><select class="si" style="font-size:10px;padding:3px 6px" onchange="saveComptaCurrency('${e.id}',this.value)"><option value="">Devise</option>${currencies.map(c=>`<option value="${c}" ${dev===c?'selected':''}>${c}</option>`).join('')}</select>
      ${has?`<span style="color:var(--gold);font-size:10px">${Math.round(Number(val)/Number(e.quantity||1)).toLocaleString('fr-FR')} ${escapeHtml(dev||'')}/${escapeHtml(item.unit||'u')}</span>`:'<span style="color:var(--warn);font-size:10px">⚠ Prix à saisir</span>'}
      ${ok?`<span class="badge b-ok">✅ Validé${v&&v.by?' par '+escapeHtml(v.by):''}</span>`:(isAdminOrSuper()?`<button class="sbtn" style="font-size:10px;padding:3px 9px" onclick="validateComptaPrice('${e.id}')">✅ Valider prix</button>`:'<span class="badge b-warn">⏳ Prix non validé</span>')}
      </div></div></div>`;
