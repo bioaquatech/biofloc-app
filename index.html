@@ -2418,6 +2418,8 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
           <th title="Oxygène dissous">DO</th>
           <th title="Ammoniac">NH₃</th>
           <th title="Nitrites">NO₂</th>
+          <th title="Lecture du moniteur de mesure de la salinité">Salinité (ppm)</th>
+          <th title="Sel (NaCl) effectivement ajouté au bassin aujourd'hui">Sel ajouté (kg)</th>
           <th title="Azote ammoniacal total">TAN</th>
           <th title="TAC — alcalinité">TAC</th>
           <th title="Cône Imhoff 30 min">Imhoff</th>
@@ -2429,8 +2431,50 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
       </table>
     </div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem;flex-wrap:wrap">
+      <button class="sbtn" onclick="openSalinityCalibModal()" style="background:var(--inp)">🧂 Étalonnage salinité</button>
       <button class="sbtn" onclick="G('saisie-rapide-modal').classList.add('hidden')" style="background:var(--inp)">Fermer</button>
       <button class="sbtn" onclick="saveSaisieRapide()" style="background:var(--acc);color:#FFFFFF;font-weight:700">💾 Tout enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Étalonnage du moniteur de salinité -->
+<div id="salinity-calib-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-title">🧂 Étalonnage du moniteur de salinité</div>
+    <div id="sal-calib-current" style="font-size:11px;color:var(--t2);margin-bottom:.7rem"></div>
+    <div style="font-size:10px;color:var(--t3);margin-bottom:.6rem">Le moniteur compte aussi le bicarbonate, le nitrate et d'autres ions : il surestime légèrement le sel réel, garder une marge.</div>
+    <div style="display:grid;gap:.5rem">
+      <div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Étape 1 — Salinité Blanc : lecture du moniteur dans l'eau de forage seule (ppm)</div>
+        <input type="number" id="sal-blanc" class="ci" placeholder="ex: 292" style="width:100%">
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <label style="font-size:10px;color:var(--t2)"><input type="radio" name="sal-mode" value="direct" checked onchange="toggleSalCalibMode()"> Saisir directement le standard (1 g/L)</label>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <label style="font-size:10px;color:var(--t2)"><input type="radio" name="sal-mode" value="solution" onchange="toggleSalCalibMode()"> Déduire d'une solution à concentration connue</label>
+      </div>
+      <div id="sal-direct-block">
+        <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Étape 2 — Salinité standard (1 g/L) : lecture nette au dessus du blanc (ppm)</div>
+        <input type="number" id="sal-standard" class="ci" placeholder="ex: 1313" style="width:100%">
+      </div>
+      <div id="sal-solution-block" style="display:none">
+        <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Concentration de la solution étalon (g/L) — défaut 3 g de sel de cuisine dans 1 L d'eau de forage</div>
+        <input type="number" id="sal-solution-gl" class="ci" value="3" style="width:100%">
+        <div style="font-size:10px;color:var(--t3);margin:.4rem 0 2px">Lecture du moniteur sur cette solution (ppm)</div>
+        <input type="number" id="sal-solution-lecture" class="ci" placeholder="ex: 4230" style="width:100%" oninput="updateSalStandardPreview()">
+        <div id="sal-standard-preview" style="font-size:10px;color:var(--acc);margin-top:3px"></div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:2px">Note (optionnel)</div>
+        <input type="text" id="sal-note" class="ci" placeholder="ex: changement de forage" style="width:100%">
+      </div>
+      <div id="sal-calib-warnings" style="font-size:10px;color:var(--warn)"></div>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem">
+      <button class="sbtn" onclick="G('salinity-calib-modal').classList.add('hidden')" style="background:var(--inp)">Fermer</button>
+      <button class="sbtn" onclick="submitSalinityCalib()" style="background:var(--acc);color:#FFFFFF;font-weight:700">💾 Enregistrer l'étalonnage</button>
     </div>
   </div>
 </div>
@@ -2870,7 +2914,7 @@ let APP={
   warnSecs:60,
   whatsapp:'',
   platformName:'' , platformMessages:['Bienvenue sur la plateforme BioFloc'],
-  state:{bassins:[],suivi:[],suiviId:0,logoUrl:null},
+  state:{bassins:[],suivi:[],suiviId:0,logoUrl:null,salinityCalibHistory:[]},
   unsubs:[],
   bCount:17,
   species:null, // profil espèce actif (voir SPECIES_PROFILES)
@@ -2912,6 +2956,7 @@ const SPECIES_PROFILES=[
     fcrAlerte:1.8,
     // Densité optimale
     densiteOpt:'20–50 kg/m³',
+    salPlafondGL:15, // plafond de travail tolérable (g/L) — tilapia supporte 10 à 15 g/L sans problème (espèce euryhaline)
   },
   {
     id:'clarias',
@@ -2935,6 +2980,7 @@ const SPECIES_PROFILES=[
     fcrCible:1.0,
     fcrAlerte:1.5,
     densiteOpt:'30–80 kg/m³',
+    salPlafondGL:2, // plafond de travail tolérable (g/L) — espèce strictement eau douce, peu tolérante au sel
   },
   {
     id:'carpe',
@@ -2958,6 +3004,7 @@ const SPECIES_PROFILES=[
     fcrCible:1.5,
     fcrAlerte:2.0,
     densiteOpt:'15–40 kg/m³',
+    salPlafondGL:2, // plafond de travail tolérable (g/L) — espèce strictement eau douce, peu tolérante au sel
   },
   {
     id:'crevette',
@@ -2983,6 +3030,7 @@ const SPECIES_PROFILES=[
     densiteOpt:'100–300 ind/m³',
     salinite:true, // paramètre additionnel
     saliniteOpt:'10–20 g/L',
+    salPlafondGL:25, // plafond de travail tolérable (g/L) — espèce saumâtre, déjà élevée en salinité de base (10-20 g/L)
   },
   {
     id:'custom',
@@ -3006,6 +3054,7 @@ const SPECIES_PROFILES=[
     fcrCible:1.5,
     fcrAlerte:2.0,
     densiteOpt:'—',
+    salPlafondGL:5, // plafond de travail générique — à ajuster selon l'espèce réelle
   },
 ];
 
@@ -3376,7 +3425,7 @@ async function doLogout(expired=false){
   await auth.signOut();
   APP.user=null;APP.farmCode=null;APP.farmName=null;APP.species=null;APP.farmSessionTimeout=null;
   localStorage.removeItem('ichtus_last_farmCode');
-  APP.state={bassins:[],suivi:[],suiviId:0,logoUrl:null};
+  APP.state={bassins:[],suivi:[],suiviId:0,logoUrl:null,salinityCalibHistory:[]};
   applyFarmLogo(null);
   FEED_TYPES=JSON.parse(JSON.stringify(FEED_TYPES_DEFAULT));
   FEED_TYPES[0].batches=[{id:1,qty:20,price:705}];  // K4
@@ -3711,12 +3760,14 @@ function saveProbioStock(){
 async function loadFarmData(){
   if(!APP.farmCode){console.warn('loadFarmData: farmCode manquant');return;}
   try{
-    const [bSnap,sSnap,fSnap,cfgSnap]=await Promise.all([
+    const [bSnap,sSnap,fSnap,cfgSnap,salCfgSnap]=await Promise.all([
       farmCol('bassins').get().catch(()=>({empty:true,docs:[]})),
       farmCol('suivi').orderBy('date').get().catch(()=>({empty:true,docs:[]})),
       farmCol('feed').get().catch(()=>({empty:true,docs:[]})),
       farmCol('config').doc('app').get().catch(()=>({exists:false})),
+      farmCol('config').doc('salinite').get().catch(()=>({exists:false})),
     ]);
+    APP.state.salinityCalibHistory=(salCfgSnap.exists&&Array.isArray(salCfgSnap.data().history))?salCfgSnap.data().history:[];
     if(!bSnap.empty){
       APP.state.bassins=bSnap.docs.map(d=>{
         const x={...d.data()};delete x._order;
@@ -3730,6 +3781,8 @@ async function loadFarmData(){
         if(x.basifiantType===undefined)x.basifiantType=null;
         if(x.carb===undefined)x.carb=null;
         if(x.carbType===undefined)x.carbType=null;
+        if(x.salinite===undefined)x.salinite=null;
+        if(x.selAjoute===undefined)x.selAjoute=null;
         return x;
       });
       APP.bCount=APP.state.bassins.length+1;
@@ -6474,7 +6527,9 @@ function openSaisieRapide(){
       <td>${opt('ph','0.01','46')}</td>
       <td>${opt('DO','0.1','46')}</td>
       <td>${opt('NH3','0.01','48')}</td>
-      <td>${opt('NO2','0.01','48')}</td>
+      <td>${opt('NO2','0.01','48',' oninput="srUpdateSalinite('+idx+')"')}</td>
+      <td>${opt('salinite','1','65',' oninput="srUpdateSalinite('+idx+')"')}<div id="sr-sal-${idx}" style="font-size:8px;color:var(--t3);white-space:nowrap"></div></td>
+      <td>${opt('selAjoute','0.1','55')}<div id="sr-seldose-${idx}" style="font-size:8px;color:var(--t3);white-space:nowrap"></div></td>
       <td>${opt('TAN','0.01','48',' oninput="srAutoCN(this,'+idx+')"')}</td>
       <td>${opt('TAC','1','48')}</td>
       <td>${opt('imhoff','0.5','48')}</td>
@@ -6487,10 +6542,38 @@ function openSaisieRapide(){
   if(leg)leg.innerHTML='<strong style="color:var(--t2)">Règle :</strong> les valeurs sont pré-remplies avec les données du jour. '
     +'<strong style="color:var(--acc)">Modifier</strong> = correction (écrase). '
     +'<strong style="color:var(--t1)">Laisser tel quel</strong> = inchangé. '
-    +'<strong style="color:var(--dng)">Effacer</strong> = supprime la mesure du jour (null).';
+    +'<strong style="color:var(--dng)">Effacer</strong> = supprime la mesure du jour (null).'
+    +(salinityCalibNeedsReminder(getActiveSalinityCalib())
+      ?'<div style="width:100%;margin-top:.4rem;padding:.4rem .6rem;background:rgba(245,166,35,.1);border:1px solid var(--warn);border-radius:6px;color:var(--warn)">⚠️ Étalonnage du moniteur de salinité requis ou à renouveler (plus de '+SALINITE_RAPPEL_JOURS+' jours) — <a href="javascript:void(0)" onclick="openSalinityCalibModal()" style="color:var(--warn);text-decoration:underline">étalonner maintenant</a></div>'
+      :'');
+  bassins.forEach((b)=>{const idx=APP.state.bassins.indexOf(b);srUpdateSalinite(idx);});
   G('saisie-rapide-modal').classList.remove('hidden');
 }
 
+function srUpdateSalinite(idx){
+  const row=document.querySelector('#saisie-rapide-tbody tr[data-idx="'+idx+'"]');if(!row)return;
+  const el=G('sr-sal-'+idx);if(!el)return;
+  const salInp=row.querySelector('[data-field="salinite"]');
+  const no2Inp=row.querySelector('[data-field="NO2"]');
+  const lecture=salInp&&salInp.value!==''?+salInp.value:null;
+  const no2=no2Inp&&no2Inp.value!==''?+no2Inp.value:(APP.state.bassins[idx]?.NO2??null);
+  const calib=getActiveSalinityCalib();
+  if(lecture==null){el.textContent='';return;}
+  if(!calib){el.textContent='⚠️ Étalonnage requis';el.style.color='var(--warn)';return;}
+  const r=computeSalinityBlock(lecture,calib,no2);
+  el.innerHTML='Sel '+(r.selGL!=null?r.selGL.toFixed(2):'—')+' g/L · Cl '+(r.chlorureMgL!=null?Math.round(r.chlorureMgL):'—')+' mg/L';
+  el.style.color=r.statut?.color||'var(--t3)';
+  if(r.statut)el.innerHTML+='<br>'+r.statut.label;
+  const doseEl=G('sr-seldose-'+idx);
+  if(doseEl){
+    const b=APP.state.bassins[idx];
+    if(r.selGL!=null&&no2!=null&&b?.vol){
+      const d=doseSelPourRapportCible(no2,r.selGL,b.vol,30);
+      doseEl.textContent=d.doseKg>0?'Suggéré : '+d.doseKg.toFixed(2)+' kg'+(d.depassePlafond?' ⚠️>'+d.plafond+'g/L':''):'Pas de sel requis';
+      doseEl.style.color=d.doseKg>0?'var(--warn)':'var(--t3)';
+    } else doseEl.textContent='';
+  }
+}
 function srAutoCN(inp,idx){
   const tr=inp.closest('tr');if(!tr)return;
   const alimInp=tr.querySelector('[data-field="alimReel"]');
@@ -6523,10 +6606,19 @@ async function saveSaisieRapide(){
     const isRequired=(field)=>getInp(field)?.dataset.mode==='required';
     // required (alimReel, mort) → 0 si vide
     // optional (tout le reste)  → null si vide (effacement explicite = supprimer la mesure)
-    ['alimReel','mort','poids','temp','ph','DO','NH3','NO2','TAN','TAC','imhoff','probiot','carb','basifiant'].forEach(field=>{
+    ['alimReel','mort','poids','temp','ph','DO','NH3','NO2','TAN','TAC','imhoff','probiot','carb','basifiant','salinite','selAjoute'].forEach(field=>{
       const v=readVal(field);
       b[field]=isRequired(field)?(v??0):v;
     });
+    // Calcule et fige sur le relevé le bloc salinité/chlorure (avec l'étalonnage
+    // utilisé, pour que le calcul reste reproductible même si l'étalonnage change).
+    const calib=getActiveSalinityCalib();
+    const salBlock=computeSalinityBlock(b.salinite,calib,b.NO2);
+    b.selGL=salBlock.selGL;
+    b.chlorureMgL=salBlock.chlorureMgL;
+    b.rapportClNo2=salBlock.rapportClNo2===Infinity?null:salBlock.rapportClNo2;
+    b.statutSalinite=salBlock.statut?salBlock.statut.niveau||(salBlock.rapportClNo2===Infinity?'maximale':null):null;
+    b.salinityCalibUsed=salBlock.calibUsed;
     try{await saveBassinRow(idx);saved++;}catch(e){console.warn('SR save:',e);}
   }
   showToast(`✅ ${saved} bassin(s) enregistré(s)`,'ok');
@@ -9723,6 +9815,186 @@ function updateParamStatusLabel(elId, param, value){
   const st=getParamStatus(param,value);
   el.textContent=st?st.label:'';
   el.style.color=st?st.color:'var(--t3)';
+}
+
+// ═══════════════════════════════════════════════
+// SALINITÉ / CHLORURE — 8e paramètre clé, protection branchies vs NO2
+// ═══════════════════════════════════════════════
+// mg de chlorure par g de NaCl, tiré de la masse molaire du NaCl :
+// Cl = 35,45 g/mol, NaCl = 58,44 g/mol → 35,45/58,44×1000 = 606,6 ≈ 607.
+const SALINITE_CL_FACTEUR=607;
+const SALINITE_RAPPEL_JOURS=30; // délai (paramétrable) avant de redemander l'étalonnage
+const SALINITE_SOLUTION_DEFAUT_GL=3; // 3 g de sel de cuisine dans 1 L d'eau de forage, par défaut
+
+// Historique d'étalonnage du moniteur de salinité (niveau ferme). Chaque entrée :
+// {blancPpm, standardPpm, date, operator, note, solutionLecturePpm?, solutionGL?}
+function getSalinityCalibHistory(){return (window.APP&&APP.state&&APP.state.salinityCalibHistory)||[];}
+function getActiveSalinityCalib(){
+  const h=getSalinityCalibHistory();
+  if(!h.length)return null;
+  return h.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+}
+function salinityCalibAgeDays(calib){
+  if(!calib||!calib.date)return null;
+  return Math.floor((Date.now()-new Date(calib.date).getTime())/86400000);
+}
+function salinityCalibNeedsReminder(calib){
+  if(!calib)return true;
+  const age=salinityCalibAgeDays(calib);
+  return age===null||age>SALINITE_RAPPEL_JOURS;
+}
+// Standard (1 g/L) déduit d'une lecture sur une solution de concentration connue.
+function computeSalinityStandardFromSolution(lectureSolutionPpm, blancPpm, gParL){
+  const g=gParL>0?gParL:SALINITE_SOLUTION_DEFAUT_GL;
+  return (lectureSolutionPpm-blancPpm)/g;
+}
+function salinityCalibPlausibilityWarnings(blancPpm, standardPpm, gParL){
+  const warns=[];
+  if(!(blancPpm>=0&&blancPpm<=2000))warns.push('Salinité Blanc hors plage habituelle (0 à 2000 ppm) — vérifier le moniteur.');
+  if(!(standardPpm>=500&&standardPpm<=2500))warns.push('Salinité standard hors plage habituelle (500 à 2500 ppm) — vérifier la pesée ou le moniteur.');
+  if(gParL!=null&&!(gParL>=1&&gParL<=5))warns.push('Concentration de la solution étalon hors plage habituelle (1 à 5 g/L) — vérifier la pesée.');
+  return warns;
+}
+// Sel (g/L), Chlorure (mg/L) à partir d'une lecture et d'un étalonnage donné (snapshot reproductible).
+function calcSalinite(lecturePpm, blancPpm, standardPpm){
+  if(lecturePpm==null||blancPpm==null||!(standardPpm>0))return null;
+  return (lecturePpm-blancPpm)/standardPpm;
+}
+function calcChlorure(selGL){
+  return selGL==null?null:selGL*SALINITE_CL_FACTEUR;
+}
+// Rapport Cl/NO2 — NO2 nul/très faible = protection maximale (pas de division par zéro).
+function calcRapportClNO2(chlorureMgL, no2MgL){
+  if(chlorureMgL==null)return null;
+  if(no2MgL==null)return null;
+  if(no2MgL<0.05)return Infinity;
+  return chlorureMgL/no2MgL;
+}
+function getSalinityStatus(rapport){
+  if(rapport==null)return{label:'Étalonnage requis',color:'var(--t3)',action:'',niveau:''};
+  if(rapport===Infinity)return{label:'🛡️ Protection maximale',color:'var(--acc)',action:'NO₂ nul ou négligeable (<0,05 mg/L).',niveau:'maximale'};
+  const r=rapport>1000?1000:rapport;
+  const plafonne=rapport>1000?'>1000':r.toFixed(1);
+  if(r>60)return{label:`✅ Large (${plafonne})`,color:'var(--acc)',action:'Pas de sel à ajouter — surveiller le NO₂.',niveau:'large'};
+  if(r>=30)return{label:`✅ Optimal (${plafonne})`,color:'var(--acc)',action:'Régime normal.',niveau:'optimal'};
+  if(r>=20)return{label:`⚠️ Vigilance (${plafonne})`,color:'var(--warn)',action:'Ajouter 0,5 g/L de sel · mesurer le NO₂ à midi et le soir.',niveau:'vigilance'};
+  if(r>=10)return{label:`🔴 Alerte (${plafonne})`,color:'var(--dng)',action:'Ajouter 1 g/L de sel · vidange 15 à 20% avec remise du sel perdu.',niveau:'alerte'};
+  return{label:`🚨 Urgence (${plafonne})`,color:'var(--dng)',action:'Sel +1 à 2 g/L (sans dépasser 5 g/L) · vidange 20% · arrêt de l\'alimentation.',niveau:'urgence'};
+}
+// Plafond de travail tolérable : propre à l'espèce active (ex: 5 g/L tilapia,
+// 2 g/L espèces d'eau douce peu tolérantes, 25 g/L crevette déjà en eau saumâtre).
+function getSalinityPlafondGL(speciesId){
+  const list=['tilapia','clarias','carpe','crevette','custom'];
+  const id=list.includes(speciesId)?speciesId:null;
+  const profile=id?SPECIES_PROFILES.find(s=>s.id===id):(typeof sp==='function'?sp():null);
+  return (profile&&profile.salPlafondGL)||5;
+}
+function getSalinityAbsoluteWarning(selGL,speciesId){
+  if(selGL==null)return null;
+  const plafond=getSalinityPlafondGL(speciesId);
+  if(selGL>plafond*2)return{label:'🚨 Excès de sel — vidange progressive',color:'var(--dng)'};
+  if(selGL>plafond)return{label:'⚠️ Plafond de travail de l\'espèce dépassé ('+plafond+' g/L)',color:'var(--warn)'};
+  return null;
+}
+// Dose de sel (kg) pour atteindre un rapport Cl/NO2 cible (par défaut 30).
+function doseSelPourRapportCible(no2MgL, selActuelGL, volumeM3, rapportCible, speciesId){
+  const cible=rapportCible||30;
+  if(no2MgL==null||volumeM3==null)return null;
+  const plafond=getSalinityPlafondGL(speciesId);
+  const selCibleGL=cible*no2MgL/SALINITE_CL_FACTEUR;
+  const doseGL=Math.max(0,selCibleGL-(selActuelGL||0));
+  return{doseKg:doseGL*volumeM3,selCibleGL,plafond,depassePlafond:selCibleGL>plafond};
+}
+// Sel à remettre (kg) après une vidange partielle, pour reconstituer la salinité cible.
+function doseSelRemiseApresVidange(fractionVidangee, volumeM3, saliniteCibleGL){
+  if(fractionVidangee==null||volumeM3==null||saliniteCibleGL==null)return null;
+  return fractionVidangee*volumeM3*saliniteCibleGL;
+}
+// Calcule tout le bloc salinité pour un bassin à partir de sa lecture brute (ppm) et
+// de l'étalonnage en vigueur (ou d'un snapshot déjà enregistré sur le relevé, pour
+// rester reproductible même si l'étalonnage ferme a changé depuis).
+function computeSalinityBlock(lecturePpm, calib, no2MgL){
+  if(lecturePpm==null)return{lecturePpm:null,selGL:null,chlorureMgL:null,rapportClNo2:null,statut:null,calibUsed:null};
+  if(!calib)return{lecturePpm,selGL:null,chlorureMgL:null,rapportClNo2:null,statut:getSalinityStatus(null),calibUsed:null};
+  const selGL=calcSalinite(lecturePpm,calib.blancPpm,calib.standardPpm);
+  const chlorureMgL=calcChlorure(selGL);
+  const rapportClNo2=calcRapportClNO2(chlorureMgL,no2MgL);
+  return{
+    lecturePpm,selGL,chlorureMgL,rapportClNo2,
+    statut:getSalinityStatus(rapportClNo2),
+    absoluWarning:getSalinityAbsoluteWarning(selGL),
+    calibUsed:{blancPpm:calib.blancPpm,standardPpm:calib.standardPpm}
+  };
+}
+function openSalinityCalibModal(){
+  const cur=getActiveSalinityCalib();
+  const el=G('sal-calib-current');
+  if(el){
+    if(!cur){el.innerHTML='<span style="color:var(--warn)">⚠️ Aucun étalonnage enregistré — la salinité lue sera acceptée mais le chlorure n\'est pas calculable tant que ce formulaire n\'est pas rempli.</span>';}
+    else{
+      const age=salinityCalibAgeDays(cur);
+      el.innerHTML='Étalonnage en vigueur : Blanc <strong>'+cur.blancPpm+' ppm</strong> · Standard (1 g/L) <strong>'+cur.standardPpm+' ppm</strong><br>'
+        +'Le '+(cur.date||'').slice(0,10)+' par '+escapeHtml(cur.operator||'?')+' · il y a '+age+' jour(s)'
+        +(salinityCalibNeedsReminder(cur)?' <span style="color:var(--warn)">— à renouveler</span>':'');
+    }
+  }
+  G('sal-blanc').value='';G('sal-standard').value='';G('sal-solution-lecture').value='';G('sal-solution-gl').value=SALINITE_SOLUTION_DEFAUT_GL;G('sal-note').value='';
+  G('sal-calib-warnings').textContent='';
+  document.querySelector('input[name="sal-mode"][value="direct"]').checked=true;
+  toggleSalCalibMode();
+  G('salinity-calib-modal').classList.remove('hidden');
+}
+function toggleSalCalibMode(){
+  const mode=document.querySelector('input[name="sal-mode"]:checked')?.value||'direct';
+  G('sal-direct-block').style.display=mode==='direct'?'block':'none';
+  G('sal-solution-block').style.display=mode==='solution'?'block':'none';
+}
+function updateSalStandardPreview(){
+  const blanc=+(G('sal-blanc').value||0);
+  const gl=+(G('sal-solution-gl').value||SALINITE_SOLUTION_DEFAUT_GL);
+  const lecture=G('sal-solution-lecture').value;
+  const prev=G('sal-standard-preview');if(!prev)return;
+  if(lecture===''){prev.textContent='';return;}
+  const std=computeSalinityStandardFromSolution(+lecture,blanc,gl);
+  prev.textContent='Standard (1 g/L) calculé : '+std.toFixed(0)+' ppm';
+}
+async function submitSalinityCalib(){
+  const blanc=+(G('sal-blanc').value||NaN);
+  const mode=document.querySelector('input[name="sal-mode"]:checked')?.value||'direct';
+  let standard,solutionLecture=null,solutionGL=null;
+  if(mode==='direct'){
+    standard=+(G('sal-standard').value||NaN);
+  } else {
+    solutionLecture=+(G('sal-solution-lecture').value||NaN);
+    solutionGL=+(G('sal-solution-gl').value||SALINITE_SOLUTION_DEFAUT_GL);
+    standard=computeSalinityStandardFromSolution(solutionLecture,blanc,solutionGL);
+  }
+  if(!isFinite(blanc)||!isFinite(standard)){showToast('❌ Salinité Blanc et standard requis','dng');return;}
+  const warns=salinityCalibPlausibilityWarnings(blanc,standard,mode==='solution'?solutionGL:null);
+  const warnEl=G('sal-calib-warnings');
+  if(warnEl)warnEl.innerHTML=warns.map(w=>'⚠️ '+escapeHtml(w)).join('<br>');
+  // Avertissement non bloquant : on enregistre quand même si l'opérateur confirme.
+  if(warns.length&&!confirm(warns.join('\n')+'\n\nEnregistrer quand même ?'))return;
+  const note=G('sal-note').value||'';
+  await saveSalinityCalib(blanc,standard,note,solutionLecture,solutionGL);
+  showToast('✅ Étalonnage enregistré','ok');
+  G('salinity-calib-modal').classList.add('hidden');
+  if(G('saisie-rapide-modal')&&!G('saisie-rapide-modal').classList.contains('hidden'))openSaisieRapide();
+}
+// Enregistre un nouvel étalonnage (ajouté à l'historique, le plus récent fait foi).
+async function saveSalinityCalib(blancPpm,standardPpm,note,solutionLecturePpm,solutionGL){
+  const entry={
+    blancPpm:+blancPpm, standardPpm:+standardPpm,
+    date:new Date().toISOString(),
+    operator:(window.APP&&APP.user?.name)||'?',
+    note:note||'',
+    ...(solutionLecturePpm!=null?{solutionLecturePpm:+solutionLecturePpm,solutionGL:+(solutionGL||SALINITE_SOLUTION_DEFAUT_GL)}:{})
+  };
+  APP.state.salinityCalibHistory=APP.state.salinityCalibHistory||[];
+  APP.state.salinityCalibHistory.push(entry);
+  try{await farmCol('config').doc('salinite').set({history:APP.state.salinityCalibHistory},{merge:true});}
+  catch(e){console.warn('[salinite] calib save skipped:',e.message);}
+  return entry;
 }
 
 // ═══════════════════════════════════════════════
@@ -15706,6 +15978,7 @@ async function switchFarm(newFarmCode){
     // que showFarmApp() recharge tout depuis Firestore pour la nouvelle ferme.
     APP.state.bassins=[];
     APP.state.suivi=[];
+    APP.state.salinityCalibHistory=[];
     APP_STOCK_ENTRIES=[];window.APP_STOCK_ENTRIES=APP_STOCK_ENTRIES;
     APP_STOCK_MOVEMENTS=[];window.APP_STOCK_MOVEMENTS=APP_STOCK_MOVEMENTS;
     APP_INTRANTS=[...DEFAULT_INTRANTS];window.APP_INTRANTS=APP_INTRANTS;
