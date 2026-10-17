@@ -10204,6 +10204,22 @@ function addSuivi(){
   APP.state.suivi.push(nr);
   APP.state.suivi.sort((a,b)=>a.date.localeCompare(b.date)||a.bassin.localeCompare(b.bassin));
   G('sc-poids').value='';if(G('sc-note'))G('sc-note').value='';saveSuiviDoc(nr);renderSuivi();renderChart();
+  // Si la pesée est la plus récente connue pour ce bassin, synchronise b.poids
+  // automatiquement : sinon calcBassin() continue de choisir le type d'aliment
+  // et la ration sur un ancien poids tant que l'opérateur ne le ressaisit pas
+  // manuellement dans Config Bassins (double saisie, facile à oublier).
+  const bi=APP.state.bassins.findIndex(b=>b.name===bassin);
+  if(bi>=0){
+    const plusRecente=APP.state.suivi.filter(r=>r.bassin===bassin).every(r=>r.date<=date);
+    if(plusRecente){
+      APP.state.bassins[bi].poids=poids;
+      saveBassin(bi);
+      if(typeof buildBTable==='function')buildBTable();
+      if(typeof upConfigCalcs==='function')upConfigCalcs();
+      if(G('t12')?.classList.contains('active')&&typeof renderRationnement==='function')renderRationnement();
+      showToast('⚖️ Poids du bassin mis à jour ('+poids+' g) — ration recalculée','acc');
+    }
+  }
 }
 function removeSuivi(id){APP.state.suivi=APP.state.suivi.filter(r=>r.id!==id);deleteSuiviDoc(id);renderSuivi();renderChart();}
 function renderSuivi(){
@@ -10227,9 +10243,16 @@ function renderSuivi(){
     const alimCum=c.alimTheo*1000*days,gain=first?r.poids-first.poids:0;
     const fcr=gain>0?(alimCum/gain):null;
     const fcrH=fcr===null?'—':fcr>sp().fcrAlerte?`<span class="fcr-bad">${fmt(fcr,2)}</span>`:`<span class="fcr-ok">${fmt(fcr,2)}</span>`;
+    // Écart au programme de croissance : la table K4/K5/K6 et le calendrier C/N
+    // sont calés sur le poids réel du bassin — un décrochage prolongé vs la
+    // cible signale que le type d'aliment/dosage mélasse en cours n'est
+    // probablement plus adapté à la taille réelle du poisson.
+    const ecartPct=cible>0?((r.poids-cible)/cible*100):0;
+    const poidsColor=ecartPct<=-15?'var(--dng)':ecartPct<=-8?'var(--warn)':'var(--acc)';
+    const ecartTitle=ecartPct<=-8?('⚠️ '+Math.abs(ecartPct).toFixed(0)+'% sous la cible — vérifier le type d\'aliment programmé pour ce poids'):'';
     const tr=document.createElement('tr');
     tr.innerHTML=`<td>${r.date}</td><td style="font-size:10px;color:var(--t2)">${r.bassin}</td>
-      <td style="color:var(--acc);font-weight:700">${fmt(r.poids,1)}</td>
+      <td style="color:${poidsColor};font-weight:700" title="${ecartTitle}">${fmt(r.poids,1)}${ecartTitle?' ⚠️':''}</td>
       <td class="cf">${fmt(cible,1)}</td><td class="cf">${fmt(gmq,2)}</td><td>${fcrH}</td>
       <td><button class="dbtn" onclick="removeSuivi(${r.id})">✕</button></td>`;
     tb.appendChild(tr);
