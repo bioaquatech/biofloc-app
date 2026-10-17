@@ -12374,7 +12374,11 @@ function onSupplierChange(val){
 
 function applySupplier(sup,silent=false){
   ACTIVE_SUPPLIER=JSON.parse(JSON.stringify(sup));
-  // Reconstruire FEED_TYPES depuis le fournisseur
+  // Reconstruire FEED_TYPES depuis le fournisseur — trié par poids max croissant :
+  // getRationEntry()/getRatEntry() sélectionnent le premier type dont maxPoids
+  // couvre le poids du bassin, donc l'ordre doit suivre les tranches de poids,
+  // pas l'ordre de saisie (sinon une ligne ajoutée en fin de liste avec un
+  // maxPoids plus petit qu'une ligne précédente n'est jamais retenue).
   FEED_TYPES=sup.types.map((t,i)=>({
     id:t.id||('F'+(i+1)),
     name:t.name,
@@ -12386,7 +12390,7 @@ function applySupplier(sup,silent=false){
     color:t.color||'#60a5fa',
     stage:t.stage||'',
     batches:FEED_TYPES.find(f=>f.id===t.id)?.batches||[{id:Date.now(),qty:100,price:700}]
-  }));
+  })).sort((a,b)=>(a.maxPoids||9999)-(b.maxPoids||9999));
   // Créer les intrants correspondants dans le catalogue Logistique (achats/CUMP)
   // s'ils n'existent pas encore, avec le même identifiant que la consommation.
   if(typeof syncFeedIntrants==='function')syncFeedIntrants();
@@ -12569,24 +12573,13 @@ async function saveSupplier(){
   refreshSupplierSelect();
   const supList=G('sup-list');
   if(supList){supList.innerHTML=SUPPLIERS.map(s=>`<option value="${s.id}">${s.nom}</option>`).join('');supList.value=sup.id;}
-  msg.style.color='var(--acc)';msg.textContent=`✅ Fournisseur "${name}" enregistré !`;
-  if(ACTIVE_SUPPLIER.id===sup.id){
-    ACTIVE_SUPPLIER=JSON.parse(JSON.stringify(sup));
-    FEED_TYPES=sup.types.map((t,i)=>({
-      id:t.id||('F'+(i+1)),name:t.name,granule:t.granule||'',protein:t.protein||0,
-      maxPoids:t.maxPoids||9999,rate:t.rate||0.020,freq:t.freq||2,
-      color:t.color||'#60a5fa',stage:t.stage||'',
-      batches:FEED_TYPES.find(f=>f.id===t.id)?.batches||[{id:Date.now(),qty:100,price:700}]
-    }));
-    CN_SCHEDULE=cnRows;
-    const lbl=G('supplier-active-label');
-    if(lbl)lbl.textContent=`${sup.nom} — ${sup.types.length} types · Réduction Biofloc −20%`;
-    renderSupplierPreview();
-    if(G('t2')?.classList.contains('active'))renderFeed();
-    if(G('t12')?.classList.contains('active'))renderRationnement();
-    upAll();
-    if(APP.farmCode){try{await db.collection('farms').doc(APP.farmCode).set({activeSupplierId:sup.id},{merge:true});}catch(e){console.warn('activeSupplierId save:',e);}}
-  }
+  msg.style.color='var(--acc)';msg.textContent=`✅ Fournisseur "${name}" enregistré et activé !`;
+  // Un profil enregistré (nouveau ou modifié) est immédiatement activé : sinon
+  // l'opérateur s'attend à ce que la ligne/le type tout juste ajouté soit pris
+  // en compte dans le rationnement, ce qui n'était pas le cas pour un nouveau
+  // fournisseur (il fallait un clic "Sélectionner" séparé, facile à manquer).
+  applySupplier(sup,true);
+  if(APP.farmCode){try{await db.collection('farms').doc(APP.farmCode).set({activeSupplierId:sup.id},{merge:true});}catch(e){console.warn('activeSupplierId save:',e);}}
   setTimeout(()=>{G('supplier-modal').classList.add('hidden');},1200);
 }
 
