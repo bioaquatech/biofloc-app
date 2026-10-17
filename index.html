@@ -1192,17 +1192,24 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
           </div>
         </div>
       </div>
+      <div id="t1-sal-banner"></div>
+      <div style="text-align:right;margin-bottom:.4rem" class="no-print">
+        <button onclick="openSalinityCalibModal()" style="background:none;border:1px solid var(--t3);color:var(--t2);border-radius:8px;padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer">🧂 Étalonnage salinité</button>
+      </div>
       <div class="tw">
         <table>
           <thead><tr>
             <th>Bassin <small style="color:var(--t3);cursor:pointer" title="Cliquer sur le nom du bassin pour voir les statistiques">📊</small></th><th>Statut</th><th>Démarrage</th><th>Vol (m³)</th><th>Nb Init</th><th>Mortalité</th><th>Nb Actuel</th>
             <th>Poids Moy (g)</th><th>Type Alim</th><th>Biomasse (kg)</th><th>Ration (%)</th>
-            <th>Alim Théo (kg)</th><th>Alim Réel (kg)</th>
+            <th>Alim Théo (g)</th><th>Alim Réel (g)</th>
             <th style="color:#a8d8ff">Temp °C <small style="color:var(--t3)">(opt.)</small></th>
             <th style="color:#a8d8ff">pH <small style="color:var(--t3)">(opt.)</small></th>
             <th style="color:#a8d8ff">DO mg/L <small style="color:var(--t3)">(opt.)</small></th>
             <th style="color:#a8d8ff">NH₃ mg/L <small style="color:var(--t3)">(opt.)</small></th>
             <th style="color:#ff8fab">NO₂ mg/L <small style="color:var(--t3)" title="Nitrites — vigilance 0.2 mg/L · alerte 0.5 mg/L">(opt.)</small></th>
+            <th style="color:#fbbf24">Salinité ppm <small style="color:var(--t3)" title="Lecture du moniteur de mesure de la salinité">(opt.)</small></th>
+            <th style="color:#fbbf24">Cl⁻ mg/L <small style="color:var(--t3)" title="Chlorures — calculé : Sel(g/L) × 607">calc.</small></th>
+            <th style="color:#fbbf24">Cl⁻/NO₂ <small style="color:var(--t3)" title="Ratio de protection des branchies — &gt;60 Large · 30-60 Optimal · 20-30 Vigilance · 10-20 Alerte · &lt;10 Urgence">calc.</small></th>
             <th style="color:var(--warn)">TAN mg/L <small style="color:var(--t3)">(opt.)</small></th>
             <th style="color:#7dd3fc">Imhoff ml/L <small style="color:var(--t3)" title="Cône Imhoff 30 min — optimal tilapia 25–40 ml/L">(opt.)</small></th>
             <th style="color:#c084fc">Probiot ml <small style="color:var(--t3)" title="Probiotique for Water Administration — quantité utilisée ce jour">(opt.)</small></th>
@@ -9395,6 +9402,12 @@ function closeNotifModal(){G('notif-modal').classList.add('hidden');}
 
 function buildBTable(){
   const tb=G('b-tbody');if(!tb)return;tb.innerHTML='';
+  const banner=G('t1-sal-banner');
+  if(banner){
+    banner.innerHTML=salinityCalibNeedsReminder(getActiveSalinityCalib())
+      ?'<div style="margin-bottom:.5rem;padding:.4rem .6rem;background:rgba(245,166,35,.1);border:1px solid var(--warn);border-radius:6px;color:var(--warn);font-size:10px">⚠️ Étalonnage du moniteur de salinité requis ou à renouveler (plus de '+SALINITE_RAPPEL_JOURS+' jours) — <a href="javascript:void(0)" onclick="openSalinityCalibModal()" style="color:var(--warn);text-decoration:underline">étalonner maintenant</a></div>'
+      :'';
+  }
   const bassins=getDisplayBassins();
   const isHistory=!!APP_historyDate;
   const role=APP.user?.role||'Opérateur';
@@ -9447,7 +9460,7 @@ function buildBTable(){
       <td class="cf" id="bb-${i}">—</td>
       <td class="cf" id="br-${i}">—</td>
       <td class="cf" id="bt-${i}">—</td>
-      <td><input type="number" class="ci" value="${fmt(b.alimReel,3)}" step="0.001" style="width:65px" title="Aliment réel (kg) — le champ Mélasse se calcule automatiquement (C:N 15:1)" onchange="const v=+this.value;if(!APP_historyDate){APP.state.bassins[${i}].alimReel=v;saveBassin(${i});}else APP_historyData[${i}].alimReel=v;upConfigCalcs();autoCarbCN(${i});"></td>
+      <td><input type="number" class="ci" value="${Math.round((b.alimReel||0)*1000)}" step="1" style="width:65px" title="Aliment réel (g) — le champ Mélasse se calcule automatiquement (C:N 15:1)" onchange="const v=(+this.value||0)/1000;if(!APP_historyDate){APP.state.bassins[${i}].alimReel=v;saveBassin(${i});}else APP_historyData[${i}].alimReel=v;upConfigCalcs();autoCarbCN(${i});"></td>
       <td><input type="number" id="bT-${i}" class="${optCls(b.temp)}" value="${optVal(b.temp)}" step="0.1" style="width:52px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].temp=v;saveBassin(${i});}else APP_historyData[${i}].temp=v;upConfigCalcs()">
         <div id="bTst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
       <td><input type="number" id="bP-${i}" class="${optCls(b.ph)}" value="${optVal(b.ph)}" step="0.01" style="width:50px" placeholder="—" onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].ph=v;saveBassin(${i});}else APP_historyData[${i}].ph=v;upConfigCalcs()">
@@ -9458,8 +9471,13 @@ function buildBTable(){
         <div id="bNst-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
       <td><input type="number" id="bNO2-${i}" class="${optCls(b.NO2)}" value="${optVal(b.NO2)}" step="0.01" style="width:55px;border-color:rgba(255,143,171,.3)" placeholder="—"
           title="Nitrites NO₂ — Vigilance 0.2 · Alerte 0.5 · Urgence 1.0 mg/L"
-          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].NO2=v;saveBassin(${i});}else APP_historyData[${i}].NO2=v;upConfigCalcs()">
+          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].NO2=v;saveBassin(${i});}else APP_historyData[${i}].NO2=v;updateBassinSalinityDisplay(${i});upConfigCalcs()">
         <div id="bNO2st-${i}" style="font-size:7.5px;font-weight:700;text-align:center;margin-top:1px;white-space:nowrap"></div></td>
+      <td><input type="number" id="bSAL-${i}" class="${optCls(b.salinite)}" value="${optVal(b.salinite)}" step="1" style="width:60px;border-color:rgba(251,191,36,.3)" placeholder="—"
+          title="Salinité lue au moniteur de mesure de la salinité (ppm)"
+          onchange="const v=this.value===''?null:+this.value;if(!APP_historyDate){APP.state.bassins[${i}].salinite=v;saveBassin(${i});}else APP_historyData[${i}].salinite=v;updateBassinSalinityDisplay(${i});upConfigCalcs()"></td>
+      <td id="bCL-${i}" style="font-size:10px;color:var(--t3);text-align:center">—</td>
+      <td id="bCLR-${i}" style="font-size:10px;text-align:center;font-weight:700">—</td>
       <td>
         <input type="number" id="bTAN-${i}" class="${b.TAN!==null&&b.TAN>=1?'ci wi':'ci opt'}" value="${optVal(b.TAN)}" step="0.01" style="width:55px;border-color:${b.TAN!==null&&b.TAN>=1?'var(--warn)':'rgba(245,166,35,.25)'}"
           placeholder="—" title="TAN ≥1 mg/L → Phase 2 mélasse · Saisir pour pré-remplir le calculateur"
@@ -9607,7 +9625,7 @@ window.renderSpeciesExtraParams=renderSpeciesExtraParams;
     if(G(`bn-${i}`))G(`bn-${i}`).textContent=c.nbActuel;
     if(G(`bb-${i}`))G(`bb-${i}`).textContent=fmt(c.biomasse,3);
     if(G(`br-${i}`))G(`br-${i}`).textContent=pct(c.rat);
-    if(G(`bt-${i}`))G(`bt-${i}`).textContent=fmt(c.alimTheo,3);
+    if(G(`bt-${i}`))G(`bt-${i}`).textContent=Math.round(c.alimTheo*1000);
     // Optional field alerts
     const sc=(id,v,warn,danger)=>{const e=G(id);if(!e)return;e.className=v===null?'ci opt':danger?'ci di':warn?'ci wi':'ci';};
     sc(`bT-${i}`,b.temp,b.temp!==null&&b.temp<24,false);
@@ -9621,7 +9639,7 @@ window.renderSpeciesExtraParams=renderSpeciesExtraParams;
     updateParamStatusLabel(`bPst-${i}`,'ph',b.ph);
     updateParamStatusLabel(`bDst-${i}`,'DO',b.DO);
     updateParamStatusLabel(`bNst-${i}`,'NH3',b.NH3);
-    updateParamStatusLabel(`bNO2st-${i}`,'NO2',b.NO2);
+    updateParamStatusLabel(`bNO2st-${i}`,'NO2',b.NO2);if(typeof updateBassinSalinityDisplay==='function')updateBassinSalinityDisplay(i);
     updateParamStatusLabel(`bTANst-${i}`,'TAN',b.TAN);
     updateParamStatusLabel(`bTACst-${i}`,'TAC',b.TAC);
     updateParamStatusLabel(`bIMHst-${i}`,'imhoff',b.imhoff);
@@ -9658,7 +9676,7 @@ function upConfigCalcs(){
     if(G(`bn-${i}`))G(`bn-${i}`).textContent=c.nbActuel;
     if(G(`bb-${i}`))G(`bb-${i}`).textContent=fmt(c.biomasse,3);
     if(G(`br-${i}`))G(`br-${i}`).textContent=pct(c.rat);
-    if(G(`bt-${i}`))G(`bt-${i}`).textContent=fmt(c.alimTheo,3);
+    if(G(`bt-${i}`))G(`bt-${i}`).textContent=Math.round(c.alimTheo*1000);
     // Optional field alerts
     const sc=(id,v,warn,danger)=>{const e=G(id);if(!e)return;e.className=v===null?'ci opt':danger?'ci di':warn?'ci wi':'ci';};
     sc(`bT-${i}`,b.temp,b.temp!==null&&b.temp<24,false);
@@ -9672,7 +9690,7 @@ function upConfigCalcs(){
     updateParamStatusLabel(`bPst-${i}`,'ph',b.ph);
     updateParamStatusLabel(`bDst-${i}`,'DO',b.DO);
     updateParamStatusLabel(`bNst-${i}`,'NH3',b.NH3);
-    updateParamStatusLabel(`bNO2st-${i}`,'NO2',b.NO2);
+    updateParamStatusLabel(`bNO2st-${i}`,'NO2',b.NO2);if(typeof updateBassinSalinityDisplay==='function')updateBassinSalinityDisplay(i);
     updateParamStatusLabel(`bTANst-${i}`,'TAN',b.TAN);
     updateParamStatusLabel(`bTACst-${i}`,'TAC',b.TAC);
     updateParamStatusLabel(`bIMHst-${i}`,'imhoff',b.imhoff);
@@ -10037,6 +10055,24 @@ async function submitSalinityCalib(){
   G('salinity-calib-modal').classList.add('hidden');
   if(G('saisie-rapide-modal')&&!G('saisie-rapide-modal').classList.contains('hidden'))openSaisieRapide();
 }
+// Met à jour l'affichage Chlorures/Ratio Cl⁻/NO₂ d'un bassin dans la table
+// Bassins & qualité d'eau, à partir de sa lecture de salinité (ppm), de son
+// NO2, et de l'étalonnage ferme en vigueur.
+function updateBassinSalinityDisplay(i){
+  const b=(APP_historyDate?APP_historyData:APP.state.bassins)[i];if(!b)return;
+  const clEl=G('bCL-'+i),ratEl=G('bCLR-'+i);
+  if(!clEl||!ratEl)return;
+  const calib=getActiveSalinityCalib();
+  const r=computeSalinityBlock(b.salinite,calib,b.NO2);
+  if(r.lecturePpm==null){clEl.textContent='—';clEl.style.color='var(--t3)';ratEl.textContent='—';ratEl.style.color='var(--t3)';return;}
+  if(!calib){clEl.textContent='⚠️ étalonnage requis';clEl.style.color='var(--warn)';ratEl.textContent='—';ratEl.style.color='var(--t3)';return;}
+  clEl.textContent=r.chlorureMgL!=null?Math.round(r.chlorureMgL)+' mg/L':'—';
+  clEl.style.color=r.absoluWarning?r.absoluWarning.color:'var(--t1)';
+  if(r.rapportClNo2===Infinity){ratEl.textContent='Protection max.';ratEl.style.color='var(--acc)';}
+  else if(r.statut){ratEl.textContent=r.statut.label.replace(/^[^\s]+\s/,'');ratEl.style.color=r.statut.color;}
+  else{ratEl.textContent='—';ratEl.style.color='var(--t3)';}
+}
+window.updateBassinSalinityDisplay=updateBassinSalinityDisplay;
 // Enregistre un nouvel étalonnage (ajouté à l'historique, le plus récent fait foi).
 async function saveSalinityCalib(blancPpm,standardPpm,note,solutionLecturePpm,solutionGL){
   const entry={
