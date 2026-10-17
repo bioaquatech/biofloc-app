@@ -1269,7 +1269,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
           <div style="font-size:18px">📊</div>
           <div>
             <div class="ctitle" style="margin-bottom:0"><span class="dot" style="background:var(--gold)"></span>Moniteur FCR &amp; Survie — 22 semaines</div>
-            <div style="font-size:9px;color:var(--t3)">570 alevins/bassin · Survie cible 90% · FCR objectif 1.3 · Source : Outil FCR v2.0</div>
+            <div style="font-size:9px;color:var(--t3)"><span id="fcr-module-nbinit">Sélectionnez un bassin</span> · Survie cible 90% · FCR objectif 1.3 · Source : Outil FCR v2.0</div>
           </div>
           <div style="margin-left:auto;display:flex;align-items:center;gap:.5rem">
             <select id="fcr-bassin" class="si" style="font-size:11px" onchange="renderFCRModule()"><option value="">Sélectionner bassin...</option></select>
@@ -3698,6 +3698,35 @@ function saveBassin(i){
   },600);
 }
 window.saveBassin=saveBassin;
+// Changer la date de démarrage d'un bassin déjà en cours de cycle réinterprète
+// rétroactivement la cible de croissance, le graphique et les prévisions de
+// consommation déjà enregistrés (voir calculs dérivés de b.startDate) : on
+// exige donc une confirmation par mot de passe, sauf si le champ était vide
+// (première saisie, pas de cycle en cours à dérégler).
+function confirmChangeStartDate(i,inputEl){
+  const target=APP_historyDate?APP_historyData[i]:APP.state.bassins[i];
+  if(!target)return;
+  const oldVal=target.startDate||'';
+  const newVal=inputEl.value;
+  const apply=()=>{
+    if(!APP_historyDate){APP.state.bassins[i].startDate=newVal;saveBassin(i);}
+    else APP_historyData[i].startDate=newVal;
+    if(typeof upConfigCalcs==='function')upConfigCalcs();
+  };
+  if(!oldVal||oldVal===newVal){apply();return;}
+  if(typeof confirmPasswordThen==='function'){
+    confirmPasswordThen(
+      'Vous changez la date de démarrage d\'un cycle déjà en cours. Cela réinterprète rétroactivement la cible de croissance, le graphique et les prévisions de consommation déjà enregistrés pour ce bassin. Confirmez votre mot de passe pour continuer.',
+      apply,
+      ()=>{inputEl.value=oldVal;}
+    );
+  } else if(confirm('Modifier la date de démarrage en cours de cycle réinterprète les données déjà enregistrées. Continuer ?')){
+    apply();
+  } else {
+    inputEl.value=oldVal;
+  }
+}
+window.confirmChangeStartDate=confirmChangeStartDate;
 async function saveBassinsNow(){
   if(!APP.farmCode||!Array.isArray(APP.state.bassins)||APP.state.bassins.length===0)return;
   clearTimeout(_dbt['bassins']);_pendingSaveKeys.delete('bassins');
@@ -3786,6 +3815,7 @@ async function loadFarmData(){
         return x;
       });
       APP.bCount=APP.state.bassins.length+1;
+      if(typeof resetDailyWaterQuality==='function')resetDailyWaterQuality();
     } else {
       APP.state.bassins=[];
       APP.bCount=1;
@@ -5071,6 +5101,7 @@ function sw(id){
   document.querySelectorAll('#screen-farm .tb').forEach(b=>{
     if(b.getAttribute('onclick')==="sw('"+id+"')")b.classList.add('active');
   });
+  if(id==='t1'){if(typeof resetDailyWaterQuality==='function')resetDailyWaterQuality();}
   if(id==='t3'){renderChart();renderSuivi();if(typeof renderFCRModule==='function')renderFCRModule();}
   if(id==='t4'){swLog(typeof APP_LOG_PANEL!=='undefined'&&APP_LOG_PANEL?APP_LOG_PANEL:'intrants');if(window.fillPwaBassinSelect)setTimeout(fillPwaBassinSelect,200);}
   if(id==='t5')upCompta();if(id==='t6')upCons();if(id==='t7')renderRecoltes();
@@ -9171,6 +9202,31 @@ function _autoRappelBasifiant(b){
   showToast('⏰ Rappel remesure TAC — '+intervalLabel,'acc');
 }
 
+// Champs de relevé quotidien (qualité d'eau + doses du jour) : remis à vide
+// (null, ou 0 pour alimReel) dès qu'on change de jour, pour que l'opérateur
+// reparte sur une page blanche plutôt que de voir/corriger la valeur de la
+// veille. La veille n'est pas perdue : elle reste archivée automatiquement
+// dans farmCol('daily').doc(dateStr) à chaque sauvegarde (voir saveBassinRow).
+// Ne touche ni mort (compteur cumulé) ni poids (pesée périodique, pas quotidienne).
+const WATER_QUALITY_DAILY_FIELDS=['temp','ph','DO','NH3','NO2','TAN','TAC','imhoff','probiot','carb','basifiant','salinite','selAjoute','alimReel'];
+function resetDailyWaterQuality(){
+  if(!window.APP||!APP.state||!Array.isArray(APP.state.bassins))return 0;
+  const todayStr=today();
+  let changed=0;
+  APP.state.bassins.forEach(b=>{
+    const lastDate=b._savedAt?String(b._savedAt).slice(0,10):null;
+    if(!lastDate||lastDate===todayStr)return; // jamais sauvegardé, ou déjà aujourd'hui → rien à faire
+    WATER_QUALITY_DAILY_FIELDS.forEach(f=>{b[f]=(f==='alimReel')?0:null;});
+    changed++;
+  });
+  if(changed){
+    if(typeof buildBTable==='function')buildBTable();
+    if(typeof upConfigCalcs==='function')upConfigCalcs();
+  }
+  return changed;
+}
+window.resetDailyWaterQuality=resetDailyWaterQuality;
+
 async function saveBassinRow(i){
   const b=APP.state.bassins[i];
   if(!b)return;
@@ -9362,7 +9418,7 @@ function buildBTable(){
         <option${b.statut==='Récolté'?' selected':''}>Récolté</option>
         <option${b.statut==='Vide'?' selected':''}>Vide</option>
       </select></td>
-      <td><input type="date" class="ci" value="${b.startDate||''}" style="font-size:9px;width:98px;padding:1px 3px" title="Date de démarrage du cycle" onchange="if(!APP_historyDate){APP.state.bassins[${i}].startDate=this.value;saveBassin(${i});}else APP_historyData[${i}].startDate=this.value;upConfigCalcs()"></td>
+      <td><input type="date" class="ci" value="${b.startDate||''}" style="font-size:9px;width:98px;padding:1px 3px" title="Date de démarrage du cycle — modification en cours de cycle soumise à confirmation par mot de passe" onchange="confirmChangeStartDate(${i},this)"></td>
       <td><input type="number" class="ci" value="${fmt(b.vol,1)}" step="0.1" style="width:52px" onchange="if(!APP_historyDate){APP.state.bassins[${i}].vol=+this.value;saveBassin(${i});}else APP_historyData[${i}].vol=+this.value;upConfigCalcs()"></td>
       <td><input type="number" class="ci" value="${b.nbInit}" style="width:60px" onchange="if(!APP_historyDate){APP.state.bassins[${i}].nbInit=+this.value;saveBassin(${i});}else APP_historyData[${i}].nbInit=+this.value;upConfigCalcs()"></td>
       <td><input type="number" class="ci" value="${b.mort}" style="width:50px" onchange="if(!APP_historyDate){APP.state.bassins[${i}].mort=+this.value;saveBassin(${i});}else APP_historyData[${i}].mort=+this.value;upConfigCalcs()"></td>
@@ -10159,9 +10215,14 @@ function renderSuivi(){
     const br=APP.state.suivi.filter(s=>s.bassin===r.bassin).sort((a,b)=>a.date.localeCompare(b.date));
     const idx=br.findIndex(s=>s.id===r.id),first=br[0],prev=idx>0?br[idx-1]:null;
     const days=first?(new Date(r.date)-new Date(first.date))/(86400000):0;
-    const cible=sp().poidsDepart+sp().gmqCible*days;
-    const gmq=prev?(r.poids-prev.poids)/Math.max(1,(new Date(r.date)-new Date(prev.date))/(86400000)):0;
     const b=APP.state.bassins.find(x=>x.name===r.bassin);
+    // Cible = courbe théorique depuis la VRAIE date de mise en charge du bassin,
+    // pas depuis la date de la première pesée — sinon la cible reste figée au
+    // poids de départ si la première pesée a lieu après le jour 0 du cycle.
+    const debutCycle=b&&(b.startDate||b.dateDebut||b.debut||b.dateStart);
+    const joursCycle=debutCycle?(new Date(r.date)-new Date(debutCycle))/(86400000):days;
+    const cible=sp().poidsDepart+sp().gmqCible*Math.max(0,joursCycle);
+    const gmq=prev?(r.poids-prev.poids)/Math.max(1,(new Date(r.date)-new Date(prev.date))/(86400000)):0;
     const c=b?calcBassin(b):{alimTheo:0};
     const alimCum=c.alimTheo*1000*days,gain=first?r.poids-first.poids:0;
     const fcr=gain>0?(alimCum/gain):null;
@@ -10180,14 +10241,24 @@ function renderChart(){
   const fb=G('chart-b')?.value||'';
   const cols=['#0077B6','#00B4D8','#F4A261','#E76F51','#5C7A99','#2D6A4F'];
   const ds=[];
-  const maxD=Math.max(...APP.state.suivi.map(r=>{const br=APP.state.suivi.filter(s=>s.bassin===r.bassin);const fd=br.sort((a,b)=>a.date.localeCompare(b.date))[0]?.date;return fd?(new Date(r.date)-new Date(fd))/(86400000):0;}),30);
+  // Jour 0 d'un bassin = sa VRAIE date de mise en charge si elle est renseignée,
+  // sinon repli sur la date de sa première pesée (même logique que renderSuivi(),
+  // pour que le tableau et le graphique restent cohérents entre eux).
+  const debutBassin=(bn)=>{
+    const b=APP.state.bassins.find(x=>x.name===bn);
+    const d=b&&(b.startDate||b.dateDebut||b.debut||b.dateStart);
+    if(d)return d;
+    const br=APP.state.suivi.filter(s=>s.bassin===bn).sort((a,b2)=>a.date.localeCompare(b2.date));
+    return br[0]?.date||null;
+  };
+  const maxD=Math.max(...APP.state.suivi.map(r=>{const fd=debutBassin(r.bassin);return fd?(new Date(r.date)-new Date(fd))/(86400000):0;}),30);
   ds.push({label:`Cible +${sp().gmqCible}g/j`,data:Array.from({length:Math.ceil(maxD)+1},(_,i)=>({x:i,y:sp().poidsDepart+sp().gmqCible*i})),borderColor:'#f5a623',backgroundColor:'transparent',pointRadius:0,showLine:true,borderDash:[5,4],borderWidth:1.5,tension:0});
   const show=fb?[fb]:[...new Set(APP.state.suivi.map(r=>r.bassin))];
   show.forEach((bn,ci)=>{
     const rows=APP.state.suivi.filter(r=>r.bassin===bn).sort((a,b)=>a.date.localeCompare(b.date));
     if(!rows.length)return;
-    const fd=rows[0].date,col=cols[ci%cols.length];
-    ds.push({label:bn,data:rows.map(r=>({x:(new Date(r.date)-new Date(fd))/(86400000),y:r.poids})),borderColor:col,backgroundColor:col+'33',pointRadius:4,showLine:true,tension:.3,borderWidth:2});
+    const fd=debutBassin(bn),col=cols[ci%cols.length];
+    ds.push({label:bn,data:rows.map(r=>({x:fd?(new Date(r.date)-new Date(fd))/(86400000):0,y:r.poids})),borderColor:col,backgroundColor:col+'33',pointRadius:4,showLine:true,tension:.3,borderWidth:2});
   });
   {const cc=chartThemeColors();
   gc=new Chart(canvas,{type:'scatter',data:{datasets:ds},options:{responsive:true,maintainAspectRatio:false,
@@ -13363,6 +13434,7 @@ function calcTAC(){
 // FCR_REF et getFCRStatus définis dans module Rationnement ci-dessus
 // Alias pour compatibilité
 const FCR_REF_OBJ=[
+  {s:1,fcr:1.90,phase:'Démarrage'},{s:2,fcr:1.80,phase:'Démarrage'},
   {s:3,fcr:1.60,phase:'Démarrage'},{s:4,fcr:1.40,phase:'Démarrage'},
   {s:5,fcr:1.25,phase:'Amélioration'},{s:6,fcr:1.15,phase:'Amélioration'},
   {s:7,fcr:1.10,phase:'Amélioration'},{s:8,fcr:1.05,phase:'Amélioration'},
@@ -13382,7 +13454,7 @@ function initFCRBassin(name){
   if(!FCR_DATA[name])FCR_DATA[name]=Array.from({length:22},(_,i)=>({week:i+1,alimKg:null,morts:0,poidsMoyen:null}));
 }
 
-function getFCRWeek(bassinData, week){
+function getFCRWeek(bassinData, week, nbInit){
   // FCR semaine = aliment semaine / gain biomasse semaine
   const w=bassinData[week-1];
   if(!w||!w.alimKg)return null;
@@ -13391,17 +13463,17 @@ function getFCRWeek(bassinData, week){
   let prevPoids=null;
   for(let i=week-2;i>=0;i--){if(bassinData[i].poidsMoyen){prevPoids=bassinData[i].poidsMoyen;break;}}
   if(!curPoids||!prevPoids)return null;
-  const vivants=570-bassinData.slice(0,week).reduce((s,r)=>s+(r.morts||0),0);
+  const vivants=(nbInit||570)-bassinData.slice(0,week).reduce((s,r)=>s+(r.morts||0),0);
   const gainBio=(curPoids-prevPoids)*vivants/1000; // kg
   return gainBio>0?w.alimKg/gainBio:null;
 }
 
-function getFCRCumul(bassinData, upToWeek){
+function getFCRCumul(bassinData, upToWeek, nbInit, poidsDepart){
   const totalAlim=bassinData.slice(0,upToWeek).reduce((s,r)=>s+(r.alimKg||0),0);
   const w=bassinData[upToWeek-1];
   if(!w||!w.poidsMoyen)return null;
-  const startPoids=5; // poids initial
-  const vivants=570-bassinData.slice(0,upToWeek).reduce((s,r)=>s+(r.morts||0),0);
+  const startPoids=poidsDepart||5; // poids initial
+  const vivants=(nbInit||570)-bassinData.slice(0,upToWeek).reduce((s,r)=>s+(r.morts||0),0);
   const totalGain=(w.poidsMoyen-startPoids)*vivants/1000;
   return totalGain>0?totalAlim/totalGain:null;
 }
@@ -13412,14 +13484,19 @@ function renderFCRModule(){
   if(!bassin){el.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:1rem">Sélectionnez un bassin</td></tr>';return;}
   initFCRBassin(bassin);
   const data=FCR_DATA[bassin];
-  const vivants570=570;
+  // Nombre réel d'alevins mis en charge dans CE bassin (pas une constante fixe
+  // pour toute la ferme) — repli sur 570 uniquement si le bassin est introuvable.
+  const bRef=APP.state.bassins.find(b=>b.name===bassin);
+  const vivants570=(bRef&&bRef.nbInit>0)?bRef.nbInit:570;
+  const poidsDepart=(bRef&&bRef.poidsDepart>0)?bRef.poidsDepart:(sp().poidsDepart||5);
+  const nbLabel=G('fcr-module-nbinit');if(nbLabel)nbLabel.textContent=vivants570+' alevins/bassin'+(bRef?'':' (bassin introuvable — valeur par défaut)');
   let survivants=vivants570;
   el.innerHTML=data.map((w,i)=>{
     survivants=vivants570-data.slice(0,i+1).reduce((s,r)=>s+(r.morts||0),0);
     const survie=Math.round(survivants/vivants570*100);
-    const fcrS=getFCRWeek(data,i+1);
-    const fcrC=getFCRCumul(data,i+1);
-    const ref=FCR_REF_OBJ[i];
+    const fcrS=getFCRWeek(data,i+1,vivants570);
+    const fcrC=getFCRCumul(data,i+1,vivants570,poidsDepart);
+    const ref=FCR_REF_OBJ.find(r=>r.s===i+1)||{fcr:0,phase:'—'};
     const fcrColor=fcrC?fcrC>1.5?'var(--dng)':fcrC>1.3?'var(--warn)':'var(--acc)':'var(--t3)';
     const ecart=fcrC&&ref?(fcrC-ref.fcr).toFixed(2):null;
     const ecartColor=ecart?(parseFloat(ecart)>0.2?'var(--dng)':parseFloat(ecart)>0?'var(--warn)':'var(--acc)'):'var(--t3)';
@@ -13443,8 +13520,8 @@ function renderFCRModule(){
   const totalAlim=data.reduce((s,r)=>s+(r.alimKg||0),0);
   const totalMorts=data.reduce((s,r)=>s+(r.morts||0),0);
   const lastPoids=data.map(d=>d.poidsMoyen).filter(Boolean).pop()||null;
-  const survieActuelle=Math.round((570-totalMorts)/570*100);
-  const fcrFinal=getFCRCumul(data,22)||getFCRCumul(data,data.filter(d=>d.poidsMoyen).length);
+  const survieActuelle=Math.round((vivants570-totalMorts)/vivants570*100);
+  const fcrFinal=getFCRCumul(data,22,vivants570,poidsDepart)||getFCRCumul(data,data.filter(d=>d.poidsMoyen).length,vivants570,poidsDepart);
   const m=G('fcr-metrics');
   if(m)m.innerHTML=`
     <div class="met${survieActuelle<85?' dng':survieActuelle<90?' warn':''}"><div class="mlbl">Survie actuelle</div><div class="mval">${survieActuelle}%</div></div>
@@ -14922,6 +14999,48 @@ function role(){return (window.APP&&APP.user&&APP.user.role)||'Opérateur'}
 // Déverrouillage prix : utilise le mot de passe de connexion Firebase (même code d\'accès que la connexion)
 var _adminPinUnlocked=false;
 function canManageSalePrices(){return _adminPinUnlocked}
+// Confirmation de mot de passe générique (réutilisable) : rejoue la connexion
+// Firebase avec le mot de passe saisi (ou le fallback local ichtus_users),
+// puis appelle onOk() si correct, onCancel() si annulé/fermé sans succès.
+window.confirmPasswordThen=function(message,onOk,onCancel){
+  var old=G('pwd-confirm-modal');if(old)old.remove();
+  var user=window.firebase&&firebase.auth&&firebase.auth().currentUser;
+  var email=user&&user.email;
+  var d=document.createElement('div');d.id='pwd-confirm-modal';d.className='v28-modal';
+  var close=function(cancelled){var m=G('pwd-confirm-modal');if(m)m.remove();if(cancelled&&onCancel)onCancel();};
+  d.innerHTML='<div class="v28-modal-box" style="max-width:380px;text-align:center">'
+    +'<div class="ctitle" style="justify-content:center"><span class="dot"></span>🔐 Confirmation d\'identité</div>'
+    +'<div class="v28-help" style="text-align:left">'+esc(message)+'</div>'
+    +(email?'<div style="font-size:10px;color:var(--acc);margin:.3rem 0">👤 '+esc(email)+'</div>':'')
+    +'<input id="pwd-confirm-input" type="password" class="form-inp" placeholder="Votre mot de passe" style="text-align:center;margin:.6rem 0">'
+    +'<div id="pwd-confirm-err" style="color:var(--dng);font-size:11px;min-height:16px;margin-bottom:.4rem"></div>'
+    +'<div class="v28-row-actions">'
+    +'<button class="sbtn" style="flex:2" id="pwd-confirm-btn">🔓 Confirmer</button>'
+    +'<button class="dbtn" style="flex:1" id="pwd-confirm-cancel">Annuler</button>'
+    +'</div></div>';
+  document.body.appendChild(d);
+  var inp=G('pwd-confirm-input'),errEl=G('pwd-confirm-err');
+  function showErr(msg){errEl.textContent=msg;inp.value='';inp.focus();}
+  function attempt(){
+    if(!inp.value)return showErr('⚠ Veuillez saisir votre mot de passe.');
+    var fbUser=window.firebase&&firebase.auth&&firebase.auth().currentUser;
+    if(!fbUser||!fbUser.email){
+      var localUsers=JSON.parse(localStorage.getItem('ichtus_users')||'[]');
+      var appUser=window.APP&&APP.user&&APP.user.username;
+      var found=localUsers.find(function(u){return u.username===appUser&&u.password===inp.value});
+      if(found){close(false);onOk();}else showErr('❌ Mot de passe incorrect.');
+      return;
+    }
+    var credential=firebase.auth.EmailAuthProvider.credential(fbUser.email,inp.value);
+    fbUser.reauthenticateWithCredential(credential)
+      .then(function(){close(false);onOk();})
+      .catch(function(){showErr('❌ Mot de passe incorrect. Réessayez.');});
+  }
+  G('pwd-confirm-btn').onclick=attempt;
+  G('pwd-confirm-cancel').onclick=function(){close(true);};
+  inp.addEventListener('keydown',function(ev){if(ev.key==='Enter')attempt();});
+  setTimeout(function(){inp.focus();},100);
+};
 window.unlockPriceAdmin=function(){
   var old=G('v28-pin-modal');if(old)old.remove();
   var user=window.firebase&&firebase.auth&&firebase.auth().currentUser;
