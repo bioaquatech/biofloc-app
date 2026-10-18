@@ -2254,7 +2254,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
             <th>Date</th><th style="color:var(--acc)">DO</th><th>pH</th><th>Temp</th>
             <th style="color:var(--warn)">TAN</th><th style="color:var(--dng)">NH₃</th>
             <th style="color:var(--gold)">TAC</th><th style="color:#c084fc">Probiot ml</th>
-            <th>Poids (g)</th><th>Alim réel</th>
+            <th>Poids (g)</th><th>Alim réel (g)</th>
           </tr></thead>
           <tbody id="bstats-tbody"></tbody>
         </table>
@@ -2419,7 +2419,7 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
           <th>Bassin</th>
           <th>Morts</th>
           <th>Poids (g)</th>
-          <th title="Aliment réel servi">Alim réel (kg)</th>
+          <th title="Aliment réel servi">Alim réel (g)</th>
           <th title="Température eau">Temp °C</th>
           <th>pH</th>
           <th title="Oxygène dissous">DO</th>
@@ -3689,7 +3689,13 @@ function saveBassins(){
 window._dirtyBassins = window._dirtyBassins || new Set();
 function saveBassin(i){
   if(!APP.farmCode) return;
-  if(typeof i==='number' && i>=0) window._dirtyBassins.add(i);
+  if(typeof i==='number' && i>=0){
+    window._dirtyBassins.add(i);
+    // Sans cette estampille, resetDailyWaterQuality() (qui vide les champs à
+    // chaque changement de jour) ne voit jamais ce bassin comme "déjà saisi
+    // aujourd'hui" et efface les valeurs au rafraîchissement suivant.
+    const b=APP.state.bassins[i];if(b)b._savedAt=new Date().toISOString();
+  }
   debounce('bassin1',()=>{
     if(!APP.farmCode || !window._dirtyBassins.size) return;
     showSyncing();
@@ -5265,7 +5271,7 @@ async function openBassinStats(bassinName){
         <td style="color:${r.TAC!=null?(r.TAC<50?'var(--dng)':r.TAC<100?'var(--warn)':r.TAC<150?'var(--gold)':'var(--acc)'):'var(--t3)'}">${r.TAC??'—'}</td>
         <td style="color:#c084fc">${r.probiot??'—'}</td>
         <td>${r.poids??'—'}</td>
-        <td>${r.alimReel??'—'}</td>
+        <td>${r.alimReel!=null?Math.round(r.alimReel*1000):'—'}</td>
       </tr>`).join('');
   }
 }
@@ -6560,7 +6566,7 @@ function openSaisieRapide(){
       <td style="font-weight:700;color:var(--acc);padding:3px 5px;white-space:nowrap">${escapeHtml(b.name)}</td>
       <td>${obl('mort','1','45')}</td>
       <td>${opt('poids','0.1','55')}</td>
-      <td>${obl('alimReel','0.001','65',' oninput="srAutoCN(this,'+idx+')"')}</td>
+      <td><input type="number" class="ci" value="${Math.round((b.alimReel||0)*1000)}" step="1" style="width:65px" data-field="alimReel" data-mode="required-g" oninput="srAutoCN(this,${idx})" placeholder="0"></td>
       <td>${opt('temp','0.1','48')}</td>
       <td>${opt('ph','0.01','46')}</td>
       <td>${opt('DO','0.1','46')}</td>
@@ -6618,7 +6624,7 @@ function srAutoCN(inp,idx){
   const tanInp=tr.querySelector('[data-field="TAN"]');
   const carbInp=G('sr-carb-'+idx);if(!carbInp)return;
   const b=APP.state.bassins[idx];if(!b)return;
-  const alimKg=parseFloat(alimInp?.value)||b.alimReel||0;
+  const alimKg=(parseFloat(alimInp?.value)||0)/1000||b.alimReel||0;
   const tan=parseFloat(tanInp?.value)??b.TAN;
   const ft=getRationEntry(b.poids||1);
   const prot=ft.protein/100||0.32;
@@ -6641,11 +6647,14 @@ async function saveSaisieRapide(){
     const b=APP.state.bassins[idx];if(!b)continue;
     const getInp=(field)=>row.querySelector('[data-field="'+field+'"]');
     const readVal=(field)=>{const inp=getInp(field);return inp?(inp.value===''?null:+inp.value):null;};
-    const isRequired=(field)=>getInp(field)?.dataset.mode==='required';
+    const isRequired=(field)=>(getInp(field)?.dataset.mode||'').startsWith('required');
     // required (alimReel, mort) → 0 si vide
     // optional (tout le reste)  → null si vide (effacement explicite = supprimer la mesure)
+    // alimReel se saisit en grammes dans ce formulaire, mais se stocke en kg
+    // (comme partout ailleurs dans l'app : mouvements de stock, CUMP, exports).
     ['alimReel','mort','poids','temp','ph','DO','NH3','NO2','TAN','TAC','imhoff','probiot','carb','basifiant','salinite','selAjoute'].forEach(field=>{
-      const v=readVal(field);
+      let v=readVal(field);
+      if(field==='alimReel'&&v!=null)v=v/1000;
       b[field]=isRequired(field)?(v??0):v;
     });
     // Calcule et fige sur le relevé le bloc salinité/chlorure (avec l'étalonnage
@@ -9386,7 +9395,7 @@ function showNotifModal(notifs){
       </div>
       <div style="font-size:10px;color:var(--t2)">Date modifiée : <strong style="color:var(--warn)">${n.dateModified}</strong></div>
       <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.35rem">
-        ${d.alimReel!=null?`<span style="font-size:10px;background:rgba(0,201,167,.1);padding:2px 7px;border-radius:8px;color:var(--acc)">Alim: ${d.alimReel} kg</span>`:''}
+        ${d.alimReel!=null?`<span style="font-size:10px;background:rgba(0,201,167,.1);padding:2px 7px;border-radius:8px;color:var(--acc)">Alim: ${Math.round(d.alimReel*1000)} g</span>`:''}
         ${d.temp!=null?`<span style="font-size:10px;background:rgba(61,142,245,.1);padding:2px 7px;border-radius:8px;color:var(--acc2)">Temp: ${d.temp}°C</span>`:''}
         ${d.ph!=null?`<span style="font-size:10px;background:rgba(61,142,245,.1);padding:2px 7px;border-radius:8px;color:var(--acc2)">pH: ${d.ph}</span>`:''}
         ${d.DO!=null?`<span style="font-size:10px;background:rgba(61,142,245,.1);padding:2px 7px;border-radius:8px;color:var(--acc2)">DO: ${d.DO}</span>`:''}
@@ -10954,7 +10963,7 @@ function exportFicheCollectePDF(){
   const dateStr=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const farm=(APP.farmName||APP.farmCode||'Ferme');
   const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const head=['Bassin','Nb Actuel','Poids (g)','Aliment','Théo (kg)','Alim Réel (kg)','Temp (°C)','pH','DO (mg/L)','NH₃','NO₂','TAN','TAC','Imhoff','PWA (mL)','Mélasse (mL)','Basifiant (g)','Morts','Observations'];
+  const head=['Bassin','Nb Actuel','Poids (g)','Aliment','Théo (g)','Alim Réel (g)','Temp (°C)','pH','DO (mg/L)','NH₃','NO₂','TAN','TAC','Imhoff','PWA (mL)','Mélasse (mL)','Basifiant (g)','Morts','Observations'];
   const thead='<tr>'+head.map((h,i)=>'<th'+(i>=5?' class="w"':'')+'>'+h+'</th>').join('')+'</tr>';
   let rows=bassins.map(b=>{
     const c=typeof calcBassin==='function'?calcBassin(b):{};
@@ -10963,7 +10972,7 @@ function exportFicheCollectePDF(){
       +'<td>'+(c.nbActuel!=null?c.nbActuel:((b.nbInit||0)-(b.mort||0)))+'</td>'
       +'<td>'+(b.poids!=null?b.poids:'')+'</td>'
       +'<td>'+esc((ft&&ft.aliment)||b.feedId||'')+'</td>'
-      +'<td>'+(c.alimTheo!=null?c.alimTheo.toFixed(3):'')+'</td>';
+      +'<td>'+(c.alimTheo!=null?Math.round(c.alimTheo*1000):'')+'</td>';
     let blanks='';for(let k=0;k<14;k++)blanks+='<td class="w"></td>';
     return '<tr>'+pre+blanks+'</tr>';
   }).join('');
@@ -15754,7 +15763,7 @@ if(window.fillPwaBassinSelect)window.fillPwaBassinSelect();
     var rows=bs.filter(function(b){return b.statut==='Actif';}).map(function(b){
       var c=typeof calcBassin==='function'?calcBassin(b):{};
       return '<tr><td>'+esc(b.name)+'</td><td>'+n(b.vol).toFixed(1)+'</td><td>'+n(b.poids).toFixed(0)+'</td><td>'+(c.nbVivant||n(b.nbInit)).toFixed(0)+'</td>'
-        +'<td>'+(c.biomasse||0).toFixed(1)+'</td><td>'+(c.alimTheo||0).toFixed(0)+'</td><td>'+(b.alimReel||0)+'</td>'
+        +'<td>'+(c.biomasse||0).toFixed(1)+'</td><td>'+Math.round((c.alimTheo||0)*1000)+'</td><td>'+Math.round((b.alimReel||0)*1000)+'</td>'
         +'<td>'+(b.temp||'—')+'</td><td>'+(b.ph||'—')+'</td><td>'+(b.DO||'—')+'</td><td>'+(b.NH3||'—')+'</td>'
         +'<td>'+(b.statut||'')+'</td></tr>';
     }).join('');
@@ -15773,7 +15782,7 @@ if(window.fillPwaBassinSelect)window.fillPwaBassinSelect();
     var rows=[header];
     bs.filter(function(b){return b.statut==='Actif';}).forEach(function(b){
       var c=typeof calcBassin==='function'?calcBassin(b):{};
-      rows.push([b.name,+n(b.vol).toFixed(1),+n(b.poids),+(c.nbVivant||n(b.nbInit)),+(c.biomasse||0).toFixed(1),+(c.alimTheo||0),(b.alimReel||0),(b.temp||''),(b.ph||''),(b.DO||''),(b.NH3||''),(b.statut||''),(b.cycle||'')]);
+      rows.push([b.name,+n(b.vol).toFixed(1),+n(b.poids),+(c.nbVivant||n(b.nbInit)),+(c.biomasse||0).toFixed(1),Math.round((c.alimTheo||0)*1000),Math.round((b.alimReel||0)*1000),(b.temp||''),(b.ph||''),(b.DO||''),(b.NH3||''),(b.statut||''),(b.cycle||'')]);
     });
     downloadXLSX([{name:'Bassins',rows:rows}],'bassins_'+new Date().toISOString().slice(0,10)+'.xlsx');
   };
