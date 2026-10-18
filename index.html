@@ -1115,7 +1115,8 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
             <th style="padding:6px 10px;text-align:left;border-bottom:2px solid var(--b2)">Stade / Poids max</th>
             <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--gold)">Aliment</th>
             <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--acc)">Fréq./jour</th>
-            <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--acc2)">% Biomasse</th>
+            <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--acc2)" title="Taux de référence tel que saisi dans la fiche aliment">% Biomasse (référence)</th>
+            <th style="padding:6px 10px;border-bottom:2px solid var(--b2);color:var(--acc)" title="Taux réellement appliqué après correction %CP (32/%CP du type)">% Biomasse (appliqué)</th>
           </tr></thead>
           <tbody id="ref-feed-tbody"></tbody>
         </table>
@@ -3088,8 +3089,8 @@ const KOUDIJS_PROFILE={
   nom:'Koudijs AKF',
   types:[
     // K4–K6b : Grower 9008 (32% CP) — cycle démarre S0 alevins 5g
-    {id:'K4', name:'9008 Floating 2.0mm', granule:'2.0mm',  protein:32, maxPoids:25,   rate:0.036, freq:6, color:'#60a5fa', stage:'5–25 g'},
-    {id:'K4b',name:'9008 Floating 2.0mm', granule:'2.0mm',  protein:32, maxPoids:50,   rate:0.032, freq:5, color:'#38bdf8', stage:'25–50 g'},
+    {id:'K4', name:'9008 Floating 2.0mm', granule:'2.0mm',  protein:40, maxPoids:25,   rate:0.036, freq:6, color:'#60a5fa', stage:'5–25 g'},
+    {id:'K4b',name:'9008 Floating 2.0mm', granule:'2.0mm',  protein:40, maxPoids:50,   rate:0.032, freq:5, color:'#38bdf8', stage:'25–50 g'},
     {id:'K5', name:'9008 Floating 3.0mm', granule:'3.0mm',  protein:32, maxPoids:100,  rate:0.023, freq:4, color:'#f59e0b', stage:'50–100 g'},
     {id:'K5b',name:'9008 Floating 3.0mm', granule:'3.0mm',  protein:32, maxPoids:200,  rate:0.020, freq:4, color:'#fbbf24', stage:'100–200 g'},
     {id:'K6', name:'9008 Floating 4.5mm', granule:'4.5mm',  protein:32, maxPoids:400,  rate:0.016, freq:3, color:'#f87171', stage:'200–400 g'},
@@ -8646,7 +8647,7 @@ function renderRationnement(){
       +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:10px;color:var(--t3)">Ration journalière</div><div style="font-size:18px;font-weight:800;color:var(--acc)">'+alimTheo.toFixed(3)+'<span style="font-size:11px"> kg</span></div></div>'
       +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:10px;color:var(--t3)">Fréquence</div><div style="font-size:18px;font-weight:800;color:var(--acc2)">'+ratEntry.freq+'<span style="font-size:11px"> repas/j</span></div></div>'
       +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:10px;color:var(--t3)">Ration/repas</div><div style="font-size:18px;font-weight:800;color:var(--gold)">'+(alimTheo/ratEntry.freq*1000).toFixed(0)+'<span style="font-size:11px"> g</span></div></div>'
-      +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:10px;color:var(--t3)">% Biomasse</div><div style="font-size:18px;font-weight:800;color:var(--purp)">'+(ratEntry.pct*100).toFixed(1)+'<span style="font-size:11px">%</span></div></div>'
+      +'<div style="background:var(--inp);border-radius:8px;padding:.5rem;text-align:center" title="Taux réellement appliqué, après correction %CP ('+REF_PROTEIN_PCT+'/'+c.ftProtein+') et température — référence fiche aliment : '+(ratEntry.pct*100).toFixed(1)+'%"><div style="font-size:10px;color:var(--t3)">% Biomasse (appliqué)</div><div style="font-size:18px;font-weight:800;color:var(--purp)">'+(c.rat*100).toFixed(1)+'<span style="font-size:11px">%</span></div></div>'
       +'</div>'
       // Mélasse préventive
       +'<div style="background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.2);border-radius:8px;padding:.5rem .7rem">'
@@ -12457,7 +12458,8 @@ function renderReferenceRationTable(){
         +'<td style="padding:6px 10px;font-weight:700">'+range+(f.stage?' ('+escapeHtml(f.stage)+')':'')+'</td>'
         +'<td style="padding:6px 10px;color:'+(f.color||'#60a5fa')+';font-weight:700">'+escapeHtml(getFeedFullName(f))+'</td>'
         +'<td style="padding:6px 10px;text-align:center;font-weight:800;color:var(--acc);font-size:14px">'+(f.freq||'—')+'</td>'
-        +'<td style="padding:6px 10px;text-align:center">'+(f.rate!=null?(f.rate*100).toFixed(1)+'%':'—')+'</td></tr>';
+        +'<td style="padding:6px 10px;text-align:center">'+(f.rate!=null?(f.rate*100).toFixed(1)+'%':'—')+'</td>'
+        +'<td style="padding:6px 10px;text-align:center;color:var(--acc)">'+(f.rate!=null?((f.rate*(REF_PROTEIN_PCT/(f.protein>0?f.protein:REF_PROTEIN_PCT)))*100).toFixed(1)+'%':'—')+(f.protein>0&&f.protein!==REF_PROTEIN_PCT?' <small style="color:var(--t3)">('+f.protein+'%CP)</small>':'')+'</td></tr>';
     }).join(''):'<tr><td colspan="4" style="padding:6px 10px;text-align:center;color:var(--t3)">Aucun aliment configuré</td></tr>';
   }
   const cnTb=G('ref-cn-tbody');
@@ -12478,9 +12480,12 @@ function loadSuppliersFromFirestore(){
   if(!APP.farmCode)return;
   farmCol('suppliers').get().then(async snap=>{
     if(!snap.empty){
-      const customs=snap.docs.map(d=>({id:d.id,...d.data()}));
-      // Garder Koudijs en premier, ajouter les customs
-      SUPPLIERS=[JSON.parse(JSON.stringify(KOUDIJS_PROFILE)),...customs.filter(s=>s.id!=='koudijs')];
+      const docs=snap.docs.map(d=>({id:d.id,...d.data()}));
+      // Koudijs modifié par la ferme (ex: %CP K4/K4b ajusté) fait foi s'il existe,
+      // sinon repli sur les valeurs d'usine — sinon toute correction apportée au
+      // profil par défaut était silencieusement perdue à chaque reconnexion.
+      const savedKoudijs=docs.find(s=>s.id==='koudijs');
+      SUPPLIERS=[savedKoudijs||JSON.parse(JSON.stringify(KOUDIJS_PROFILE)),...docs.filter(s=>s.id!=='koudijs')];
     }
     refreshSupplierSelect();
     // Réappliquer le fournisseur choisi pour cette ferme (sinon on retombe sur Koudijs à chaque rechargement)
@@ -12703,7 +12708,7 @@ async function saveSupplier(){
   const idx=SUPPLIERS.findIndex(s=>s.id===sup.id);
   if(idx>=0)SUPPLIERS[idx]=sup;else SUPPLIERS.push(sup);
   // Sauvegarder dans Firestore si ferme connectée
-  if(APP.farmCode&&sup.id!=='koudijs'){
+  if(APP.farmCode){
     try{
       await farmCol('suppliers').doc(sup.id).set(sup);
     }catch(e){console.warn('Supplier save:',e);}
