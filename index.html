@@ -5775,6 +5775,32 @@ function getAnalyseRules(speciesId){
   return {tilapia:ANALYSE_RULES_TILAPIA,clarias:ANALYSE_RULES_CLARIAS,carpe:ANALYSE_RULES_CARPE,crevette:ANALYSE_RULES_CREVETTE}[id]||ANALYSE_RULES_TILAPIA;
 }
 
+// Interprétation du NO2 intégrant la protection chlorure (rapport Cl⁻/NO₂),
+// au lieu de lire le NO2 isolément : un NO2 élevé n'est pas forcément un
+// risque réel si le rapport Cl⁻/NO₂ est suffisant (≥30 — branchies protégées),
+// et inversement un rapport insuffisant (<30) doit être signalé même si le
+// NO2 seul paraît correct. Retombe sur l'alerte NO2 classique si la salinité
+// n'est pas renseignée ou qu'aucun étalonnage n'est en vigueur.
+function getIntegratedNO2Alert(b,speciesId,calibOverride){
+  const no2=b.NO2;
+  if(no2===null||no2===undefined)return null;
+  const baseAlert=getAlertForParam('NO2',no2,speciesId);
+  const calib=calibOverride!==undefined?calibOverride:(typeof getActiveSalinityCalib==='function'?getActiveSalinityCalib():null);
+  const salBlock=calib&&typeof computeSalinityBlock==='function'?computeSalinityBlock(b.salinite,calib,no2):null;
+  if(!salBlock||salBlock.chlorureMgL==null)return baseAlert; // salinité non renseignée → repli NO2 seul
+  const rapport=salBlock.rapportClNo2,stat=salBlock.statut;
+  const statLabel=stat.label.replace(/^\S+\s/,'');
+  if(rapport===Infinity||rapport>=30){
+    // Branchies protégées par le chlorure : le NO2 seul aurait pu déclencher
+    // une fausse alerte — on neutralise, c'est tout l'intérêt de l'intégration.
+    return null;
+  }
+  const niveauMap={vigilance:'ALERTE',alerte:'URGENCE',urgence:'URGENCE'};
+  return{param:'NO2',label:'NO₂ — protection Cl⁻ insuffisante',unit:'mg/L',icon:'🚨',value:no2,
+    level:niveauMap[stat.niveau]||(baseAlert?baseAlert.level:'ALERTE'),color:stat.color,
+    interpretation:'NO₂ à '+no2+' mg/L avec un rapport Cl⁻/NO₂ de seulement '+(isFinite(rapport)?rapport.toFixed(1):'—')+' ('+statLabel+') : protection des branchies insuffisante malgré le sel déjà présent.',
+    actions:[stat.action].concat(baseAlert?baseAlert.actions:[])};
+}
 function getAlertForParam(param, value, speciesId){
   if(value===null||value===undefined)return null;
   const v=parseFloat(value);if(isNaN(v))return null;
@@ -5828,12 +5854,12 @@ function openAnalyse(){
   selected.forEach(b=>{
     const alerts=[];
     analyseParams.forEach(p=>{
-      const alert=getAlertForParam(p,b[p]);
+      const alert=p==='NO2'?getIntegratedNO2Alert(b):getAlertForParam(p,b[p]);
       if(alert)alerts.push(alert);
     });
     const ok=analyseParams.filter(p=>{
       const v=b[p];if(v===null||v===undefined)return false;
-      return !getAlertForParam(p,v);
+      return p==='NO2'?!getIntegratedNO2Alert(b):!getAlertForParam(p,v);
     });
     const paramSaisis=analyseParams.filter(p=>b[p]!==null&&b[p]!==undefined).length;
     if(paramSaisis===0)return;
@@ -6034,10 +6060,15 @@ function auditFarm(ctx){
   const waterParams=['DO','ph','temp','NH3','NO2','TAN','TAC','imhoff',...extraKeys];
 
   // ── Qualité d'eau : tous les bassins actifs, pas de sélection manuelle ──
+  // Étalonnage salinité : celui de la ferme auditée (ctx.salinityCalibHistory)
+  // si fourni — sinon celui de la ferme connectée (cas de l'audit local).
+  const salCalib=ctx&&ctx.salinityCalibHistory!==undefined
+    ?getActiveSalinityCalib(ctx.salinityCalibHistory)
+    :(typeof getActiveSalinityCalib==='function'?getActiveSalinityCalib():null);
   const waterIssues=[];
   let noDataCount=0;
   bassinsActifs.forEach(b=>{
-    const alerts=waterParams.map(p=>getAlertForParam(p,b[p],sid)).filter(Boolean);
+    const alerts=waterParams.map(p=>p==='NO2'?getIntegratedNO2Alert(b,sid,salCalib):getAlertForParam(p,b[p],sid)).filter(Boolean);
     const paramSaisis=waterParams.filter(p=>b[p]!==null&&b[p]!==undefined).length;
     if(paramSaisis===0){noDataCount++;return;}
     if(alerts.length)waterIssues.push({bassin:b,alerts});
@@ -6195,12 +6226,13 @@ async function runGlobalAudit(){
     const rows=await Promise.all(farmDocs.map(async f=>{
       try{
         const col=(c)=>db.collection('farms').doc(f.id).collection(c);
-        const [bS,inS,stS,mvS,invS]=await Promise.all([
+        const [bS,inS,stS,mvS,invS,salS]=await Promise.all([
           col('bassins').get(),
           col('intrants').get().catch(()=>({docs:[]})),
           col('stock_entries').get().catch(()=>({docs:[]})),
           col('stock_movements').get().catch(()=>({docs:[]})),
           col('inventaires').orderBy('date','desc').limit(1).get().catch(()=>({empty:true})),
+          col('config').doc('salinite').get().catch(()=>({exists:false})),
         ]);
         const r=auditFarm({
           bassins:bS.docs.map(d=>d.data()),
@@ -6208,7 +6240,8 @@ async function runGlobalAudit(){
           stockEntries:stS.docs.map(d=>d.data()),
           stockMovements:mvS.docs.map(d=>d.data()),
           speciesId:f.data.speciesId||'tilapia',
-          latestInventaire:invS.empty?null:invS.docs[0].data()
+          latestInventaire:invS.empty?null:invS.docs[0].data(),
+          salinityCalibHistory:(salS.exists&&Array.isArray(salS.data().history))?salS.data().history:[]
         });
         return{farmCode:f.id,farmName:f.data.name||f.id,ok:true,...r};
       }catch(e){
@@ -9913,9 +9946,9 @@ const SALINITE_SOLUTION_DEFAUT_GL=3; // 3 g de sel de cuisine dans 1 L d'eau de 
 // Historique d'étalonnage du moniteur de salinité (niveau ferme). Chaque entrée :
 // {blancPpm, standardPpm, date, operator, note, solutionLecturePpm?, solutionGL?}
 function getSalinityCalibHistory(){return (window.APP&&APP.state&&APP.state.salinityCalibHistory)||[];}
-function getActiveSalinityCalib(){
-  const h=getSalinityCalibHistory();
-  if(!h.length)return null;
+function getActiveSalinityCalib(history){
+  const h=history||getSalinityCalibHistory();
+  if(!h||!h.length)return null;
   return h.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
 }
 function salinityCalibAgeDays(calib){
