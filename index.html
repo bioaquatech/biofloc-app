@@ -10301,6 +10301,38 @@ function addSuivi(){
   }
 }
 function removeSuivi(id){APP.state.suivi=APP.state.suivi.filter(r=>r.id!==id);deleteSuiviDoc(id);renderSuivi();renderChart();}
+
+// ═══════════════════════════════════════════════
+// COURBE CIBLE DE CROISSANCE — modèle de Gompertz (courbe en S), pas une droite.
+// La littérature sur le tilapia (y compris GIFT) ajuste systématiquement des
+// modèles sigmoïdes (Gompertz, logistique, von Bertalanffy) à la croissance
+// pondérale — jamais un gain constant par jour. Une droite surestime la
+// croissance en tout début de cycle (un alevin de 5 g ne gagne pas déjà
+// gmqCible g/jour) et la sous-estime en milieu de cycle.
+// Calibrée pour passer par les deux mêmes bornes que l'ancien modèle linéaire
+// (poidsDepart au jour 0, poidsDepart + gmqCible×dureeCycle au dernier jour du
+// cycle), donc les objectifs globaux ne changent pas — seule la trajectoire
+// entre les deux change.
+function getGrowthCycleDays(){
+  // Durée du cycle = dernier palier fini du calendrier C/N actif (ex: S22 → 154 j),
+  // repli sur 22 semaines si non configuré.
+  const weeks=(typeof CN_SCHEDULE!=='undefined'&&CN_SCHEDULE.length)
+    ?CN_SCHEDULE.reduce((m,r)=>r.maxWeek!=null?Math.max(m,r.maxWeek):m,22)
+    :22;
+  return weeks*7;
+}
+function getGrowthTargetWeight(joursCycle){
+  const s=sp();
+  const P0=s.poidsDepart,G2=s.gmqCible;
+  const cycleDays=getGrowthCycleDays();
+  const PEND=P0+G2*cycleDays;
+  if(!(P0>0)||!(PEND>P0)||!(cycleDays>0))return P0+G2*Math.max(0,joursCycle); // repli linéaire si données insuffisantes
+  const A=PEND*1.1076; // asymptote légèrement au-dessus du poids cible (même ratio que la courbe validée)
+  const b=Math.log(A/P0);
+  const k=Math.log(b/(-Math.log(PEND/A)))/cycleDays;
+  const t=Math.max(0,joursCycle);
+  return A*Math.exp(-b*Math.exp(-k*t));
+}
 function renderSuivi(){
   const tb=G('sc-tbody');if(!tb)return;
   const fl=G('sc-filter')?.value||'';
@@ -10316,7 +10348,7 @@ function renderSuivi(){
     // poids de départ si la première pesée a lieu après le jour 0 du cycle.
     const debutCycle=b&&(b.startDate||b.dateDebut||b.debut||b.dateStart);
     const joursCycle=debutCycle?(new Date(r.date)-new Date(debutCycle))/(86400000):days;
-    const cible=sp().poidsDepart+sp().gmqCible*Math.max(0,joursCycle);
+    const cible=getGrowthTargetWeight(joursCycle);
     const gmq=prev?(r.poids-prev.poids)/Math.max(1,(new Date(r.date)-new Date(prev.date))/(86400000)):0;
     const c=b?calcBassin(b):{alimTheo:0};
     const alimCum=c.alimTheo*1000*days,gain=first?r.poids-first.poids:0;
@@ -10354,7 +10386,7 @@ function renderChart(){
     return br[0]?.date||null;
   };
   const maxD=Math.max(...APP.state.suivi.map(r=>{const fd=debutBassin(r.bassin);return fd?(new Date(r.date)-new Date(fd))/(86400000):0;}),30);
-  ds.push({label:`Cible +${sp().gmqCible}g/j`,data:Array.from({length:Math.ceil(maxD)+1},(_,i)=>({x:i,y:sp().poidsDepart+sp().gmqCible*i})),borderColor:'#f5a623',backgroundColor:'transparent',pointRadius:0,showLine:true,borderDash:[5,4],borderWidth:1.5,tension:0});
+  ds.push({label:`Cible (courbe en S, ${sp().gmqCible}g/j moy.)`,data:Array.from({length:Math.ceil(maxD)+1},(_,i)=>({x:i,y:getGrowthTargetWeight(i)})),borderColor:'#f5a623',backgroundColor:'transparent',pointRadius:0,showLine:true,borderDash:[5,4],borderWidth:1.5,tension:.2});
   const show=fb?[fb]:[...new Set(APP.state.suivi.map(r=>r.bassin))];
   show.forEach((bn,ci)=>{
     const rows=APP.state.suivi.filter(r=>r.bassin===bn).sort((a,b)=>a.date.localeCompare(b.date));
