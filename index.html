@@ -1292,11 +1292,13 @@ input[type=date].di2::-webkit-calendar-picker-indicator{filter:invert(0) sepia(1
               <th style="color:var(--gold)">Aliment (kg)<br><small>cette semaine</small></th>
               <th style="color:var(--dng)">Morts<br><small>cette sem.</small></th>
               <th style="color:var(--acc)">Survie %</th>
-              <th style="color:var(--acc)">FCR cumulé</th>
+              <th style="color:var(--acc2)" title="FCR calculé uniquement entre cette pesée et la précédente — plus réactif mais plus sensible aux erreurs de pesée">FCR semaine</th>
+              <th style="color:var(--acc)" title="FCR depuis le début du cycle — indicateur de référence, plus stable">FCR cumulé</th>
               <th style="color:var(--t3)">FCR réf.</th>
               <th style="color:var(--warn)">Écart</th>
+              <th>Interprétation</th>
             </tr></thead>
-            <tbody id="fcr-tbody"><tr><td colspan="9" style="text-align:center;color:var(--t3);padding:1rem">Sélectionnez un bassin pour commencer le suivi</td></tr></tbody>
+            <tbody id="fcr-tbody"><tr><td colspan="11" style="text-align:center;color:var(--t3);padding:1rem">Sélectionnez un bassin pour commencer le suivi</td></tr></tbody>
           </table>
         </div>
         <div style="margin-top:.5rem;font-size:9px;color:var(--t3);line-height:1.6">
@@ -10356,9 +10358,13 @@ function renderSuivi(){
     const cible=getGrowthTargetWeight(joursCycle,b&&b.poidsInitial);
     const gmq=prev?(r.poids-prev.poids)/Math.max(1,(new Date(r.date)-new Date(prev.date))/(86400000)):0;
     const c=b?calcBassin(b):{alimTheo:0};
-    const alimCum=c.alimTheo*1000*days,gain=first?r.poids-first.poids:0;
-    const fcr=gain>0?(alimCum/gain):null;
-    const fcrH=fcr===null?'—':fcr>sp().fcrAlerte?`<span class="fcr-bad">${fmt(fcr,2)}</span>`:`<span class="fcr-ok">${fmt(fcr,2)}</span>`;
+    // Pas de calcul fiable du FCR ici : il faudrait l'aliment RÉEL distribué
+    // chaque jour depuis la 1ʳᵉ pesée, pas la ration théorique d'AUJOURD'HUI
+    // (calculée sur le poids actuel) extrapolée sur tous les jours écoulés —
+    // c'est ce qui produisait des FCR absurdes (ex: 500+). Le vrai calcul,
+    // basé sur l'aliment réellement saisi semaine par semaine, est fait dans
+    // le Moniteur FCR & Survie ci-dessous — voir cette colonne.
+    const fcrH='<span style="color:var(--t3)" title="Non calculable ici de façon fiable — voir Moniteur FCR &amp; Survie ci-dessous">—</span>';
     // Écart au programme de croissance : la table K4/K5/K6 et le calendrier C/N
     // sont calés sur le poids réel du bassin — un décrochage prolongé vs la
     // cible signale que le type d'aliment/dosage mélasse en cours n'est
@@ -13599,12 +13605,70 @@ const FCR_REF_OBJ=[
 ];
 
 // État FCR tracker (par bassin)
-let FCR_DATA={}; // {bassinName: [{week, alimKg, morts, poidsMoyen}]}
+let FCR_DATA={}; // {bassinName: [{week, alimKg, alimKgManual, morts, poidsMoyen}]}
+let FCR_ALIM_AUTO_LOADED={}; // {bassinName: true} — une seule tentative de pré-remplissage par bassin/session
 
 function initFCRBassin(name){
   if(!FCR_DATA[name])FCR_DATA[name]=Array.from({length:22},(_,i)=>({week:i+1,alimKg:null,morts:0,poidsMoyen:null}));
 }
 
+// Pré-remplit alimKg par semaine à partir de l'aliment réel déjà saisi
+// quotidiennement (Config Bassins / Saisie rapide), archivé jour par jour dans
+// farmCol('daily'). Semaine i = [dateDébutBassin + 7×(i-1) ; +6 jours]. Ne
+// touche jamais une case déjà corrigée manuellement par l'opérateur
+// (w.alimKgManual) — l'auto-remplissage ne doit jamais écraser une saisie.
+async function autoFillFCRAlimentFromDaily(bassin){
+  const bRef=APP.state.bassins.find(b=>b.name===bassin);
+  const debut=bRef&&(bRef.startDate||bRef.dateDebut||bRef.debut||bRef.dateStart);
+  if(!debut||!APP.farmCode||typeof farmCol!=='function'){FCR_ALIM_AUTO_LOADED[bassin]=true;return;}
+  initFCRBassin(bassin);
+  const data=FCR_DATA[bassin];
+  const debutDate=new Date(debut);
+  const finDate=new Date(debutDate.getTime()+22*7*86400000);
+  const dStr=debutDate.toISOString().slice(0,10);
+  const yStr=finDate.toISOString().slice(0,10);
+  try{
+    const snap=await farmCol('daily')
+      .where(firebase.firestore.FieldPath.documentId(),'>=',dStr)
+      .where(firebase.firestore.FieldPath.documentId(),'<=',yStr)
+      .get();
+    const byDate={};
+    snap.forEach(doc=>{
+      const d=doc.data();
+      const b=(d.bassins||[]).find(x=>x.name===bassin);
+      if(b)byDate[doc.id]=Number(b.alimReel)||0;
+    });
+    data.forEach((w,i)=>{
+      if(w.alimKgManual)return;
+      const weekStart=new Date(debutDate.getTime()+i*7*86400000);
+      let sum=0,has=false;
+      for(let d2=0;d2<7;d2++){
+        const ds=new Date(weekStart.getTime()+d2*86400000).toISOString().slice(0,10);
+        if(byDate[ds]!=null){sum+=byDate[ds];has=true;}
+      }
+      if(has)w.alimKg=+sum.toFixed(3);
+    });
+  }catch(e){console.warn('[FCR] auto-remplissage aliment:',e.message);}
+  FCR_ALIM_AUTO_LOADED[bassin]=true;
+  renderFCRModule();
+}
+
+// Interprétation du FCR pour guider l'opérateur — TOUJOURS relative à la
+// référence DE LA SEMAINE EN COURS (FCR_REF_OBJ), jamais à un seuil absolu
+// fixe : le FCR est normalement élevé en tout début de cycle (≈1,9 en S1,
+// alevins) et descend progressivement vers son creux d'efficacité (≈1,0 en
+// S9-S10) avant de remonter en finition. Un FCR de 1,8 en semaine 1 est
+// normal, pas une alerte — seul un écart à CE que la référence attend à CE
+// stade précis doit déclencher un signal. Le seuil absolu ne sert que de
+// repli quand aucune référence n'est disponible pour la semaine.
+function getFCRInterpretation(fcrC, ecart){
+  if(fcrC==null)return{label:'En attente de données',color:'var(--t3)',action:''};
+  if(ecart==null)return{label:fcrC<=1.3?'✅ Correct':'⚠️ À surveiller (pas de référence pour cette semaine)',color:fcrC<=1.3?'var(--acc)':'var(--warn)',action:''};
+  const e=parseFloat(ecart);
+  if(e>0.3)return{label:'🔴 FCR nettement dégradé vs attendu à ce stade',color:'var(--dng)',action:'Écart de +'+ecart+' vs la référence de CETTE semaine (qui tient déjà compte du fait que le FCR est normalement plus élevé en début de cycle) — vérifier gaspillage d\'aliment, qualité d\'eau (DO/NO2/TAN) et état sanitaire.'};
+  if(e>0.1)return{label:'⚠️ Léger écart vs attendu',color:'var(--warn)',action:'Surveiller le gaspillage et la fréquence des repas.'};
+  return{label:'✅ Conforme à l\'objectif de cette phase',color:'var(--acc)',action:''};
+}
 function getFCRWeek(bassinData, week, nbInit){
   // FCR semaine = aliment semaine / gain biomasse semaine
   const w=bassinData[week-1];
@@ -13632,14 +13696,15 @@ function getFCRCumul(bassinData, upToWeek, nbInit, poidsDepart){
 function renderFCRModule(){
   const bassin=G('fcr-bassin')?.value||'';
   const el=G('fcr-tbody');if(!el)return;
-  if(!bassin){el.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:1rem">Sélectionnez un bassin</td></tr>';return;}
+  if(!bassin){el.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--t3);padding:1rem">Sélectionnez un bassin</td></tr>';return;}
   initFCRBassin(bassin);
+  if(!FCR_ALIM_AUTO_LOADED[bassin])autoFillFCRAlimentFromDaily(bassin);
   const data=FCR_DATA[bassin];
   // Nombre réel d'alevins mis en charge dans CE bassin (pas une constante fixe
   // pour toute la ferme) — repli sur 570 uniquement si le bassin est introuvable.
   const bRef=APP.state.bassins.find(b=>b.name===bassin);
   const vivants570=(bRef&&bRef.nbInit>0)?bRef.nbInit:570;
-  const poidsDepart=(bRef&&bRef.poidsDepart>0)?bRef.poidsDepart:(sp().poidsDepart||5);
+  const poidsDepart=(bRef&&bRef.poidsInitial>0)?bRef.poidsInitial:(sp().poidsDepart||5);
   const nbLabel=G('fcr-module-nbinit');if(nbLabel)nbLabel.textContent=vivants570+' alevins/bassin'+(bRef?'':' (bassin introuvable — valeur par défaut)');
   let survivants=vivants570;
   el.innerHTML=data.map((w,i)=>{
@@ -13651,19 +13716,23 @@ function renderFCRModule(){
     const fcrColor=fcrC?fcrC>1.5?'var(--dng)':fcrC>1.3?'var(--warn)':'var(--acc)':'var(--t3)';
     const ecart=fcrC&&ref?(fcrC-ref.fcr).toFixed(2):null;
     const ecartColor=ecart?(parseFloat(ecart)>0.2?'var(--dng)':parseFloat(ecart)>0?'var(--warn)':'var(--acc)'):'var(--t3)';
+    const interp=getFCRInterpretation(fcrC,ecart);
     return `<tr>
       <td style="color:var(--t3);font-weight:700">S${i+1}</td>
       <td style="font-size:9px;color:var(--t3)">${ref.phase}</td>
       <td><input type="number" class="ci" style="width:65px;font-size:10px" value="${w.poidsMoyen||''}" placeholder="—" step="0.1"
         onchange="FCR_DATA['${escapeHtml(bassin)}'][${i}].poidsMoyen=this.value?+this.value:null;renderFCRModule()"></td>
       <td><input type="number" class="ci" style="width:65px;font-size:10px" value="${w.alimKg||''}" placeholder="—" step="0.01"
-        onchange="FCR_DATA['${escapeHtml(bassin)}'][${i}].alimKg=this.value?+this.value:null;renderFCRModule()"></td>
+        title="${w.alimKgManual?'Corrigé manuellement':'Pré-rempli depuis l\'aliment réel saisi quotidiennement — modifiable'}"
+        onchange="FCR_DATA['${escapeHtml(bassin)}'][${i}].alimKg=this.value?+this.value:null;FCR_DATA['${escapeHtml(bassin)}'][${i}].alimKgManual=true;renderFCRModule()"></td>
       <td><input type="number" class="ci" style="width:45px;font-size:10px" value="${w.morts||0}" min="0"
         onchange="FCR_DATA['${escapeHtml(bassin)}'][${i}].morts=+this.value||0;renderFCRModule()"></td>
       <td style="font-family:var(--mono);color:${survie<85?'var(--dng)':survie<90?'var(--warn)':'var(--acc)'}">${survie}%</td>
+      <td style="font-family:var(--mono);color:var(--acc2)" title="Entre cette pesée et la précédente">${fcrS?fcrS.toFixed(2):'—'}</td>
       <td style="font-family:var(--mono);color:${fcrColor}">${fcrC?fcrC.toFixed(2):'—'}</td>
       <td style="font-size:9px;color:var(--gold)">${ref.fcr.toFixed(2)}</td>
       <td style="font-size:9px;color:${ecartColor}">${ecart!==null?(parseFloat(ecart)>0?'+':'')+ecart:'—'}</td>
+      <td style="font-size:9px;color:${interp.color};max-width:150px" title="${interp.action}">${interp.label}</td>
     </tr>`;
   }).join('');
 
@@ -13673,13 +13742,25 @@ function renderFCRModule(){
   const lastPoids=data.map(d=>d.poidsMoyen).filter(Boolean).pop()||null;
   const survieActuelle=Math.round((vivants570-totalMorts)/vivants570*100);
   const fcrFinal=getFCRCumul(data,22,vivants570,poidsDepart)||getFCRCumul(data,data.filter(d=>d.poidsMoyen).length,vivants570,poidsDepart);
+  // Trajectoire globale : compare le FCR cumulé à la référence de la semaine
+  // en cours (dernière semaine avec des données saisies) — "sommes-nous sur
+  // la bonne voie" plutôt qu'un chiffre isolé sans point de comparaison.
+  let currentWeekIdx=0;
+  data.forEach((d,i)=>{if(d.poidsMoyen||d.alimKg)currentWeekIdx=i;});
+  const refNow=FCR_REF_OBJ.find(r=>r.s===currentWeekIdx+1)||null;
+  const ecartGlobal=(fcrFinal!=null&&refNow)?(fcrFinal-refNow.fcr).toFixed(2):null;
+  const trajectoire=getFCRInterpretation(fcrFinal,ecartGlobal);
   const m=G('fcr-metrics');
   if(m)m.innerHTML=`
     <div class="met${survieActuelle<85?' dng':survieActuelle<90?' warn':''}"><div class="mlbl">Survie actuelle</div><div class="mval">${survieActuelle}%</div></div>
     <div class="met"><div class="mlbl">Total morts</div><div class="mval">${totalMorts}</div></div>
     <div class="met"><div class="mlbl">Aliment cumulé</div><div class="mval">${totalAlim.toFixed(1)}<span class="munit">kg</span></div></div>
     <div class="met${fcrFinal&&fcrFinal>1.3?' warn':''}"><div class="mlbl">FCR cumulé</div><div class="mval" style="color:${fcrFinal?fcrFinal>1.5?'var(--dng)':fcrFinal>1.3?'var(--warn)':'var(--acc)':'var(--t3)'}">${fcrFinal?fcrFinal.toFixed(2):'—'}</div></div>
-    <div class="met"><div class="mlbl">Dernier poids</div><div class="mval">${lastPoids?lastPoids+' g':'—'}</div></div>`;
+    <div class="met"><div class="mlbl">Dernier poids</div><div class="mval">${lastPoids?lastPoids+' g':'—'}</div></div>
+    <div class="met" style="grid-column:1/-1;text-align:left"><div class="mlbl">Trajectoire — sommes-nous sur la bonne voie ?</div>
+      <div class="mval" style="font-size:14px;color:${trajectoire.color}">${trajectoire.label}${refNow?' <span style="font-size:10px;color:var(--t3);font-weight:400">(référence S'+(currentWeekIdx+1)+': '+refNow.fcr.toFixed(2)+')</span>':''}</div>
+      ${trajectoire.action?`<div style="font-size:10px;color:var(--t3);margin-top:3px">${trajectoire.action}</div>`:''}
+    </div>`;
 }
 
 
